@@ -1,0 +1,42 @@
+services:
+  # SERVICIO DE BASE DE DATOS (PostgreSQL)
+  db_soyucab:
+    image: postgres:15
+    container_name: soyucab_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: db_soyucab
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistencia de datos
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts de inicialización automática (se ejecutan solo si la BD está vacía)
+      - ./scripts:/docker-entrypoint-initdb.d
+    networks:
+      - soyucab-network
+
+  # SERVICIO DE ADMINISTRACIÓN (pgAdmin 4)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: soyucab_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@soyucab.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db_soyucab
+    networks:
+      - soyucab-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  soyucab-network:
+    driver: bridge

@@ -1,0 +1,9 @@
+# Datos de BD
+postgres_data/
+
+# Variables de entorno
+.env
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
