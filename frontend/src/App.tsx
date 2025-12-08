@@ -33,6 +33,8 @@ import CommunityGrowthReport from './components/CommunityGrowthReport';
 import GraduateSkillsReport from './components/GraduateSkillsReport';
 import ContentInteractionReport from './components/ContentInteractionReport';
 import TopViralReport from './components/TopViralReport';
+import LideresReport from './components/LideresReport';
+import EventosReport from './components/EventosReport';
 import ActiveGroupsReport from './components/ActiveGroupsReport';
 import GraduateDiasporaReport from './components/GraduateDiasporaReport';
 import CompanyUniversityLinkReport from './components/CompanyUniversityLinkReport';
@@ -47,7 +49,7 @@ import GeneralSettings from './components/GeneralSettings';
 import MessagingSystem from './components/MessagingSystem';
 import soyucabLogo from './assets/33c35295992cfb6178c01246eefc5ecbf6bc76db.png';
 
-type View = 'feed' | 'profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events-report' | 'community-report' | 'skills-report' | 'interaction-report' | 'viral-report' | 'groups-report' | 'diaspora-report' | 'internships-report' | 'health-report' | 'student-groups-report';
+type View = 'feed' | 'profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events-report' | 'community-report' | 'skills-report' | 'interaction-report' | 'viral-report' | 'lideres-report' | 'eventos-db-report' | 'groups-report' | 'diaspora-report' | 'internships-report' | 'health-report' | 'student-groups-report';
 type AuthView = 'login' | 'register';
 
 function App() {
@@ -94,6 +96,10 @@ function App() {
         return <ContentInteractionReport />;
       case 'viral-report':
         return <TopViralReport />;
+      case 'lideres-report':
+        return <LideresReport />;
+      case 'eventos-db-report':
+        return <EventosReport />;
       case 'groups-report':
         return <ActiveGroupsReport />;
       case 'diaspora-report':
@@ -218,6 +224,14 @@ function App() {
                     <DropdownMenuItem onClick={() => setCurrentView('viral-report')}>
                       <TrendingUp className="mr-2 h-4 w-4" />
                       <span>Top Contenido Viral (BD)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrentView('lideres-report')}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Líderes de Opinión (BD)</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrentView('eventos-db-report')}>
+                      <Calendar className="mr-2 h-4 w-4" />
+                      <span>Interés en Eventos (BD)</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setCurrentView('groups-report')}>
                       <Users className="mr-2 h-4 w-4" />

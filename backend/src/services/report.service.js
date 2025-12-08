@@ -351,8 +351,14 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
         </div>
 
         <div class="content">
-            <h2 class="section-title">Ranking de Contenido por Impacto</h2>
-            <p class="section-subtitle">Ordenado por score de viralidad (FN_CALCULAR_NIVEL_IMPACTO)</p>
+            <h2 class="section-title">${reportType === 'viralidad' ? 'Ranking de Contenido por Impacto' :
+            reportType === 'lideres' ? 'Ranking de Líderes de Opinión' :
+                'Eventos Próximos y Proyección'
+        }</h2>
+            <p class="section-subtitle">${reportType === 'viralidad' ? 'Ordenado por score de viralidad (FN_CALCULAR_NIVEL_IMPACTO)' :
+            reportType === 'lideres' ? 'Ordenado por impacto acumulado en la comunidad' :
+                'Ordenado por fecha de inicio (próximos primero)'
+        }</p>
             
             ${data.length > 0 ? `
             <table>
