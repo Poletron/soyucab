@@ -6,14 +6,6 @@
 -- Fórmula: (Comentarios * 3) + (Reacciones * 1)
 -- =============================================================================
 
--- =============================================================================
--- OBJETO: FUNCIÓN DE LÓGICA DE NEGOCIO
--- Responsable: Oscar Jaramillo
--- Nombre: FN_CALCULAR_NIVEL_IMPACTO
--- Descripción: Calcula la "Viralidad" ponderando comentarios y reacciones.
--- Fórmula: (Comentarios * 3) + (Reacciones * 1)
--- =============================================================================
-
 CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_IMPACTO(p_correo_autor VARCHAR, p_fecha_creacion TIMESTAMP)
 RETURNS DECIMAL AS $$
 DECLARE
