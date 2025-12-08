@@ -1,0 +1,315 @@
+{
+    "info": {
+        "_postman_id": "soyucab-api-collection",
+        "name": "SoyUCAB API",
+        "description": "API REST para la red social universitaria SoyUCAB.\n\nPara autenticación, usar el header `x-user-email` con el correo del usuario.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "user_email",
+            "value": "oscar@ucab.edu.ve",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health & Info",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "health"
+                            ]
+                        },
+                        "description": "Verifica el estado de la API y conexión a BD."
+                    }
+                },
+                {
+                    "name": "API Info",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                ""
+                            ]
+                        },
+                        "description": "Información general de la API y endpoints disponibles."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Feed",
+            "item": [
+                {
+                    "name": "Get Feed (Contenido)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text",
+                                "description": "Email del usuario autenticado"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/feed",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "feed"
+                            ]
+                        },
+                        "description": "Obtiene el contenido visible para el usuario (aplica RLS)."
+                    }
+                },
+                {
+                    "name": "Get Feed Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/feed/stats",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "feed",
+                                "stats"
+                            ]
+                        },
+                        "description": "Estadísticas generales del contenido."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Reportes",
+            "item": [
+                {
+                    "name": "Listar Tipos de Reporte",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/types",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "types"
+                            ]
+                        },
+                        "description": "Lista los tipos de reportes disponibles."
+                    }
+                },
+                {
+                    "name": "Preview - Top Viral",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/viralidad",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "viralidad"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Top Contenido Viral."
+                    }
+                },
+                {
+                    "name": "Preview - Líderes Opinión",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/lideres",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "lideres"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Líderes de Opinión."
+                    }
+                },
+                {
+                    "name": "Preview - Eventos",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/eventos",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "eventos"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Interés en Eventos."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Viralidad",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"viralidad\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Top Contenido Viral."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Líderes",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"lideres\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Líderes de Opinión."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Eventos",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"eventos\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Interés en Eventos."
+                    }
+                }
+            ]
+        }
+    ]
+}

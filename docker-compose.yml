@@ -1,5 +1,7 @@
 services:
+  # ============================================
   # SERVICIO DE BASE DE DATOS (PostgreSQL)
+  # ============================================
   db_soyucab:
     image: postgres:15
     container_name: soyucab_postgres
@@ -17,8 +19,15 @@ services:
       - ./scripts:/docker-entrypoint-initdb.d
     networks:
       - soyucab-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d db_soyucab" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ============================================
   # SERVICIO DE ADMINISTRACIÓN (pgAdmin 4)
+  # ============================================
   pgadmin:
     image: dpage/pgadmin4
     container_name: soyucab_pgadmin
@@ -29,7 +38,71 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - db_soyucab
+      db_soyucab:
+        condition: service_healthy
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO BACKEND (Node.js API)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: soyucab_backend
+    restart: always
+    environment:
+      PORT: 3000
+      DB_HOST: db_soyucab
+      DB_PORT: 5432
+      DB_NAME: db_soyucab
+      DB_USER: postgres
+      DB_PASSWORD: password123
+      JSREPORT_URL: http://jsreport:5488
+      DEFAULT_USER: oscar@ucab.edu.ve
+    ports:
+      - "3000:3000"
+    depends_on:
+      db_soyucab:
+        condition: service_healthy
+      jsreport:
+        condition: service_started
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO DE REPORTES (JsReport)
+  # ============================================
+  jsreport:
+    image: jsreport/jsreport:3.11.3
+    container_name: soyucab_jsreport
+    restart: always
+    environment:
+      # Modo stateless - no guardamos templates en disco
+      extensions_authentication_enabled: "false"
+      extensions_authorization_enabled: "false"
+      allowLocalFilesAccess: "true"
+    ports:
+      - "5488:5488"
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO FRONTEND (React + Vite)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: soyucab_frontend
+    restart: always
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
     networks:
       - soyucab-network
 

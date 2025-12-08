@@ -75,11 +75,28 @@ GRANT INSERT, UPDATE ON OFERTA_LABORAL TO rol_entidad;
 GRANT INSERT, UPDATE ON SE_POSTULA TO rol_persona;
 
 
--- 5. FUNCIÓN DE IDENTIDAD (MAPEO)
+-- 5. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN HÍBRIDA
 -- =============================================================================
--- Ahora retorna el correo del usuario autenticado en lugar de un ID numérico.
+-- Soporta AMBOS modos:
+--   1. API Mode: Lee la variable de sesión 'app.current_user' (para Backend Node.js)
+--   2. Terminal Mode: Mapea el rol de Postgres (para defensa en psql)
+-- =============================================================================
 CREATE OR REPLACE FUNCTION fn_get_auth_correo() RETURNS VARCHAR(255) AS $$
+DECLARE
+    v_api_user VARCHAR(255);
 BEGIN
+    -- PRIORIDAD 1: Verificar si la API inyectó un usuario en la sesión
+    BEGIN
+        v_api_user := current_setting('app.user_email', true);
+        IF v_api_user IS NOT NULL AND v_api_user <> '' THEN
+            RETURN v_api_user;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        -- Si la variable no existe, continuamos al modo terminal
+        NULL;
+    END;
+    
+    -- PRIORIDAD 2: Modo Terminal - Mapeo de Roles de Postgres
     IF current_user = 'usr_oscar' THEN RETURN 'oscar@ucab.edu.ve';
     ELSIF current_user = 'usr_luis' THEN RETURN 'luis@ucab.edu.ve';
     ELSIF current_user = 'usr_extrano' THEN RETURN 'extranjero@test.com';

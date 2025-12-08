@@ -80,3 +80,13 @@ LEFT JOIN REACCIONA_CONTENIDO r
 WHERE e.fecha_inicio > CURRENT_TIMESTAMP 
 GROUP BY e.correo_autor, e.fecha_hora_creacion, e.titulo, e.fecha_inicio, e.ciudad_ubicacion
 ORDER BY e.fecha_inicio ASC;
+
+
+-- =============================================================================
+-- 4. PERMISOS PARA LAS VISTAS DE REPORTES
+-- =============================================================================
+-- Solo el MODERADOR tiene acceso a los reportes estratégicos
+-- (Los usuarios comunes no pueden ver métricas de viralidad ni rankings)
+GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador;
+GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador;
+GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador;
