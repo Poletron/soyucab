@@ -22,6 +22,7 @@ DROP ROLE IF EXISTS usr_admin_moderador;
 DROP ROLE IF EXISTS rol_persona;
 DROP ROLE IF EXISTS rol_entidad;
 DROP ROLE IF EXISTS rol_moderador;
+DROP ROLE IF EXISTS rol_auditor;
 
 -- 2. CREACIÓN DE PERFILES (ROLES GENÉRICOS)
 -- =============================================================================
@@ -35,6 +36,10 @@ CREATE ROLE rol_entidad NOLOGIN;
 -- C. Rol Moderador (Gestión de Comunidad)
 -- BYPASSRLS para que pueda ver contenido privado reportado.
 CREATE ROLE rol_moderador NOLOGIN BYPASSRLS; 
+
+-- D. Rol Auditor (Herramientas de BI y Reportería)
+-- Acceso de solo lectura para análisis y métricas
+CREATE ROLE rol_auditor NOLOGIN; 
 
 
 -- 3. CREACIÓN DE USUARIOS (ACTORES)
@@ -56,12 +61,15 @@ CREATE ROLE usr_admin_moderador WITH LOGIN PASSWORD 'admin123' IN ROLE rol_moder
 -- =============================================================================
 
 -- PERMISOS COMUNES (Todos pueden leer catálogos y loguearse)
-GRANT USAGE ON SCHEMA public TO rol_persona, rol_entidad, rol_moderador;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador;
+GRANT USAGE ON SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
 
 -- PERMISOS DEL MODERADOR (Poder Total de Gestión)
 GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rol_moderador;
+
+-- PERMISOS DEL AUDITOR (Solo Lectura para BI y Reportería)
+-- Nota: Ya tiene SELECT global, aquí se documenta el propósito
 
 -- PERMISOS DE CONTENIDO (Compartidos)
 GRANT INSERT, UPDATE ON CONTENIDO, PUBLICACION, EVENTO, COMENTARIO, REACCIONA_CONTENIDO TO rol_persona, rol_entidad;

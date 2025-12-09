@@ -121,7 +121,9 @@ CREATE TABLE COMENTARIO (
     PRIMARY KEY (fk_contenido_autor, fk_contenido_fecha, fecha_hora_comentario),
     CONSTRAINT fk_comentario_contenido FOREIGN KEY (fk_contenido_autor, fk_contenido_fecha) REFERENCES CONTENIDO(correo_autor, fecha_hora_creacion),
     CONSTRAINT fk_comentario_autor FOREIGN KEY (correo_autor_comentario) REFERENCES MIEMBRO(correo_principal),
-    CONSTRAINT fk_comentario_padre FOREIGN KEY (fk_padre_autor_cont, fk_padre_fecha_cont, fk_padre_fecha_coment) REFERENCES COMENTARIO(fk_contenido_autor, fk_contenido_fecha, fecha_hora_comentario)
+    CONSTRAINT fk_comentario_padre FOREIGN KEY (fk_padre_autor_cont, fk_padre_fecha_cont, fk_padre_fecha_coment) REFERENCES COMENTARIO(fk_contenido_autor, fk_contenido_fecha, fecha_hora_comentario),
+    -- Constraint de calidad: evita comentarios vacíos o con solo espacios
+    CONSTRAINT check_comentario_no_vacio CHECK (LENGTH(TRIM(texto_comentario)) > 0)
 );
 
 -- Catálogo de Reacciones (Implícito en Constraints)
