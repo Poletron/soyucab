@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, ArrowRight, CheckCircle, Building2, MapPin, Globe } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle, Building2, MapPin } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -220,8 +220,8 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               type="button"
               onClick={() => setAccountType('persona')}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${accountType === 'persona'
-                  ? 'bg-white shadow-sm'
-                  : 'bg-transparent text-gray-600'
+                ? 'bg-white shadow-sm'
+                : 'bg-transparent text-gray-600'
                 }`}
               style={accountType === 'persona' ? { color: '#40b4e5' } : {}}
             >
@@ -232,8 +232,8 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               type="button"
               onClick={() => setAccountType('organizacion')}
               className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${accountType === 'organizacion'
-                  ? 'bg-white shadow-sm'
-                  : 'bg-transparent text-gray-600'
+                ? 'bg-white shadow-sm'
+                : 'bg-transparent text-gray-600'
                 }`}
               style={accountType === 'organizacion' ? { color: '#40b4e5' } : {}}
             >
@@ -295,7 +295,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>País *</Label>
-                        <Select value={formData.country} onValueChange={(value) => handleInputChange('country', value)}>
+                        <Select value={formData.country} onValueChange={(value: string) => handleInputChange('country', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona tu país" />
                           </SelectTrigger>
@@ -369,7 +369,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                       </div>
                       <div className="space-y-2">
                         <Label>Tipo de Entidad *</Label>
-                        <Select value={formData.entityType} onValueChange={(value) => handleInputChange('entityType', value)}>
+                        <Select value={formData.entityType} onValueChange={(value: string) => handleInputChange('entityType', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Tipo de entidad" />
                           </SelectTrigger>
@@ -471,7 +471,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                   <>
                     <div className="space-y-2">
                       <Label>Tipo de Usuario *</Label>
-                      <Select onValueChange={(value) => handleInputChange('userType', value)}>
+                      <Select onValueChange={(value: string) => handleInputChange('userType', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecciona tu tipo de usuario" />
                         </SelectTrigger>
@@ -492,7 +492,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                     {(formData.userType === 'student' || formData.userType === 'graduate') && (
                       <div className="space-y-2">
                         <Label>Escuela *</Label>
-                        <Select onValueChange={(value) => handleInputChange('school', value)}>
+                        <Select onValueChange={(value: string) => handleInputChange('school', value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecciona tu escuela" />
                           </SelectTrigger>
@@ -517,7 +517,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                   <Checkbox
                     id="terms"
                     checked={acceptTerms}
-                    onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
+                    onCheckedChange={(checked: boolean | "indeterminate") => setAcceptTerms(checked as boolean)}
                   />
                   <Label htmlFor="terms" className="text-sm leading-5 cursor-pointer">
                     Acepto los{' '}
