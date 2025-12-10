@@ -18,49 +18,78 @@ DROP ROLE IF EXISTS usr_luis;
 DROP ROLE IF EXISTS usr_extrano;
 DROP ROLE IF EXISTS usr_polar;
 DROP ROLE IF EXISTS usr_admin_moderador;
+DROP ROLE IF EXISTS usr_auditor;
+DROP ROLE IF EXISTS usr_anonimo;
 
 DROP ROLE IF EXISTS rol_persona;
 DROP ROLE IF EXISTS rol_entidad;
 DROP ROLE IF EXISTS rol_moderador;
 DROP ROLE IF EXISTS rol_auditor;
+DROP ROLE IF EXISTS rol_anonimo;
 
 -- 2. CREACIÓN DE PERFILES (ROLES GENÉRICOS)
 -- =============================================================================
 
--- A. Rol Persona (Estudiantes, Profesores, Egresados)
+-- A. Rol Anónimo (Invitado - solo lectura de contenido público)
+CREATE ROLE rol_anonimo NOLOGIN;
+
+-- B. Rol Persona (Estudiantes, Profesores, Egresados)
 CREATE ROLE rol_persona NOLOGIN;
 
--- B. Rol Entidad (Organizaciones, Empresas)
+-- C. Rol Entidad (Organizaciones, Empresas)
 CREATE ROLE rol_entidad NOLOGIN;
 
--- C. Rol Moderador (Gestión de Comunidad)
+-- D. Rol Moderador (Gestión de Comunidad)
 -- BYPASSRLS para que pueda ver contenido privado reportado.
 CREATE ROLE rol_moderador NOLOGIN BYPASSRLS; 
 
--- D. Rol Auditor (Herramientas de BI y Reportería)
+-- E. Rol Auditor (Herramientas de BI y Reportería)
 -- Acceso de solo lectura para análisis y métricas
 CREATE ROLE rol_auditor NOLOGIN; 
 
 
 -- 3. CREACIÓN DE USUARIOS (ACTORES)
 -- =============================================================================
+-- +----------------------+---------------------+----------------+----------+
+-- | Usuario PostgreSQL   | Correo Asociado     | Rol            | Password |
+-- +----------------------+---------------------+----------------+----------+
+-- | usr_anonimo          | (sin autenticar)    | Anónimo        | guest    |
+-- | usr_oscar            | oscar@ucab.edu.ve   | Persona        | 1234     |
+-- | usr_luis             | luis@ucab.edu.ve    | Persona (amigo)| 1234     |
+-- | usr_extrano          | nuevo.ingreso@...   | Persona (solo) | 1234     |
+-- | usr_polar            | rrhh@polar.com      | Entidad        | 1234     |
+-- | usr_admin_moderador  | (staff)             | Moderador      | admin123 |
+-- | usr_auditor          | (BI/reportes)       | Auditor        | audit123 |
+-- +----------------------+---------------------+----------------+----------+
 
--- Usuarios Normales
+-- Usuario Anónimo/Invitado (solo lectura de contenido público)
+CREATE ROLE usr_anonimo WITH LOGIN PASSWORD 'guest' IN ROLE rol_anonimo;
+
+-- Usuarios Normales (rol_persona)
 CREATE ROLE usr_oscar WITH LOGIN PASSWORD '1234' IN ROLE rol_persona;
 CREATE ROLE usr_luis WITH LOGIN PASSWORD '1234' IN ROLE rol_persona;
 CREATE ROLE usr_extrano WITH LOGIN PASSWORD '1234' IN ROLE rol_persona;
 
--- Usuario Corporativo
+-- Usuario Corporativo (rol_entidad)
 CREATE ROLE usr_polar WITH LOGIN PASSWORD '1234' IN ROLE rol_entidad;
 
--- Usuario Staff (Moderador)
+-- Usuario Staff - Moderador (BYPASSRLS - puede ver contenido privado)
 CREATE ROLE usr_admin_moderador WITH LOGIN PASSWORD 'admin123' IN ROLE rol_moderador;
+
+-- Usuario Auditor (solo lectura para BI y reportes)
+CREATE ROLE usr_auditor WITH LOGIN PASSWORD 'audit123' IN ROLE rol_auditor;
 
 
 -- 4. ASIGNACIÓN DE PERMISOS (MATRIZ DE ACCESO)
 -- =============================================================================
 
--- PERMISOS COMUNES (Todos pueden leer catálogos y loguearse)
+-- PERMISOS ROL ANÓNIMO (Solo lectura de contenido público)
+-- Según documentación: SELECT sobre PERSONA, CONTENIDO, catálogos públicos
+GRANT USAGE ON SCHEMA public TO rol_anonimo;
+GRANT SELECT ON PERSONA, CONTENIDO, PUBLICACION, EVENTO, COMENTARIO TO rol_anonimo;
+GRANT SELECT ON TIPO_REACCION, TIPO_NEXO, ROL, GRUPO_INTERES, TUTORIA, OFERTA_LABORAL TO rol_anonimo;
+
+-- PERMISOS COMUNES (Usuarios autenticados)
 GRANT USAGE ON SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rol_persona, rol_entidad, rol_moderador, rol_auditor;
@@ -83,15 +112,39 @@ GRANT INSERT, UPDATE ON OFERTA_LABORAL TO rol_entidad;
 GRANT INSERT, UPDATE ON SE_POSTULA TO rol_persona;
 
 
--- 5. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN HÍBRIDA
+-- 5. TABLA DE MAPEO USUARIO POSTGRES → CORREO
+-- =============================================================================
+-- Esta tabla permite mapear usuarios de PostgreSQL a correos de la aplicación
+-- de forma dinámica (ahora se ejecuta después de 05_Semilla_Datos.sql)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS MAPEO_USUARIO_POSTGRES (
+    usuario_postgres VARCHAR(63) PRIMARY KEY,
+    correo_aplicacion VARCHAR(255) NOT NULL,
+    descripcion VARCHAR(100),
+    CONSTRAINT fk_mapeo_miembro FOREIGN KEY (correo_aplicacion) REFERENCES MIEMBRO(correo_principal)
+);
+
+-- Poblar tabla de mapeo con usuarios de demostración
+INSERT INTO MAPEO_USUARIO_POSTGRES (usuario_postgres, correo_aplicacion, descripcion) VALUES
+('usr_oscar', 'oscar@ucab.edu.ve', 'Estudiante con conexiones'),
+('usr_luis', 'luis@ucab.edu.ve', 'Estudiante amigo de Oscar'),
+('usr_extrano', 'nuevo.ingreso@ucab.edu.ve', 'Usuario sin conexiones sociales'),
+('usr_polar', 'rrhh@polar.com', 'Empresa Polar'),
+('usr_admin_moderador', 'oscar@ucab.edu.ve', 'Moderador del sistema'),
+('usr_auditor', 'oscar@ucab.edu.ve', 'Auditor de reportes')
+ON CONFLICT (usuario_postgres) DO UPDATE SET correo_aplicacion = EXCLUDED.correo_aplicacion;
+
+-- 6. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN DINÁMICA
 -- =============================================================================
 -- Soporta AMBOS modos:
---   1. API Mode: Lee la variable de sesión 'app.current_user' (para Backend Node.js)
---   2. Terminal Mode: Mapea el rol de Postgres (para defensa en psql)
+--   1. API Mode: Lee la variable de sesión 'app.user_email' (Backend Node.js)
+--   2. Terminal Mode: Busca en MAPEO_USUARIO_POSTGRES (pgAdmin/psql)
 -- =============================================================================
 CREATE OR REPLACE FUNCTION fn_get_auth_correo() RETURNS VARCHAR(255) AS $$
 DECLARE
     v_api_user VARCHAR(255);
+    v_mapped_email VARCHAR(255);
 BEGIN
     -- PRIORIDAD 1: Verificar si la API inyectó un usuario en la sesión
     BEGIN
@@ -100,19 +153,17 @@ BEGIN
             RETURN v_api_user;
         END IF;
     EXCEPTION WHEN OTHERS THEN
-        -- Si la variable no existe, continuamos al modo terminal
-        NULL;
+        NULL; -- Variable no existe, continuamos
     END;
     
-    -- PRIORIDAD 2: Modo Terminal - Mapeo de Roles de Postgres
-    IF current_user = 'usr_oscar' THEN RETURN 'oscar@ucab.edu.ve';
-    ELSIF current_user = 'usr_luis' THEN RETURN 'luis@ucab.edu.ve';
-    ELSIF current_user = 'usr_extrano' THEN RETURN 'extranjero@test.com';
-    ELSIF current_user = 'usr_polar' THEN RETURN 'rrhh@polar.com';
-    ELSE RETURN NULL;
-    END IF;
+    -- PRIORIDAD 2: Modo Terminal - Búsqueda dinámica en tabla de mapeo
+    SELECT correo_aplicacion INTO v_mapped_email
+    FROM MAPEO_USUARIO_POSTGRES
+    WHERE usuario_postgres = current_user;
+    
+    RETURN v_mapped_email; -- Retorna NULL si no encuentra
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql STABLE;
 
 
 -- 6. SEGURIDAD A NIVEL DE FILA (RLS)
@@ -144,3 +195,11 @@ USING (
 );
 
 -- NOTA: El rol_moderador ignora estas políticas gracias a BYPASSRLS.
+
+-- =============================================================================
+-- 8. PERMISOS PARA VISTAS DE REPORTES
+-- =============================================================================
+-- Solo el MODERADOR y AUDITOR tienen acceso a los reportes estratégicos
+GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador, rol_auditor;
+GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador, rol_auditor;
+GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador, rol_auditor;

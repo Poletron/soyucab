@@ -85,8 +85,7 @@ ORDER BY e.fecha_inicio ASC;
 -- =============================================================================
 -- 4. PERMISOS PARA LAS VISTAS DE REPORTES
 -- =============================================================================
--- Solo el MODERADOR tiene acceso a los reportes estratégicos
--- (Los usuarios comunes no pueden ver métricas de viralidad ni rankings)
-GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador;
-GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador;
-GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador;
+-- NOTA: Los GRANTs están en 06_Seguridad.sql porque los roles se crean ahí
+-- GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador;
+-- GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador;
+-- GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador;

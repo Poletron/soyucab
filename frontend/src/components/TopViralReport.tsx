@@ -56,22 +56,24 @@ const TopViralReport = () => {
     // Métricas calculadas
     const totalContenido = data.length;
     const avgScore = data.length > 0
-        ? (data.reduce((sum, r) => sum + (r.score_viralidad || 0), 0) / data.length).toFixed(1)
+        ? (data.reduce((sum, r) => sum + (Number(r.score_viralidad) || 0), 0) / data.length).toFixed(1)
         : '0';
-    const totalComentarios = data.reduce((sum, r) => sum + (r.total_comentarios || 0), 0);
+    const totalComentarios = data.reduce((sum, r) => sum + (Number(r.total_comentarios) || 0), 0);
     const topContent = data[0]?.contenido_titulo || 'N/A';
 
-    const getScoreLevel = (score: number): string => {
-        if (score >= 10) return 'Muy Alto';
-        if (score >= 5) return 'Alto';
-        if (score >= 2) return 'Medio';
+    const getScoreLevel = (score: number | string): string => {
+        const val = Number(score) || 0;
+        if (val >= 10) return 'Muy Alto';
+        if (val >= 5) return 'Alto';
+        if (val >= 2) return 'Medio';
         return 'Bajo';
     };
 
-    const getScoreColor = (score: number): string => {
-        if (score >= 10) return '#047732';
-        if (score >= 5) return '#40b4e5';
-        if (score >= 2) return '#ffc526';
+    const getScoreColor = (score: number | string): string => {
+        const val = Number(score) || 0;
+        if (val >= 10) return '#047732';
+        if (val >= 5) return '#40b4e5';
+        if (val >= 2) return '#ffc526';
         return '#ef4444';
     };
 

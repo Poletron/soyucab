@@ -53,7 +53,7 @@ const EventosReport = () => {
 
     // Métricas calculadas
     const totalEventos = data.length;
-    const totalInteresados = data.reduce((sum, r) => sum + (r.interesados_potenciales || 0), 0);
+    const totalInteresados = data.reduce((sum, r) => sum + (Number(r.interesados_potenciales) || 0), 0);
     const exitoCount = data.filter(r => r.status_proyeccion === 'EXITO ASEGURADO').length;
     const nextEvent = data[0]?.nombre_evento || 'N/A';
 
