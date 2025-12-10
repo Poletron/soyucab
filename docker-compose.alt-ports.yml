@@ -1,0 +1,120 @@
+# ============================================
+# DOCKER COMPOSE CON PUERTOS ALTERNATIVOS
+# ============================================
+# Use este archivo si los puertos estándar están ocupados
+# Comando: docker compose -f docker-compose.alt-ports.yml up -d --build
+
+services:
+  # ============================================
+  # SERVICIO DE BASE DE DATOS (PostgreSQL)
+  # ============================================
+  db_soyucab:
+    image: postgres:15
+    container_name: soyucab_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: db_soyucab
+    ports:
+      - "5433:5432" # Puerto alternativo 5433
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts:/docker-entrypoint-initdb.d
+    networks:
+      - soyucab-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d db_soyucab" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # SERVICIO DE ADMINISTRACIÓN (pgAdmin 4)
+  # ============================================
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: soyucab_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@soyucab.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8088:80" # Puerto alternativo 8088
+    depends_on:
+      db_soyucab:
+        condition: service_healthy
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO BACKEND (Node.js API)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: soyucab_backend
+    restart: always
+    environment:
+      PORT: 3000
+      DB_HOST: db_soyucab
+      DB_PORT: 5432
+      DB_NAME: db_soyucab
+      DB_USER: postgres
+      DB_PASSWORD: password123
+      JSREPORT_URL: http://jsreport:5488
+      DEFAULT_USER: oscar@ucab.edu.ve
+    ports:
+      - "3001:3000" # Puerto alternativo 3001
+    depends_on:
+      db_soyucab:
+        condition: service_healthy
+      jsreport:
+        condition: service_started
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO DE REPORTES (JsReport)
+  # ============================================
+  jsreport:
+    image: jsreport/jsreport:3.11.3
+    container_name: soyucab_jsreport
+    restart: always
+    environment:
+      extensions_authentication_enabled: "false"
+      extensions_authorization_enabled: "false"
+      allowLocalFilesAccess: "true"
+    ports:
+      - "5489:5488" # Puerto alternativo 5489
+    networks:
+      - soyucab-network
+
+  # ============================================
+  # SERVICIO FRONTEND (React + Vite)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3001 # Usar puerto alternativo del backend
+    container_name: soyucab_frontend
+    restart: always
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports:
+      - "4173:5173" # Puerto alternativo 4173
+    depends_on:
+      - backend
+    networks:
+      - soyucab-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  soyucab-network:
+    driver: bridge
