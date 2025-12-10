@@ -20,8 +20,8 @@ SoyUCAB es una plataforma social diseñada para conectar a la comunidad ucabista
 
 ```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│    Frontend     │────▶│     Backend      │────▶│   PostgreSQL    │
-│  React + Vite   │     │  Node.js + Express│     │     Database    │
+│    Frontend     │────▶│     Backend     │────▶│   PostgreSQL    │
+│  React + Vite   │     │ Node.js + Express│     │     Database    │
 │   Puerto 5173   │     │   Puerto 3000    │     │   Puerto 5432   │
 └─────────────────┘     └────────┬─────────┘     └─────────────────┘
                                  │
