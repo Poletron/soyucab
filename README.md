@@ -2,283 +2,218 @@
 
 Sistema de red social institucional para la Universidad Católica Andrés Bello (UCAB), desarrollado como proyecto de Base de Datos II.
 
-## 📋 Descripción del Proyecto
-
-SoyUCAB es una plataforma social diseñada para conectar a la comunidad ucabista: estudiantes, egresados, profesores y personal administrativo. El sistema incluye:
-
-- **Gestión de perfiles** y nexos institucionales
-- **Conexiones sociales** entre miembros
-- **Grupos de interés** (públicos, privados y secretos)
-- **Sistema de mensajería** privada
-- **Eventos** institucionales
-- **Ofertas laborales** y sistema de tutorías
-- **Reportes analíticos** en PDF
-
 ---
 
-## 🏗️ Arquitectura del Sistema
+## 🚀 GUÍA RÁPIDA DE DESPLIEGUE (Entrega 3)
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│    Frontend     │────▶│     Backend     │────▶│   PostgreSQL    │
-│  React + Vite   │     │ Node.js + Express│     │     Database    │
-│   Puerto 5173   │     │   Puerto 3000    │     │   Puerto 5432   │
-└─────────────────┘     └────────┬─────────┘     └─────────────────┘
-                                 │
-                                 ▼
-                        ┌──────────────────┐
-                        │    JsReport      │
-                        │  (Generador PDF) │
-                        │   Puerto 5488    │
-                        └──────────────────┘
-```
+> [!IMPORTANT]
+> **Requisitos**: Docker Desktop instalado y ejecutándose.
 
-**Servicios adicionales:**
-- **pgAdmin 4** (Puerto 8080) - Administración visual de la base de datos
-
----
-
-## 🚀 Requisitos Previos
-
-- **Docker Desktop** (versión 20.10 o superior)
-- **Docker Compose** (incluido en Docker Desktop)
-- **Git** (para clonar el repositorio)
-
-> [!NOTE]
-> Asegúrese de que Docker Desktop esté ejecutándose antes de iniciar el despliegue.
-
----
-
-## 📦 Despliegue Rápido
-
-### 1. Clonar el repositorio
+### Paso 1: Clonar e iniciar
 
 ```bash
 git clone <URL_DEL_REPOSITORIO>
 cd soyucab
-```
-
-### 2. Iniciar todos los servicios
-
-```bash
 docker compose up -d --build
 ```
 
-> [!TIP]
-> La primera ejecución puede tomar varios minutos mientras se descargan las imágenes y se construyen los contenedores.
-
-### 3. Verificar que todos los servicios estén corriendo
+### Paso 2: Verificar (esperar ~20 segundos)
 
 ```bash
 docker compose ps
 ```
 
-Debería ver 5 contenedores con estado `running`:
-- `soyucab_postgres`
-- `soyucab_pgadmin`
-- `soyucab_backend`
-- `soyucab_jsreport`
-- `soyucab_frontend`
+Deben aparecer 5 contenedores `running`:
+- `soyucab_postgres` ✅
+- `soyucab_backend` ✅
+- `soyucab_jsreport` ✅
+- `soyucab_pgadmin` ✅
+- `soyucab_reports_dashboard` ✅
 
----
-
-## 🔀 Despliegue con Puertos Alternativos (Evitar Conflictos)
-
-Si tiene otros proyectos ejecutándose que usan los puertos estándar, puede usar la configuración de puertos alternativos:
-
-```bash
-docker compose -f docker-compose.alt-ports.yml up -d --build
-```
-
-### Tabla de Puertos Alternativos
-
-| Servicio | Puerto Estándar | Puerto Alternativo |
-|----------|-----------------|-------------------|
-| **Frontend** | 5173 | **4173** |
-| **Backend API** | 3000 | **3001** |
-| **PostgreSQL** | 5432 | **5433** |
-| **pgAdmin** | 8080 | **8088** |
-| **JsReport** | 5488 | **5489** |
-
-> [!WARNING]
-> Al usar puertos alternativos, recuerde actualizar las URLs de acceso. Por ejemplo, el frontend estará en `http://localhost:4173` en lugar de `http://localhost:5173`.
-
----
-
-## 🔗 Puntos de Acceso
+### Paso 3: ¡Listo para usar!
 
 | Servicio | URL | Descripción |
 |----------|-----|-------------|
-| **Frontend** | http://localhost:5173 | Aplicación web principal |
-| **Backend API** | http://localhost:3000 | API REST |
-| **pgAdmin** | http://localhost:8080 | Administrador de BD |
-| **JsReport** | http://localhost:5488 | Editor de reportes |
+| **📊 Dashboard de Reportes** | http://localhost | Panel principal con visualización de datos y descarga de PDFs |
+| **🔗 API Backend** | http://localhost:3000 | Endpoints REST para reportes |
+| **🛢️ pgAdmin** | http://localhost:8080 | Administrador visual de la BD |
+| **📄 JsReport** | http://localhost:5488 | Motor de generación de PDFs |
 
 ---
 
-## 🔐 Credenciales de Acceso
+## 📊 DEMOSTRACIÓN DE REPORTES (Rúbrica 3)
 
-### Base de Datos PostgreSQL
+### Desde el Dashboard (Recomendado)
+
+1. Abrir http://localhost
+2. Navegar entre las pestañas para ver cada reporte:
+   - **Top Viral** - Contenido con mayor engagement
+   - **Líderes de Opinión** - Usuarios con más impacto
+   - **Proyección Eventos** - Análisis de asistencia
+   - **Crecimiento Demográfico** - Nuevos registros por mes
+   - **Grupos Activos** - Comunidades más grandes
+   - **Referentes** - Usuarios más influyentes
+3. Hacer clic en **"Descargar PDF"** en cualquier reporte
+
+### Desde Postman/cURL (Alternativa)
+
+```bash
+# Generar PDF de Top Viral
+curl -X POST http://localhost:3000/api/reports/generate/top-viral \
+  -H "Content-Type: application/json" \
+  -d '{"format": "pdf"}' \
+  --output reporte_viral.pdf
+
+# Ver datos JSON de Líderes
+curl http://localhost:3000/api/reports/preview/lideres
+```
+
+### Tipos de Reportes Disponibles
+
+| Endpoint | Descripción | Vista SQL |
+|----------|-------------|-----------|
+| `top-viral` | Publicaciones más virales | V_REPORTE_TOP_VIRAL |
+| `lideres` | Líderes de opinión | V_REPORTE_LIDERES_OPINION |
+| `eventos` | Proyección de eventos | V_REPORTE_INTERES_EVENTOS |
+| `crecimiento` | Crecimiento demográfico | V_REPORTE_CRECIMIENTO_DEMOGRAFICO |
+| `grupos` | Grupos más activos | V_GRUPOS_MAS_ACTIVOS |
+| `referentes` | Top referentes | V_TOP_REFERENTES_COMUNIDAD |
+
+---
+
+## 🔐 CREDENCIALES
+
+### pgAdmin 4 (http://localhost:8080)
 
 | Campo | Valor |
 |-------|-------|
-| **Host** | `localhost` (desde fuera de Docker) o `db_soyucab` (entre contenedores) |
+| **Email** | `admin@soyucab.com` |
+| **Contraseña** | `admin` |
+
+### Conexión a PostgreSQL (desde pgAdmin)
+
+| Campo | Valor |
+|-------|-------|
+| **Host** | `db_soyucab` |
 | **Puerto** | `5432` |
 | **Base de Datos** | `db_soyucab` |
 | **Usuario** | `postgres` |
 | **Contraseña** | `password123` |
 
-### pgAdmin 4
+> [!CAUTION]
+> Usar `db_soyucab` como host (nombre del contenedor), NO `localhost`.
 
-| Campo | Valor |
-|-------|-------|
-| **URL** | http://localhost:8080 |
-| **Email** | `admin@soyucab.com` |
-| **Contraseña** | `admin` |
+### Usuarios de Demostración
 
-> [!IMPORTANT]
-> Al conectar pgAdmin a la base de datos, use `db_soyucab` como nombre del host (no `localhost`), ya que pgAdmin corre dentro de Docker.
-
-### Usuario por Defecto de la Aplicación
-
-| Campo | Valor |
-|-------|-------|
-| **Email** | `oscar@ucab.edu.ve` |
+| Usuario PostgreSQL | Correo | Rol | Contraseña |
+|-------------------|--------|-----|------------|
+| `usr_oscar` | oscar@ucab.edu.ve | Persona | `1234` |
+| `usr_luis` | luis@ucab.edu.ve | Persona | `1234` |
+| `usr_polar` | rrhh@polar.com | Entidad | `1234` |
+| `usr_auditor` | auditor@ucab.edu.ve | Auditor | `audit123` |
+| `usr_admin_moderador` | moderador@ucab.edu.ve | Moderador | `admin123` |
 
 ---
 
-## 🗂️ Estructura del Proyecto
+## 🗂️ ESTRUCTURA DE SCRIPTS SQL
 
-```
-soyucab/
-├── backend/               # API REST (Node.js + Express)
-│   ├── Dockerfile
-│   ├── src/
-│   │   ├── controllers/   # Controladores de la API
-│   │   ├── routes/        # Definición de rutas
-│   │   └── services/      # Lógica de negocio
-│   └── package.json
-├── frontend/              # Aplicación web (React + Vite)
-│   ├── Dockerfile
-│   ├── src/
-│   │   ├── components/    # Componentes React
-│   │   └── services/      # Servicios de API
-│   └── package.json
-├── scripts/               # Scripts SQL de inicialización
-│   ├── 01_DDL_Tablas.sql       # Definición de tablas
-│   ├── 02_Logica_Negocio.sql   # Procedimientos almacenados
-│   ├── 03_Triggers.sql         # Triggers
-│   ├── 04_Reportes.sql         # Funciones de reportes
-│   ├── 05_Semilla_Datos.sql    # Datos de prueba
-│   └── 06_Seguridad.sql        # Roles y permisos
-├── postman/               # Colección de Postman para testing
-│   └── SoyUCAB_API.postman_collection.json
-├── documentacion/         # Documentación del proyecto
-└── docker-compose.yml     # Orquestación de servicios
-```
+Los scripts se ejecutan automáticamente al iniciar la base de datos:
+
+| Script | Contenido |
+|--------|-----------|
+| `01_DDL_Tablas.sql` | 25 tablas del modelo relacional |
+| `02_Logica_Negocio.sql` | Funciones y procedimientos almacenados |
+| `03_Triggers.sql` | Triggers de auditoría y validación |
+| `04_Reportes.sql` | 6 vistas para reportes analíticos |
+| `05_Semilla_Datos.sql` | Datos de prueba (~500 registros) |
+| `06_Seguridad.sql` | Roles, permisos y RLS |
 
 ---
 
-## 📊 Roles de Base de Datos
+## 🔄 COMANDOS ÚTILES
 
-El sistema implementa **Role-Based Access Control (RBAC)**:
-
-| Rol | Descripción |
-|-----|-------------|
-| `rol_anonimo` | Usuario no autenticado, solo lectura pública |
-| `rol_miembro` | Usuario autenticado estándar |
-| `rol_institucional` | Entidades organizacionales |
-| `rol_moderador` | Gestión de contenido y comunidad |
-| `rol_auditor` | Solo lectura para reportes analíticos |
-
----
-
-## 🧪 Probar la API
-
-### Usando la colección de Postman
-
-1. Importar el archivo `postman/SoyUCAB_API.postman_collection.json` en Postman
-2. Configurar la variable `baseUrl` como `http://localhost:3000`
-3. Ejecutar las peticiones disponibles
-
-### Endpoints principales
+### Reiniciar completamente (borra datos)
 
 ```bash
-# Obtener todos los miembros
-GET http://localhost:3000/api/miembros
-
-# Obtener países
-GET http://localhost:3000/api/paises
-
-# Generar reporte de líderes
-POST http://localhost:3000/api/reports/lideres-influencia
-
-# Generar reporte de publicaciones virales
-POST http://localhost:3000/api/reports/top-viral
+docker compose down -v && docker compose up -d --build
 ```
 
----
-
-## 🔄 Comandos Útiles
-
-### Reiniciar todos los servicios
+### Ver logs de la base de datos
 
 ```bash
-docker compose down
-docker compose up -d --build
+docker compose logs db_soyucab
 ```
 
-### Ver logs de un servicio específico
-
-```bash
-# Logs del backend
-docker compose logs -f backend
-
-# Logs de la base de datos
-docker compose logs -f db_soyucab
-```
-
-### Reiniciar la base de datos desde cero
-
-```bash
-# Detener servicios y eliminar volúmenes
-docker compose down -v
-
-# Volver a iniciar (ejecutará los scripts SQL automáticamente)
-docker compose up -d --build
-```
-
-### Acceder a la consola de PostgreSQL
+### Acceder a la consola SQL
 
 ```bash
 docker exec -it soyucab_postgres psql -U postgres -d db_soyucab
 ```
 
----
+### Ejecutar como usuario específico (demostrar RLS)
 
-## ⚠️ Resolución de Problemas
-
-### Docker no inicia los contenedores
-
-1. Verificar que Docker Desktop esté ejecutándose
-2. Reiniciar Docker Desktop
-3. Ejecutar `docker compose down` y luego `docker compose up -d --build`
-
-### Error de conexión a la base de datos
-
-1. Esperar unos segundos después del `docker compose up` para que PostgreSQL inicialice
-2. Verificar con `docker compose logs db_soyucab` que no haya errores
-
-### Puerto en uso
-
-Si algún puerto está ocupado, puede modificar los puertos en `docker-compose.yml`:
-
-```yaml
-ports:
-  - "PUERTO_LOCAL:PUERTO_CONTENEDOR"
+```bash
+docker exec -it soyucab_postgres psql -U usr_oscar -d db_soyucab
 ```
 
-Por ejemplo, cambiar `"5173:5173"` a `"4000:5173"` para usar el puerto 4000 localmente.
+---
+
+## 🔀 PUERTOS ALTERNATIVOS
+
+Si los puertos estándar están ocupados, usar:
+
+```bash
+docker compose -f docker-compose.alt-ports.yml up -d --build
+```
+
+| Servicio | Puerto Normal | Puerto Alternativo |
+|----------|---------------|-------------------|
+| Dashboard | 80 | 4000 |
+| Backend API | 3000 | 3001 |
+| PostgreSQL | 5432 | 5433 |
+| pgAdmin | 8080 | 8088 |
+| JsReport | 5488 | 5489 |
+
+---
+
+## 🏗️ ARQUITECTURA DEL SISTEMA
+
+```
+┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  📊 Dashboard       │────▶│   🔗 Backend     │────▶│  🐘 PostgreSQL  │
+│  React + Nginx      │     │  Node.js/Express │     │    + Views      │
+│     Puerto 80       │     │   Puerto 3000    │     │   Puerto 5432   │
+└─────────────────────┘     └────────┬─────────┘     └─────────────────┘
+                                     │
+                                     ▼
+                            ┌──────────────────┐
+                            │   📄 JsReport    │
+                            │  (Generador PDF) │
+                            │   Puerto 5488    │
+                            └──────────────────┘
+```
+
+---
+
+## ⚠️ RESOLUCIÓN DE PROBLEMAS
+
+### "Cannot connect to Docker"
+1. Verificar que Docker Desktop esté ejecutándose
+2. Reiniciar Docker Desktop
+
+### La base de datos no inicializa
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+### Error al conectar pgAdmin con la BD
+- Usar `db_soyucab` como host, NO `localhost`
+- El host `localhost` solo funciona fuera de Docker
+
+### Los reportes no cargan
+1. Esperar 30 segundos después del `docker compose up`
+2. Verificar que el backend esté corriendo: `docker compose logs backend`
 
 ---
 
@@ -287,12 +222,3 @@ Por ejemplo, cambiar `"5173:5173"` a `"4000:5173"` para usar el puerto 4000 loca
 **Oscar Jaramillo** - Proyecto de Base de Datos II  
 Universidad Católica Andrés Bello (UCAB)  
 Septiembre 2025 - Enero 2026
-
----
-
-## 📝 Notas Adicionales
-
-- Los scripts SQL en `scripts/` se ejecutan automáticamente al iniciar la base de datos por primera vez
-- Los datos de prueba incluyen miembros, publicaciones, eventos, grupos y más
-- El sistema incluye triggers y procedimientos almacenados para lógica de negocio
-- Los reportes se generan en formato PDF usando JsReport

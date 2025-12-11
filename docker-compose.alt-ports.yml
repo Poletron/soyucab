@@ -92,20 +92,18 @@ services:
       - soyucab-network
 
   # ============================================
-  # SERVICIO FRONTEND (React + Vite)
+  # FRONTEND ENTREGA 3 - Dashboard de Reportes
   # ============================================
-  frontend:
+  reports_dashboard:
     build:
-      context: ./frontend
+      context: ./frontend_dashboard
       dockerfile: Dockerfile
       args:
         VITE_API_URL: http://localhost:3001 # Usar puerto alternativo del backend
-    container_name: soyucab_frontend
+    container_name: soyucab_reports_dashboard
     restart: always
-    environment:
-      VITE_API_URL: http://localhost:3001
     ports:
-      - "4173:5173" # Puerto alternativo 4173
+      - "4000:80" # Puerto alternativo 4000
     depends_on:
       - backend
     networks:
