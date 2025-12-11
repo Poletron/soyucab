@@ -2,6 +2,8 @@
 -- SCRIPT DE REPORTES (VISTAS) - MÓDULO INTERACCIÓN (CORREGIDO)
 -- =============================================================================
 
+-- Oscar Jaramillo
+
 -- 1. REPORTE: TOP CONTENIDO VIRAL
 -- =============================================================================
 CREATE OR REPLACE VIEW V_REPORTE_TOP_VIRAL AS
@@ -20,13 +22,13 @@ SELECT
     FN_CALCULAR_NIVEL_IMPACTO(c.clave_contenido) as score_viralidad,
     
     (SELECT COUNT(*) FROM COMENTARIO com 
-     -- CAMBIO: Subconsulta de comentarios usa la FK simple
-     WHERE com.fk_contenido = c.clave_contenido) as total_comentarios,
-     
+    -- CAMBIO: Subconsulta de comentarios usa la FK simple
+    WHERE com.fk_contenido = c.clave_contenido) as total_comentarios,
+    
     (SELECT COUNT(*) FROM REACCIONA_CONTENIDO re 
-     -- CAMBIO: Subconsulta de reacciones usa la FK simple
-     WHERE re.fk_contenido = c.clave_contenido) as total_reacciones
-     
+    -- CAMBIO: Subconsulta de reacciones usa la FK simple
+    WHERE re.fk_contenido = c.clave_contenido) as total_reacciones
+    
 FROM CONTENIDO c
 JOIN PERSONA p ON c.correo_autor = p.correo_principal
 -- CORRECCIÓN: El JOIN ahora se hace por la clave simple
@@ -79,7 +81,7 @@ WHERE e.fecha_inicio > CURRENT_TIMESTAMP
 GROUP BY e.fk_contenido, e.titulo, e.fecha_inicio, e.ciudad_ubicacion
 ORDER BY e.fecha_inicio ASC;
 
--- En 04_Reportes.sql:
+-- En 04_Reportes.sql: Luis Torres
 
 CREATE OR REPLACE VIEW V_REPORTE_CRECIMIENTO_DEMOGRAFICO AS
 SELECT 
@@ -127,3 +129,70 @@ FROM MIEMBRO m
 JOIN PERSONA p ON m.correo_principal = p.correo_principal
 ORDER BY score_autoridad DESC
 LIMIT 15;
+
+--Pedro
+CREATE VIEW vista_top5_areas_conocimiento_demanda AS
+SELECT
+    T.area_conocimiento,
+    COUNT(ST.correo_solicitante) AS total_solicitudes_area,
+    COUNT(DISTINCT T.correo_tutor) AS total_tutores_disponibles
+FROM
+    TUTORIA T
+LEFT JOIN
+    SOLICITA_TUTORIA ST ON
+        T.correo_tutor = ST.correo_tutor_tutoria AND
+        T.area_conocimiento = ST.area_conocimiento_tutoria AND
+        T.fecha_alta = ST.fecha_alta_tutoria
+GROUP BY
+    T.area_conocimiento
+ORDER BY
+    total_solicitudes_area DESC
+LIMIT 5;
+
+
+CREATE VIEW vista_nexos_vigentes_vs_por_vencer AS
+SELECT
+    TN.nombre_nexo AS tipo_convenio,
+    P.nombres || ' ' || P.apellidos AS nombre_persona,
+    EO.nombre_oficial AS nombre_organizacion,
+    TN.fecha_inicio,
+    TN.fecha_fin,
+    CASE
+        WHEN TN.fecha_fin BETWEEN NOW()::DATE AND (NOW()::DATE + INTERVAL '30 days') THEN 'Por Vencer'
+        WHEN TN.fecha_fin IS NULL OR TN.fecha_fin > (NOW()::DATE + INTERVAL '30 days') THEN 'Vigente'
+        ELSE 'Vencido'
+    END AS estado_vigencia
+FROM
+    TIENE_NEXO TN
+JOIN
+    PERSONA P ON TN.correo_persona = P.correo_principal
+JOIN
+    ENTIDAD_ORGANIZACIONAL EO ON TN.correo_organizacion = EO.correo_principal
+WHERE
+    (
+        TN.fecha_fin IS NULL OR -- Incluye los nexos indefinidos
+        TN.fecha_fin >= NOW()::DATE -- Incluye cualquier nexo cuya fecha de fin sea hoy o en el futuro
+    )
+ORDER BY
+    estado_vigencia DESC;
+
+CREATE VIEW vista_top10_ofertas_mas_postuladas AS
+SELECT
+    OL.titulo_oferta,
+    EO.nombre_oficial AS nombre_organizacion,
+    COUNT(SP.correo_persona) AS cantidad_postulantes
+FROM
+    OFERTA_LABORAL OL
+JOIN
+    ENTIDAD_ORGANIZACIONAL EO ON OL.correo_organizacion = EO.correo_principal
+LEFT JOIN
+    SE_POSTULA SP ON
+        OL.correo_organizacion = SP.correo_organizacion_oferta AND
+        OL.fecha_publicacion = SP.fecha_publicacion_oferta AND
+        OL.titulo_oferta = SP.titulo_oferta
+GROUP BY
+    OL.titulo_oferta,
+    EO.nombre_oficial
+ORDER BY
+    cantidad_postulantes DESC
+LIMIT 10;

@@ -1,7 +1,7 @@
 -- =============================================================================
 -- OBJETO: FUNCIÓN DE LÓGICA DE NEGOCIO (CORREGIDA)
 -- =============================================================================
-
+--Oscar Jaramillo
 -- CAMBIO: La función ahora recibe el ID simple de contenido (clave_contenido)
 CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_IMPACTO(p_clave_contenido INTEGER) 
 RETURNS DECIMAL AS $$
@@ -86,6 +86,7 @@ BEGIN
 END;
 $$;
 
+--Luis
 -- En 02_Logica_Negocio.sql:
 
 CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_AUTORIDAD(p_correo_miembro VARCHAR)
@@ -148,3 +149,35 @@ EXCEPTION
         RAISE EXCEPTION 'Error al crear el grupo y asignar fundador: %', SQLERRM;
 END;
 $$;
+
+--Pedro
+
+CREATE OR REPLACE FUNCTION fn_calcular_tasas_cierre_ofertas()
+RETURNS TABLE (
+    titulo_oferta VARCHAR(255),
+    total_postulaciones BIGINT,
+    total_cerradas BIGINT,
+    tasa_cierre_porcentual NUMERIC
+)
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        OL.titulo_oferta,
+        COUNT(SP.correo_persona) AS total_postulaciones,
+        SUM(CASE WHEN SP.estado_postulacion IN ('Aceptada', 'Rechazada') THEN 1 ELSE 0 END) AS total_cerradas,
+        (CAST(SUM(CASE WHEN SP.estado_postulacion IN ('Aceptada', 'Rechazada') THEN 1 ELSE 0 END) AS NUMERIC) * 100 / COUNT(SP.correo_persona)) AS tasa_cierre
+    FROM
+        OFERTA_LABORAL OL
+    JOIN
+        SE_POSTULA SP ON OL.correo_organizacion = SP.correo_organizacion_oferta
+        AND OL.fecha_publicacion = SP.fecha_publicacion_oferta
+        AND OL.titulo_oferta = SP.titulo_oferta
+    GROUP BY
+        OL.titulo_oferta
+    HAVING
+        COUNT(SP.correo_persona) > 0
+    ORDER BY
+        tasa_cierre DESC;
+END;
+$$ LANGUAGE plpgsql;
