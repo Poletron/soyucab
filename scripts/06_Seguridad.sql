@@ -1,22 +1,25 @@
 -- =============================================================================
--- SCRIPT DE SEGURIDAD (DCL) - ROLES Y RLS (VERSIÓN FINAL)
+-- SCRIPT DE SEGURIDAD (DCL) - ROLES Y RLS
 -- Proyecto: SoyUCAB
 -- Objetivo: Implementación estricta de RBAC y Matriz de Privacidad.
--- Versión: Actualizada a Claves Compuestas
 -- =============================================================================
 
--- 1. LIMPIEZA INICIAL
 -- =============================================================================
+-- 1. LIMPIEZA INICIAL - POLÍTICAS RLS
+-- =============================================================================
+-- Eliminamos políticas de seguridad a nivel de fila que recrearemos
 DROP POLICY IF EXISTS p_contenido_publico ON CONTENIDO;
 DROP POLICY IF EXISTS p_contenido_privado ON CONTENIDO;
 DROP POLICY IF EXISTS p_contenido_conexiones ON CONTENIDO;
-DROP FUNCTION IF EXISTS fn_get_auth_correo;
 
--- AÑADIDO: Limpieza de objetos de Logica_Negocio.sql
-DROP FUNCTION IF EXISTS FN_CALCULAR_NIVEL_IMPACTO(INTEGER); 
-DROP PROCEDURE IF EXISTS SP_CERRAR_EVENTO_Y_CREAR_RESEÑA(VARCHAR, TIMESTAMP);
+-- Eliminamos la función de identidad que recrearemos en este script
+DROP FUNCTION IF EXISTS fn_get_auth_correo();
 
--- Borramos usuarios y roles si existen
+
+-- =============================================================================
+-- 2. LIMPIEZA INICIAL - USUARIOS Y ROLES
+-- =============================================================================
+-- NOTA: Los usuarios deben eliminarse antes que los roles padre
 DROP ROLE IF EXISTS usr_oscar;
 DROP ROLE IF EXISTS usr_luis;
 DROP ROLE IF EXISTS usr_extrano;
@@ -25,13 +28,16 @@ DROP ROLE IF EXISTS usr_admin_moderador;
 DROP ROLE IF EXISTS usr_auditor;
 DROP ROLE IF EXISTS usr_anonimo;
 
+-- Ahora eliminamos los roles genéricos
 DROP ROLE IF EXISTS rol_persona;
 DROP ROLE IF EXISTS rol_entidad;
 DROP ROLE IF EXISTS rol_moderador;
 DROP ROLE IF EXISTS rol_auditor;
 DROP ROLE IF EXISTS rol_anonimo;
 
--- 2. CREACIÓN DE PERFILES (ROLES GENÉRICOS)
+
+-- =============================================================================
+-- 3. CREACIÓN DE PERFILES (ROLES GENÉRICOS)
 -- =============================================================================
 
 -- A. Rol Anónimo (Invitado - solo lectura de contenido público)
@@ -52,7 +58,8 @@ CREATE ROLE rol_moderador NOLOGIN BYPASSRLS;
 CREATE ROLE rol_auditor NOLOGIN; 
 
 
--- 3. CREACIÓN DE USUARIOS (ACTORES)
+-- =============================================================================
+-- 4. CREACIÓN DE USUARIOS (ACTORES)
 -- =============================================================================
 -- +----------------------+---------------------+----------------+----------+
 -- | Usuario PostgreSQL   | Correo Asociado     | Rol            | Password |
@@ -84,7 +91,8 @@ CREATE ROLE usr_admin_moderador WITH LOGIN PASSWORD 'admin123' IN ROLE rol_moder
 CREATE ROLE usr_auditor WITH LOGIN PASSWORD 'audit123' IN ROLE rol_auditor;
 
 
--- 4. ASIGNACIÓN DE PERMISOS (MATRIZ DE ACCESO)
+-- =============================================================================
+-- 5. ASIGNACIÓN DE PERMISOS (MATRIZ DE ACCESO)
 -- =============================================================================
 
 -- PERMISOS ROL ANÓNIMO (Solo lectura de contenido público)
@@ -101,10 +109,7 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rol_persona, rol_entida
 -- PERMISOS DEL MODERADOR (Poder Total de Gestión)
 GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rol_moderador;
 
--- PERMISOS DEL AUDITOR (Solo Lectura para BI y Reportería)
--- Nota: Ya tiene SELECT global, aquí se documenta el propósito
-
--- PERMISOS DE CONTENIDO (Compartidos)
+-- PERMISOS DE CONTENIDO (Compartidos entre PERSONA y ENTIDAD)
 GRANT INSERT, UPDATE ON CONTENIDO, PUBLICACION, EVENTO, COMENTARIO, REACCIONA_CONTENIDO TO rol_persona, rol_entidad;
 
 -- REGLA ANTI-SPAM DE MENSAJERÍA
@@ -116,10 +121,11 @@ GRANT INSERT, UPDATE ON OFERTA_LABORAL TO rol_entidad;
 GRANT INSERT, UPDATE ON SE_POSTULA TO rol_persona;
 
 
--- 5. TABLA DE MAPEO USUARIO POSTGRES → CORREO
+-- =============================================================================
+-- 6. TABLA DE MAPEO USUARIO POSTGRES → CORREO
 -- =============================================================================
 -- Esta tabla permite mapear usuarios de PostgreSQL a correos de la aplicación
--- de forma dinámica (ahora se ejecuta después de 05_Semilla_Datos.sql)
+-- de forma dinámica (se ejecuta después de 05_Semilla_Datos.sql)
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS MAPEO_USUARIO_POSTGRES (
@@ -135,16 +141,19 @@ INSERT INTO MAPEO_USUARIO_POSTGRES (usuario_postgres, correo_aplicacion, descrip
 ('usr_luis', 'luis@ucab.edu.ve', 'Estudiante amigo de Oscar'),
 ('usr_extrano', 'nuevo.ingreso@ucab.edu.ve', 'Usuario sin conexiones sociales'),
 ('usr_polar', 'rrhh@polar.com', 'Empresa Polar'),
-('usr_admin_moderador', 'moderador@ucab.edu.ve', 'Moderador del sistema'), -- CAMBIO: Usar un correo ficticio de staff
-('usr_auditor', 'auditor@ucab.edu.ve', 'Auditor de reportes')              -- CAMBIO: Usar un correo ficticio de staff
+('usr_admin_moderador', 'moderador@ucab.edu.ve', 'Moderador del sistema'),
+('usr_auditor', 'auditor@ucab.edu.ve', 'Auditor de reportes')
 ON CONFLICT (usuario_postgres) DO UPDATE SET correo_aplicacion = EXCLUDED.correo_aplicacion;
 
--- 6. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN DINÁMICA
+
+-- =============================================================================
+-- 7. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN DINÁMICA
 -- =============================================================================
 -- Soporta AMBOS modos:
 --   1. API Mode: Lee la variable de sesión 'app.user_email' (Backend Node.js)
 --   2. Terminal Mode: Busca en MAPEO_USUARIO_POSTGRES (pgAdmin/psql)
 -- =============================================================================
+
 CREATE OR REPLACE FUNCTION fn_get_auth_correo() RETURNS VARCHAR(255) AS $$
 DECLARE
     v_api_user VARCHAR(255);
@@ -170,7 +179,8 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 
 
--- 6. SEGURIDAD A NIVEL DE FILA (RLS)
+-- =============================================================================
+-- 8. SEGURIDAD A NIVEL DE FILA (RLS) - TABLA CONTENIDO
 -- =============================================================================
 
 ALTER TABLE CONTENIDO ENABLE ROW LEVEL SECURITY;
@@ -200,10 +210,18 @@ USING (
 
 -- NOTA: El rol_moderador ignora estas políticas gracias a BYPASSRLS.
 
+
 -- =============================================================================
--- 8. PERMISOS PARA VISTAS DE REPORTES
+-- 9. PERMISOS PARA VISTAS DE REPORTES
 -- =============================================================================
 -- Solo el MODERADOR y AUDITOR tienen acceso a los reportes estratégicos
+
+-- Reportes principales de interacción
 GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador, rol_auditor;
+
+-- Reportes adicionales de análisis
+GRANT SELECT ON V_REPORTE_CRECIMIENTO_DEMOGRAFICO TO rol_moderador, rol_auditor;
+GRANT SELECT ON V_GRUPOS_MAS_ACTIVOS TO rol_moderador, rol_auditor;
+GRANT SELECT ON V_TOP_REFERENTES_COMUNIDAD TO rol_moderador, rol_auditor;
