@@ -1,6 +1,6 @@
 # 🎓 SoyUCAB - Red Social Institucional
 
-Sistema de red social institucional para la Universidad Católica Andrés Bello (UCAB), desarrollado como proyecto de Base de Datos II.
+Sistema de red social institucional para la Universidad Católica Andrés Bello (UCAB), desarrollado como proyecto de Base de Datos.
 
 ---
 
@@ -219,6 +219,6 @@ docker compose up -d --build
 
 ## 👨‍💻 Desarrollado por
 
-**Oscar Jaramillo** - Proyecto de Base de Datos II  
+**Oscar Jaramillo** - **Luis Torres** - **Pedro Urdaneta**  
 Universidad Católica Andrés Bello (UCAB)  
 Septiembre 2025 - Enero 2026
