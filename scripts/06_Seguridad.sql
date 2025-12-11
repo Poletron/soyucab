@@ -12,6 +12,10 @@ DROP POLICY IF EXISTS p_contenido_privado ON CONTENIDO;
 DROP POLICY IF EXISTS p_contenido_conexiones ON CONTENIDO;
 DROP FUNCTION IF EXISTS fn_get_auth_correo;
 
+-- AÑADIDO: Limpieza de objetos de Logica_Negocio.sql
+DROP FUNCTION IF EXISTS FN_CALCULAR_NIVEL_IMPACTO(INTEGER); 
+DROP PROCEDURE IF EXISTS SP_CERRAR_EVENTO_Y_CREAR_RESEÑA(VARCHAR, TIMESTAMP);
+
 -- Borramos usuarios y roles si existen
 DROP ROLE IF EXISTS usr_oscar;
 DROP ROLE IF EXISTS usr_luis;
@@ -131,8 +135,8 @@ INSERT INTO MAPEO_USUARIO_POSTGRES (usuario_postgres, correo_aplicacion, descrip
 ('usr_luis', 'luis@ucab.edu.ve', 'Estudiante amigo de Oscar'),
 ('usr_extrano', 'nuevo.ingreso@ucab.edu.ve', 'Usuario sin conexiones sociales'),
 ('usr_polar', 'rrhh@polar.com', 'Empresa Polar'),
-('usr_admin_moderador', 'oscar@ucab.edu.ve', 'Moderador del sistema'),
-('usr_auditor', 'oscar@ucab.edu.ve', 'Auditor de reportes')
+('usr_admin_moderador', 'moderador@ucab.edu.ve', 'Moderador del sistema'), -- CAMBIO: Usar un correo ficticio de staff
+('usr_auditor', 'auditor@ucab.edu.ve', 'Auditor de reportes')              -- CAMBIO: Usar un correo ficticio de staff
 ON CONFLICT (usuario_postgres) DO UPDATE SET correo_aplicacion = EXCLUDED.correo_aplicacion;
 
 -- 6. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN DINÁMICA

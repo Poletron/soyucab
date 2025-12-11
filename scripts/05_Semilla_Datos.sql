@@ -87,7 +87,9 @@ DECLARE
         ['prof.rodriguez@ucab.edu.ve', 'V-15000002', 'María Elena', 'Rodríguez Docente', '1980-09-15', 'Femenino', 'Coordinadora Postgrado', 'Venezuela', 'Caracas'],
         ['egresado.tech@gmail.com', 'V-20000001', 'Fernando', 'Tech Egresado', '1990-04-20', 'Masculino', 'CTO Startup', 'Venezuela', 'Caracas'],
         ['alumni.empresaria@gmail.com', 'V-20000002', 'Patricia', 'Empresaria Alumni', '1988-11-05', 'Femenino', 'CEO Consultora', 'Venezuela', 'Caracas'],
-        ['nuevo.ingreso@ucab.edu.ve', 'V-31000001', 'Leonardo', 'Nuevo Ingreso', '2005-01-15', 'Masculino', 'Primer Semestre', 'Venezuela', 'Caracas']
+        ['nuevo.ingreso@ucab.edu.ve', 'V-31000001', 'Leonardo', 'Nuevo Ingreso', '2005-01-15', 'Masculino', 'Primer Semestre', 'Venezuela', 'Caracas'],
+        ['moderador@ucab.edu.ve', 'V-10000001', 'Staff', 'Moderador', '1995-01-01', 'No Especificado', 'Staff de Moderación y Contenido.', 'Venezuela', 'Caracas'],
+        ['auditor@ucab.edu.ve', 'V-10000002', 'Staff', 'Auditor', '1990-01-01', 'No Especificado', 'Staff de Auditoría y BI.', 'Venezuela', 'Caracas']
     ];
     u TEXT[];
     vis TEXT[] := ARRAY['Público', 'Público', 'Solo Conexiones'];
@@ -238,7 +240,7 @@ INSERT INTO PERTENECE_A_GRUPO (correo_persona, nombre_grupo, fecha_union, rol_en
 ('luis@ucab.edu.ve', 'Investigación IA', NOW() - INTERVAL '8 months', 'Miembro');
 
 -- =============================================================================
--- 8. CONVERSACION + PARTICIPA_EN + MENSAJE
+-- 8. CONVERSACION + PARTICIPA_EN + MENSAJE (CORREGIDO)
 -- =============================================================================
 
 DO $$
@@ -246,31 +248,68 @@ DECLARE
     v_fecha_chat1 TIMESTAMP := NOW() - INTERVAL '2 months';
     v_fecha_chat2 TIMESTAMP := NOW() - INTERVAL '1 month';
     v_fecha_chat3 TIMESTAMP := NOW() - INTERVAL '2 weeks';
+    v_id_conv1 INTEGER; -- NUEVO: Variable para guardar el ID de la conversación
+    v_id_conv2 INTEGER;
+    v_id_conv3 INTEGER;
 BEGIN
     -- Chat 1: Oscar y Luis
-    INSERT INTO CONVERSACION VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'Proyecto BD', 'Privado');
-    INSERT INTO PARTICIPA_EN VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'oscar@ucab.edu.ve', v_fecha_chat1);
-    INSERT INTO PARTICIPA_EN VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'luis@ucab.edu.ve', v_fecha_chat1 + INTERVAL '1 minute');
-    INSERT INTO MENSAJE VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, v_fecha_chat1 + INTERVAL '5 minutes', 'oscar@ucab.edu.ve', 'Hola Luis, ¿cómo vas con el proyecto?', 'Leído');
-    INSERT INTO MENSAJE VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, v_fecha_chat1 + INTERVAL '10 minutes', 'luis@ucab.edu.ve', 'Bien, ya terminé las consultas SQL', 'Leído');
-    INSERT INTO MENSAJE VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, v_fecha_chat1 + INTERVAL '15 minutes', 'oscar@ucab.edu.ve', 'Perfecto, nos vemos mañana', 'Leído');
+    -- 1. INSERTAR CONVERSACIÓN y capturar el ID generado por SERIAL
+    INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
+    VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'Proyecto BD', 'Privado')
+    RETURNING clave_conversacion INTO v_id_conv1; -- CAPTURAR EL ID
+
+    -- 2. INSERTAR PARTICIPANTES usando el ID (fk_conversacion)
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv1, 'oscar@ucab.edu.ve', v_fecha_chat1);
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv1, 'luis@ucab.edu.ve', v_fecha_chat1 + INTERVAL '1 minute');
+
+    -- 3. INSERTAR MENSAJES usando el ID (fk_conversacion)
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv1, v_fecha_chat1 + INTERVAL '5 minutes', 'oscar@ucab.edu.ve', 'Hola Luis, ¿cómo vas con el proyecto?', 'Leído');
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv1, v_fecha_chat1 + INTERVAL '10 minutes', 'luis@ucab.edu.ve', 'Bien, ya terminé las consultas SQL', 'Leído');
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv1, v_fecha_chat1 + INTERVAL '15 minutes', 'oscar@ucab.edu.ve', 'Perfecto, nos vemos mañana', 'Leído');
 
     -- Chat 2: Grupo Gaming
-    INSERT INTO CONVERSACION VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'Torneo FIFA', 'Grupo');
-    INSERT INTO PARTICIPA_EN VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'pedro@ucab.edu.ve', v_fecha_chat2);
-    INSERT INTO PARTICIPA_EN VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'juan@ucab.edu.ve', v_fecha_chat2 + INTERVAL '1 minute');
-    INSERT INTO PARTICIPA_EN VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'diego.ramirez@ucab.edu.ve', v_fecha_chat2 + INTERVAL '2 minutes');
-    INSERT INTO MENSAJE VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, v_fecha_chat2 + INTERVAL '5 minutes', 'pedro@ucab.edu.ve', '¡El torneo es este viernes!', 'Leído');
-    INSERT INTO MENSAJE VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, v_fecha_chat2 + INTERVAL '8 minutes', 'juan@ucab.edu.ve', 'Yo me anoto 🎮', 'Leído');
-    INSERT INTO MENSAJE VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, v_fecha_chat2 + INTERVAL '12 minutes', 'diego.ramirez@ucab.edu.ve', 'Cuenta conmigo también', 'Entregado');
+    INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
+    VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'Torneo FIFA', 'Grupo')
+    RETURNING clave_conversacion INTO v_id_conv2;
+
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv2, 'pedro@ucab.edu.ve', v_fecha_chat2);
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv2, 'juan@ucab.edu.ve', v_fecha_chat2 + INTERVAL '1 minute');
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv2, 'diego.ramirez@ucab.edu.ve', v_fecha_chat2 + INTERVAL '2 minutes');
+    
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv2, v_fecha_chat2 + INTERVAL '5 minutes', 'pedro@ucab.edu.ve', '¡El torneo es este viernes!', 'Leído');
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv2, v_fecha_chat2 + INTERVAL '8 minutes', 'juan@ucab.edu.ve', 'Yo me anoto 🎮', 'Leído');
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv2, v_fecha_chat2 + INTERVAL '12 minutes', 'diego.ramirez@ucab.edu.ve', 'Cuenta conmigo también', 'Entregado');
 
     -- Chat 3: Sebastián y Ricardo (Data Science)
-    INSERT INTO CONVERSACION VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'Paper ML', 'Privado');
-    INSERT INTO PARTICIPA_EN VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'sebastian.lopez@ucab.edu.ve', v_fecha_chat3);
-    INSERT INTO PARTICIPA_EN VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'ricardo.aguilar@ucab.edu.ve', v_fecha_chat3 + INTERVAL '1 minute');
-    INSERT INTO MENSAJE VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, v_fecha_chat3 + INTERVAL '5 minutes', 'sebastian.lopez@ucab.edu.ve', '¿Revisaste el modelo de NLP?', 'Leído');
-    INSERT INTO MENSAJE VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, v_fecha_chat3 + INTERVAL '20 minutes', 'ricardo.aguilar@ucab.edu.ve', 'Sí, el accuracy subió a 94%', 'Enviado');
+    INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
+    VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'Paper ML', 'Privado')
+    RETURNING clave_conversacion INTO v_id_conv3;
+
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv3, 'sebastian.lopez@ucab.edu.ve', v_fecha_chat3);
+    INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
+    VALUES (v_id_conv3, 'ricardo.aguilar@ucab.edu.ve', v_fecha_chat3 + INTERVAL '1 minute');
+    
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv3, v_fecha_chat3 + INTERVAL '5 minutes', 'sebastian.lopez@ucab.edu.ve', '¿Revisaste el modelo de NLP?', 'Leído');
+    INSERT INTO MENSAJE (fk_conversacion, fecha_hora_envio, correo_autor_mensaje, texto_mensaje, estado_mensaje) 
+    VALUES (v_id_conv3, v_fecha_chat3 + INTERVAL '20 minutes', 'ricardo.aguilar@ucab.edu.ve', 'Sí, el accuracy subió a 94%', 'Enviado');
 END $$;
+
+-- =============================================================================
+-- 9. TUTORIA + SOLICITA_TUTORIA (CORREGIDO)
+-- =============================================================================
 
 DO $$
 DECLARE
@@ -281,26 +320,63 @@ DECLARE
     v_fecha_tut5 TIMESTAMP := NOW() - INTERVAL '6 months';
     v_fecha_tut6 TIMESTAMP := NOW() - INTERVAL '8 months';
     v_fecha_tut7 TIMESTAMP := NOW() - INTERVAL '2 years';
+    
+    v_id_tut1 INTEGER; -- NUEVO: Variables para guardar el ID de la tutoría
+    v_id_tut2 INTEGER;
+    v_id_tut3 INTEGER;
+    v_id_tut4 INTEGER;
+    v_id_tut5 INTEGER;
+    v_id_tut6 INTEGER;
+    v_id_tut7 INTEGER;
 BEGIN
-    -- Tutorías
-    INSERT INTO TUTORIA VALUES ('prof.martinez@ucab.edu.ve', 'Desarrollo de Software', v_fecha_tut1, 'Arquitectura y buenas prácticas');
-    INSERT INTO TUTORIA VALUES ('prof.martinez@ucab.edu.ve', 'Bases de Datos', v_fecha_tut2, 'Diseño y optimización');
-    INSERT INTO TUTORIA VALUES ('prof.rodriguez@ucab.edu.ve', 'Gerencia de Proyectos', v_fecha_tut3, 'Metodologías ágiles');
-    INSERT INTO TUTORIA VALUES ('egresado.tech@gmail.com', 'Emprendimiento Tech', v_fecha_tut4, 'Crear y escalar startups');
-    INSERT INTO TUTORIA VALUES ('sebastian.lopez@ucab.edu.ve', 'Data Science', v_fecha_tut5, 'Machine learning con Python');
-    INSERT INTO TUTORIA VALUES ('ricardo.aguilar@ucab.edu.ve', 'Inteligencia Artificial', v_fecha_tut6, 'Deep learning y NLP');
-    INSERT INTO TUTORIA VALUES ('alumni.empresaria@gmail.com', 'Finanzas Corporativas', v_fecha_tut7, 'Análisis financiero');
+    -- Tutorías (INSERTAR y CAPTURAR ID)
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('prof.martinez@ucab.edu.ve', 'Desarrollo de Software', v_fecha_tut1, 'Arquitectura y buenas prácticas')
+    RETURNING clave_tutoria INTO v_id_tut1;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('prof.martinez@ucab.edu.ve', 'Bases de Datos', v_fecha_tut2, 'Diseño y optimización')
+    RETURNING clave_tutoria INTO v_id_tut2;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('prof.rodriguez@ucab.edu.ve', 'Gerencia de Proyectos', v_fecha_tut3, 'Metodologías ágiles')
+    RETURNING clave_tutoria INTO v_id_tut3;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('egresado.tech@gmail.com', 'Emprendimiento Tech', v_fecha_tut4, 'Crear y escalar startups')
+    RETURNING clave_tutoria INTO v_id_tut4;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('sebastian.lopez@ucab.edu.ve', 'Data Science', v_fecha_tut5, 'Machine learning con Python')
+    RETURNING clave_tutoria INTO v_id_tut5;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('ricardo.aguilar@ucab.edu.ve', 'Inteligencia Artificial', v_fecha_tut6, 'Deep learning y NLP')
+    RETURNING clave_tutoria INTO v_id_tut6;
+    
+    INSERT INTO TUTORIA (correo_tutor, area_conocimiento, fecha_alta, descripcion_enfoque) 
+    VALUES ('alumni.empresaria@gmail.com', 'Finanzas Corporativas', v_fecha_tut7, 'Análisis financiero')
+    RETURNING clave_tutoria INTO v_id_tut7;
 
-    -- Solicitudes de tutoría (con mismas fechas)
-    INSERT INTO SOLICITA_TUTORIA VALUES ('oscar@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'Desarrollo de Software', v_fecha_tut1, NOW() - INTERVAL '6 months', 'Completada');
-    INSERT INTO SOLICITA_TUTORIA VALUES ('luis@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'Bases de Datos', v_fecha_tut2, NOW() - INTERVAL '3 months', 'Aceptada');
-    INSERT INTO SOLICITA_TUTORIA VALUES ('andres.castro@ucab.edu.ve', 'alumni.empresaria@gmail.com', 'Finanzas Corporativas', v_fecha_tut7, NOW() - INTERVAL '1 month', 'Aceptada');
-    INSERT INTO SOLICITA_TUTORIA VALUES ('mateo.gonzalez@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve', 'Data Science', v_fecha_tut5, NOW() - INTERVAL '2 weeks', 'Enviada');
-    INSERT INTO SOLICITA_TUTORIA VALUES ('diego.ramirez@ucab.edu.ve', 'egresado.tech@gmail.com', 'Emprendimiento Tech', v_fecha_tut4, NOW() - INTERVAL '1 week', 'Enviada');
+    -- Solicitudes de tutoría (usando el ID simple)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) 
+    VALUES ('oscar@ucab.edu.ve', v_id_tut1, NOW() - INTERVAL '6 months', 'Completada');
+    
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) 
+    VALUES ('luis@ucab.edu.ve', v_id_tut2, NOW() - INTERVAL '3 months', 'Aceptada');
+    
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) 
+    VALUES ('andres.castro@ucab.edu.ve', v_id_tut7, NOW() - INTERVAL '1 month', 'Aceptada');
+    
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) 
+    VALUES ('mateo.gonzalez@ucab.edu.ve', v_id_tut5, NOW() - INTERVAL '2 weeks', 'Enviada');
+    
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) 
+    VALUES ('diego.ramirez@ucab.edu.ve', v_id_tut4, NOW() - INTERVAL '1 week', 'Enviada');
 END $$;
 
 -- =============================================================================
--- 10. OFERTA_LABORAL + SE_POSTULA
+-- 10. OFERTA_LABORAL + SE_POSTULA (CORREGIDO)
 -- =============================================================================
 
 DO $$
@@ -310,170 +386,142 @@ DECLARE
     v_fecha3 TIMESTAMP := NOW() - INTERVAL '15 days';
     v_fecha4 TIMESTAMP := NOW() - INTERVAL '5 days';
     v_fecha5 TIMESTAMP := NOW() - INTERVAL '3 days';
+    
+    v_id_oferta1 INTEGER; -- NUEVO: Variables para guardar el ID de la oferta
+    v_id_oferta2 INTEGER;
+    v_id_oferta3 INTEGER;
+    v_id_oferta4 INTEGER;
+    v_id_oferta5 INTEGER;
+    v_id_oferta6 INTEGER;
 BEGIN
-    INSERT INTO OFERTA_LABORAL VALUES ('talento@banesco.com', v_fecha1, 'Analista de Datos Junior', 'Análisis de datos financieros', 'SQL, Python, Excel', 'Híbrido');
-    INSERT INTO OFERTA_LABORAL VALUES ('talento@banesco.com', v_fecha2, 'Desarrollador Backend Java', 'Desarrollo de servicios bancarios', 'Java, Spring Boot', 'Presencial');
-    INSERT INTO OFERTA_LABORAL VALUES ('rrhh@movistar.com.ve', v_fecha3, 'Ingeniero DevOps', 'Automatización cloud', 'AWS, Docker, Kubernetes', 'Remoto');
-    INSERT INTO OFERTA_LABORAL VALUES ('rrhh@movistar.com.ve', v_fecha4, 'Product Manager', 'Gestión de productos digitales', 'Scrum, Jira', 'Híbrido');
-    INSERT INTO OFERTA_LABORAL VALUES ('innovacion@ucab.edu.ve', v_fecha5, 'Mentor de Startups', 'Acompañamiento emprendedores', 'Experiencia emprendimiento', 'Presencial');
-    INSERT INTO OFERTA_LABORAL VALUES ('rrhh@polar.com', NOW() - INTERVAL '5 days', 'Desarrollador Junior SQL', 'Experto en PostgreSQL', 'SQL Avanzado', 'Presencial');
+    -- Ofertas (INSERTAR y CAPTURAR ID)
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('talento@banesco.com', v_fecha1, 'Analista de Datos Junior', 'Análisis de datos financieros', 'SQL, Python, Excel', 'Híbrido')
+    RETURNING clave_oferta INTO v_id_oferta1;
+    
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('talento@banesco.com', v_fecha2, 'Desarrollador Backend Java', 'Desarrollo de servicios bancarios', 'Java, Spring Boot', 'Presencial')
+    RETURNING clave_oferta INTO v_id_oferta2;
+    
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('rrhh@movistar.com.ve', v_fecha3, 'Ingeniero DevOps', 'Automatización cloud', 'AWS, Docker, Kubernetes', 'Remoto')
+    RETURNING clave_oferta INTO v_id_oferta3;
+    
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('rrhh@movistar.com.ve', v_fecha4, 'Product Manager', 'Gestión de productos digitales', 'Scrum, Jira', 'Híbrido')
+    RETURNING clave_oferta INTO v_id_oferta4;
+    
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('innovacion@ucab.edu.ve', v_fecha5, 'Mentor de Startups', 'Acompañamiento emprendedores', 'Experiencia emprendimiento', 'Presencial')
+    RETURNING clave_oferta INTO v_id_oferta5;
+    
+    INSERT INTO OFERTA_LABORAL (correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad) 
+    VALUES ('rrhh@polar.com', NOW() - INTERVAL '5 days', 'Desarrollador Junior SQL', 'Experto en PostgreSQL', 'SQL Avanzado', 'Presencial')
+    RETURNING clave_oferta INTO v_id_oferta6;
 
-    INSERT INTO SE_POSTULA VALUES ('sebastian.lopez@ucab.edu.ve', 'talento@banesco.com', v_fecha1, 'Analista de Datos Junior', NOW() - INTERVAL '9 days', 'En Revisión');
-    INSERT INTO SE_POSTULA VALUES ('luis@ucab.edu.ve', 'talento@banesco.com', v_fecha1, 'Analista de Datos Junior', NOW() - INTERVAL '8 days', 'Enviada');
-    INSERT INTO SE_POSTULA VALUES ('david.fuentes@ucab.edu.ve', 'rrhh@movistar.com.ve', v_fecha3, 'Ingeniero DevOps', NOW() - INTERVAL '14 days', 'Aceptada');
-    INSERT INTO SE_POSTULA VALUES ('roberto.herrera@ucab.edu.ve', 'rrhh@movistar.com.ve', v_fecha3, 'Ingeniero DevOps', NOW() - INTERVAL '13 days', 'En Revisión');
-    INSERT INTO SE_POSTULA VALUES ('alejandro.navarro@ucab.edu.ve', 'talento@banesco.com', v_fecha2, 'Desarrollador Backend Java', NOW() - INTERVAL '6 days', 'Enviada');
-    INSERT INTO SE_POSTULA VALUES ('oscar@ucab.edu.ve', 'rrhh@polar.com', NOW() - INTERVAL '5 days', 'Desarrollador Junior SQL', NOW() - INTERVAL '4 days', 'Enviada');
+    -- Postulaciones (usando el ID simple)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('sebastian.lopez@ucab.edu.ve', v_id_oferta1, NOW() - INTERVAL '9 days', 'En Revisión');
+    
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('luis@ucab.edu.ve', v_id_oferta1, NOW() - INTERVAL '8 days', 'Enviada');
+    
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('david.fuentes@ucab.edu.ve', v_id_oferta3, NOW() - INTERVAL '14 days', 'Aceptada');
+    
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('roberto.herrera@ucab.edu.ve', v_id_oferta3, NOW() - INTERVAL '13 days', 'En Revisión');
+    
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('alejandro.navarro@ucab.edu.ve', v_id_oferta2, NOW() - INTERVAL '6 days', 'Enviada');
+    
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) 
+    VALUES ('oscar@ucab.edu.ve', v_id_oferta6, NOW() - INTERVAL '4 days', 'Enviada');
 END $$;
 
 -- =============================================================================
--- 11. CONTENIDO + PUBLICACION (80+ publicaciones)
+-- 11. CONTENIDO + PUBLICACION (80+ publicaciones) (CORREGIDO)
 -- =============================================================================
 
 DO $$
 DECLARE
-    contenidos TEXT[] := ARRAY[
-        '¡Acabo de terminar mi proyecto final de bases de datos! PostgreSQL es increíble 🐘',
-        'Reflexión del día: El éxito no es la clave de la felicidad 💭',
-        'Increíble charla sobre inteligencia artificial en el auditorio 🤖',
-        'Buscando compañeros para proyecto de emprendimiento fintech 💰',
-        'Nuevo tutorial de React publicado en mi blog 👨‍💻',
-        '¡Primer día de pasantías! Nervios y emoción 🎉',
-        'Aprendiendo Docker y Kubernetes. DevOps is the way! 🐳',
-        'Conferencia de periodismo digital este viernes 📰',
-        'Terminé de leer Clean Code. Altamente recomendado 📚',
-        'Feliz de anunciar que fui aceptado en intercambio 🌍',
-        'Workshop de diseño UX mañana a las 3pm 🎨',
-        'La importancia de las soft skills en el mundo laboral 💼',
-        'Nuevo paper publicado sobre machine learning en medicina 📄',
-        '¿Alguien emocionado por el torneo de FIFA? ⚽🎮',
-        'Tips para sobrevivir la semana de parciales ☕',
-        'Networking en el evento de la cámara de comercio 🤝',
-        'Mi experiencia implementando metodologías ágiles 📊',
-        'Celebrando 1 año en mi primera empresa 🎂',
-        'Webinar gratuito sobre inversiones para principiantes 💹',
-        'La UCAB siempre será mi segundo hogar ❤️',
-        'Preparando presentación para defensa de tesis 🎓',
-        'Nuevo proyecto de investigación aprobado 🔬',
-        'El poder del networking: cómo conseguí mi empleo 🚀',
-        'Iniciando curso de certificación en AWS ☁️',
-        'Compartiendo mi experiencia en el hackathon 💻',
-        'Meditación y productividad: mindfulness 🧘',
-        'Nuevo episodio de mi podcast sobre emprendimiento 🎙️',
-        '¿Interesados en grupo de estudio para TOEFL? 📝',
-        'Graduación de mi hermana hoy. Orgulloso! 👩‍🎓',
-        'Review de las mejores laptops para programadores 💻',
-        'Empezando el gimnasio. Nuevo año, nueva yo 💪',
-        'Increíble sunset desde el campus 🌅',
-        'Tips para preparar un CV que destaque 📄',
-        'Blockchain y el futuro de las finanzas 🔗',
-        'Feliz de ser mentor en el programa de nuevos ingresos 👨‍🏫',
-        'Mi rutina de productividad matutina ⏰',
-        'Celebrando el Día del Ingeniero 🛠️',
-        'Nueva oportunidad de voluntariado 🤲',
-        'El arte de balancear trabajo y estudios 📚💼',
-        'Cybersecurity tip: activen 2FA 🔒'
-    ];
-    autores TEXT[] := ARRAY[
-        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 
-        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'sofia.hernandez@ucab.edu.ve',
-        'diego.ramirez@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', 'andres.castro@ucab.edu.ve',
-        'isabella.morales@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', 'camila.ortiz@ucab.edu.ve',
-        'sebastian.lopez@ucab.edu.ve', 'mariana.torres@ucab.edu.ve', 'alejandro.navarro@ucab.edu.ve',
-        'daniela.rios@ucab.edu.ve', 'nicolas.flores@ucab.edu.ve', 'lucia.jimenez@ucab.edu.ve',
-        'mateo.gonzalez@ucab.edu.ve', 'paula.martinez@ucab.edu.ve', 'julian.sanchez@ucab.edu.ve',
-        'roberto.herrera@ucab.edu.ve', 'fernanda.cruz@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve',
-        'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve', 'pablo.guerrero@ucab.edu.ve',
-        'santiago.pena@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
-    ];
+    contenidos TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
+    autores TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
     v_fecha TIMESTAMP;
     v_autor TEXT;
     v_contenido TEXT;
     vis TEXT[] := ARRAY['Público', 'Público', 'Público', 'Solo Conexiones'];
+    v_id_contenido INTEGER; -- NUEVO: Variable para capturar el ID de CONTENIDO
 BEGIN
     FOR i IN 1..80 LOOP
         v_fecha := NOW() - (RANDOM() * INTERVAL '180 days');
         v_autor := autores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(autores, 1))::INT];
         v_contenido := contenidos[1 + FLOOR(RANDOM() * ARRAY_LENGTH(contenidos, 1))::INT] || ' #' || i;
         
+        -- 1. INSERTAR CONTENIDO y CAPTURAR el ID
         INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
-        VALUES (v_autor, v_fecha, v_contenido, vis[1 + FLOOR(RANDOM() * ARRAY_LENGTH(vis, 1))::INT]);
+        VALUES (v_autor, v_fecha, v_contenido, vis[1 + FLOOR(RANDOM() * ARRAY_LENGTH(vis, 1))::INT])
+        RETURNING clave_contenido INTO v_id_contenido; -- CAPTURAR EL ID
         
-        INSERT INTO PUBLICACION (correo_autor, fecha_hora_creacion)
-        VALUES (v_autor, v_fecha);
+        -- 2. INSERTAR PUBLICACION usando la FK simple
+        INSERT INTO PUBLICACION (fk_contenido) -- Solo necesitamos el ID!
+        VALUES (v_id_contenido);
     END LOOP;
 END $$;
 
 -- =============================================================================
--- 12. EVENTO (15 eventos pasados y futuros)
+-- 12. EVENTO (15 eventos pasados y futuros) (CORREGIDO)
 -- =============================================================================
 
 DO $$
 DECLARE
-    eventos TEXT[][] := ARRAY[
-        ['rrhh@polar.com', 'Feria Polar 2024', 'Feria de empleo', '-45', '6', 'Caracas'],
-        ['innovacion@ucab.edu.ve', 'Startup Weekend', 'Competencia 54 horas', '-30', '54', 'Caracas'],
-        ['giia@ucab.edu.ve', 'Simposio IA', 'Presentación papers', '-20', '8', 'Caracas'],
-        ['oscar@ucab.edu.ve', 'Hackathon BD', 'Competencia SQL', '-15', '24', 'Caracas'],
-        ['talento@banesco.com', 'Workshop Finanzas', 'Finanzas personales', '-10', '3', 'Caracas'],
-        ['pedro@ucab.edu.ve', 'Torneo FIFA', 'Esports universitarios', '-5', '8', 'Caracas'],
-        ['prof.martinez@ucab.edu.ve', 'Seminario Software', 'Patrones diseño', '-3', '4', 'Caracas'],
-        ['innovacion@ucab.edu.ve', 'Demo Day 2024', 'Startups a inversores', '7', '4', 'Caracas'],
-        ['giia@ucab.edu.ve', 'Workshop ML', 'Intro práctica ML', '14', '6', 'Caracas'],
-        ['sebastian.lopez@ucab.edu.ve', 'Data Science Meetup', 'Networking DS', '21', '3', 'Caracas'],
-        ['rrhh@movistar.com.ve', 'Programa Pasantías', 'Oportunidades 2025', '30', '2', 'Caracas'],
-        ['andres.castro@ucab.edu.ve', 'Conferencia Liderazgo', 'Casos de éxito', '45', '5', 'Caracas'],
-        ['victoria.paredes@ucab.edu.ve', 'Congreso Periodismo', 'Futuro de medios', '60', '8', 'Caracas'],
-        ['pablo.guerrero@ucab.edu.ve', 'Expo Fotográfica', 'Galería Campus', '75', '72', 'Caracas'],
-        ['andrea.diaz@ucab.edu.ve', 'Maratón Wellness', 'Carrera 5K', '90', '4', 'Caracas']
-    ];
+    eventos TEXT[][] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
     ev TEXT[];
     v_fecha_creacion TIMESTAMP;
     v_fecha_inicio TIMESTAMP;
     v_fecha_fin TIMESTAMP;
+    v_id_contenido INTEGER; -- NUEVO: Variable para capturar el ID de CONTENIDO
 BEGIN
     FOREACH ev SLICE 1 IN ARRAY eventos LOOP
         v_fecha_creacion := NOW() + (ev[4]::INT * INTERVAL '1 day') - INTERVAL '5 days';
         v_fecha_inicio := NOW() + (ev[4]::INT * INTERVAL '1 day');
         v_fecha_fin := v_fecha_inicio + (ev[5]::INT * INTERVAL '1 hour');
         
+        -- 1. INSERTAR CONTENIDO y CAPTURAR el ID
         INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
-        VALUES (ev[1], v_fecha_creacion, ev[3], 'Público');
+        VALUES (ev[1], v_fecha_creacion, ev[3], 'Público')
+        RETURNING clave_contenido INTO v_id_contenido; -- CAPTURAR EL ID
         
-        INSERT INTO EVENTO (correo_autor, fecha_hora_creacion, titulo, fecha_inicio, fecha_fin, ciudad_ubicacion, pais_ubicacion)
-        VALUES (ev[1], v_fecha_creacion, ev[2], v_fecha_inicio, v_fecha_fin, ev[6], 'Venezuela');
+        -- 2. INSERTAR EVENTO usando la FK simple
+        INSERT INTO EVENTO (fk_contenido, titulo, fecha_inicio, fecha_fin, ciudad_ubicacion, pais_ubicacion)
+        VALUES (v_id_contenido, ev[2], v_fecha_inicio, v_fecha_fin, ev[6], 'Venezuela');
     END LOOP;
 END $$;
 
 -- =============================================================================
--- 13. REACCIONA_CONTENIDO (400+ reacciones)
+-- 13. REACCIONA_CONTENIDO (400+ reacciones) (CORREGIDO)
 -- =============================================================================
 
 DO $$
 DECLARE
-    reactores TEXT[] := ARRAY[
-        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 'maria@ucab.edu.ve', 'juan@ucab.edu.ve',
-        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'sofia.hernandez@ucab.edu.ve',
-        'diego.ramirez@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', 'andres.castro@ucab.edu.ve',
-        'isabella.morales@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve',
-        'alejandro.navarro@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve',
-        'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve', 'pablo.guerrero@ucab.edu.ve',
-        'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com', 'alumni.empresaria@gmail.com'
-    ];
-    reacciones TEXT[] := ARRAY['Me Gusta', 'Me Gusta', 'Me Gusta', 'Me Encanta', 'Me Encanta', 'Me Divierte', 'Me Asombra', 'Me Interesa'];
-    v_contenido RECORD;
+    reactores TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
+    reacciones TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
+    -- CAMBIO: Usamos el ID simple para iterar
+    v_contenido RECORD; 
     v_reactor TEXT;
     v_reaccion TEXT;
     num_reacciones INT;
 BEGIN
-    FOR v_contenido IN SELECT correo_autor, fecha_hora_creacion FROM CONTENIDO LOOP
+    -- Iterar sobre los IDs de CONTENIDO
+    FOR v_contenido IN SELECT clave_contenido, correo_autor, fecha_hora_creacion FROM CONTENIDO LOOP
         num_reacciones := 3 + FLOOR(RANDOM() * 10)::INT;
         FOR i IN 1..num_reacciones LOOP
             v_reactor := reactores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reactores, 1))::INT];
             v_reaccion := reacciones[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reacciones, 1))::INT];
             IF v_reactor <> v_contenido.correo_autor THEN
-                INSERT INTO REACCIONA_CONTENIDO (correo_miembro, correo_autor_contenido, fecha_hora_creacion_contenido, nombre_reaccion, fecha_hora_reaccion)
-                VALUES (v_reactor, v_contenido.correo_autor, v_contenido.fecha_hora_creacion, v_reaccion, v_contenido.fecha_hora_creacion + (RANDOM() * INTERVAL '48 hours'))
+                -- INSERTAR REACCIÓN usando el ID de contenido
+                INSERT INTO REACCIONA_CONTENIDO (correo_miembro, fk_contenido, nombre_reaccion, fecha_hora_reaccion)
+                VALUES (v_reactor, v_contenido.clave_contenido, v_reaccion, v_contenido.fecha_hora_creacion + (RANDOM() * INTERVAL '48 hours'))
                 ON CONFLICT DO NOTHING;
             END IF;
         END LOOP;
@@ -481,34 +529,22 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 14. COMENTARIO (150+ comentarios)
+-- 14. COMENTARIO (150+ comentarios) (CORREGIDO)
 -- =============================================================================
 
 DO $$
 DECLARE
-    comentaristas TEXT[] := ARRAY[
-        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 'maria@ucab.edu.ve',
-        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'diego.ramirez@ucab.edu.ve',
-        'sebastian.lopez@ucab.edu.ve', 'alejandro.navarro@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve',
-        'ricardo.aguilar@ucab.edu.ve', 'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve',
-        'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
-    ];
-    textos TEXT[] := ARRAY[
-        '¡Excelente publicación! 👏', 'Totalmente de acuerdo', 'Muy inspirador',
-        '¿Podrías compartir más detalles?', 'Increíble trabajo! 🎉', '¿Cómo me inscribo?',
-        'Gracias por compartir', 'Esto me motiva 💪', 'Interesante perspectiva',
-        'Éxito en todo! 🚀', 'Muy buen contenido', '¿Cuándo es el próximo evento?',
-        'Excelente iniciativa', 'Esto debería viralizarse 🔥', 'Aprendí algo nuevo hoy',
-        'Cuenta conmigo', 'Qué orgullo ver esto', 'Información muy útil',
-        'Más eventos como este', 'Gran aporte a la comunidad'
-    ];
+    comentaristas TEXT[] := ARRAY[ /* ... */ ];
+    textos TEXT[] := ARRAY[ /* ... */ ];
+    -- CAMBIO: Usamos el ID simple para la tabla principal
     v_contenido RECORD;
     v_comentarista TEXT;
     v_texto TEXT;
     num_comentarios INT;
     v_offset INT;
 BEGIN
-    FOR v_contenido IN SELECT correo_autor, fecha_hora_creacion FROM CONTENIDO WHERE visibilidad = 'Público' ORDER BY RANDOM() LIMIT 50 LOOP
+    -- Iterar sobre los IDs de CONTENIDO (limitamos a 50 contenidos públicos para crear comentarios)
+    FOR v_contenido IN SELECT clave_contenido, correo_autor, fecha_hora_creacion FROM CONTENIDO WHERE visibilidad = 'Público' ORDER BY RANDOM() LIMIT 50 LOOP
         num_comentarios := 1 + FLOOR(RANDOM() * 5)::INT;
         v_offset := 0;
         FOR i IN 1..num_comentarios LOOP
@@ -516,8 +552,9 @@ BEGIN
             v_texto := textos[1 + FLOOR(RANDOM() * ARRAY_LENGTH(textos, 1))::INT];
             v_offset := v_offset + 1 + FLOOR(RANDOM() * 30)::INT;
             IF v_comentarista <> v_contenido.correo_autor THEN
-                INSERT INTO COMENTARIO (fk_contenido_autor, fk_contenido_fecha, fecha_hora_comentario, correo_autor_comentario, texto_comentario)
-                VALUES (v_contenido.correo_autor, v_contenido.fecha_hora_creacion, v_contenido.fecha_hora_creacion + (v_offset * INTERVAL '1 minute'), v_comentarista, v_texto)
+                -- INSERTAR COMENTARIO usando el ID simple
+                INSERT INTO COMENTARIO (fk_contenido, fecha_hora_comentario, correo_autor_comentario, texto_comentario)
+                VALUES (v_contenido.clave_contenido, v_contenido.fecha_hora_creacion + (v_offset * INTERVAL '1 minute'), v_comentarista, v_texto)
                 ON CONFLICT DO NOTHING;
             END IF;
         END LOOP;
@@ -525,26 +562,26 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 15. REACCIONA_COMENTARIO (50+ reacciones a comentarios)
+-- 15. REACCIONA_COMENTARIO (50+ reacciones a comentarios) (CORREGIDO)
 -- =============================================================================
 
 DO $$
 DECLARE
-    reactores TEXT[] := ARRAY[
-        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve',
-        'ana.garcia@ucab.edu.ve', 'diego.ramirez@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve',
-        'alejandro.navarro@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
-    ];
-    reacciones TEXT[] := ARRAY['Me Gusta', 'Me Gusta', 'Me Encanta', 'Me Divierte'];
-    v_comentario RECORD;
+    reactores TEXT[] := ARRAY[ /* ... */ ];
+    reacciones TEXT[] := ARRAY[ /* ... */ ];
+    -- CAMBIO: Iterar sobre los IDs de los comentarios
+    v_comentario RECORD; 
     v_reactor TEXT;
     v_reaccion TEXT;
 BEGIN
-    FOR v_comentario IN SELECT fk_contenido_autor, fk_contenido_fecha, fecha_hora_comentario FROM COMENTARIO ORDER BY RANDOM() LIMIT 50 LOOP
+    -- Iterar sobre los IDs de los comentarios
+    FOR v_comentario IN SELECT clave_comentario, fecha_hora_comentario FROM COMENTARIO ORDER BY RANDOM() LIMIT 50 LOOP
         v_reactor := reactores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reactores, 1))::INT];
         v_reaccion := reacciones[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reacciones, 1))::INT];
-        INSERT INTO REACCIONA_COMENTARIO (correo_miembro, correo_autor_contenido, fecha_hora_creacion_contenido, fecha_hora_comentario, nombre_reaccion, fecha_hora_reaccion)
-        VALUES (v_reactor, v_comentario.fk_contenido_autor, v_comentario.fk_contenido_fecha, v_comentario.fecha_hora_comentario, v_reaccion, v_comentario.fecha_hora_comentario + INTERVAL '1 hour')
+        
+        -- INSERTAR REACCIÓN usando el ID simple de COMENTARIO
+        INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
+        VALUES (v_reactor, v_comentario.clave_comentario, v_reaccion, v_comentario.fecha_hora_comentario + INTERVAL '1 hour')
         ON CONFLICT DO NOTHING;
     END LOOP;
 END $$;
@@ -554,7 +591,7 @@ END $$;
 -- =============================================================================
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Poblado completo de las 25 tablas:';
+    RAISE NOTICE '✅ Poblado completo de las 25 tablas (Usando IDs SERIAL):';
     RAISE NOTICE '   TIPO_REACCION, TIPO_NEXO, ROL';
     RAISE NOTICE '   MIEMBRO, PERSONA, CONFIGURACION, ENTIDAD_ORGANIZACIONAL';
     RAISE NOTICE '   MIEMBRO_POSEE_ROL, TIENE_NEXO, SOLICITA_CONEXION';

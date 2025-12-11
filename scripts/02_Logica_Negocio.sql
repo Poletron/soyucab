@@ -1,12 +1,9 @@
 -- =============================================================================
--- OBJETO: FUNCIÓN DE LÓGICA DE NEGOCIO
--- Responsable: Oscar Jaramillo
--- Nombre: FN_CALCULAR_NIVEL_IMPACTO
--- Descripción: Calcula la "Viralidad" ponderando comentarios y reacciones.
--- Fórmula: (Comentarios * 3) + (Reacciones * 1)
+-- OBJETO: FUNCIÓN DE LÓGICA DE NEGOCIO (CORREGIDA)
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_IMPACTO(p_correo_autor VARCHAR, p_fecha_creacion TIMESTAMP)
+-- CAMBIO: La función ahora recibe el ID simple de contenido (clave_contenido)
+CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_IMPACTO(p_clave_contenido INTEGER) 
 RETURNS DECIMAL AS $$
 DECLARE
     v_total_comentarios INT := 0;
@@ -16,92 +13,76 @@ DECLARE
 BEGIN
     -- 1. Validación: Verificar si el contenido existe
     SELECT EXISTS(
+        -- Se valida directamente sobre la PK simple
         SELECT 1 FROM CONTENIDO 
-        WHERE correo_autor = p_correo_autor 
-          AND fecha_hora_creacion = p_fecha_creacion
+        WHERE clave_contenido = p_clave_contenido
     ) INTO v_existe;
 
     IF NOT v_existe THEN
-        RETURN 0; -- Si no existe, el impacto es 0
+        RETURN 0;
     END IF;
 
     -- 2. Contar Comentarios (Cada uno vale 3 puntos)
-    -- Se cuenta todo el hilo (comentarios padres e hijos)
+    -- Se cuenta usando la FK simple (fk_contenido)
     SELECT COUNT(*) INTO v_total_comentarios
     FROM COMENTARIO
-    WHERE fk_contenido_autor = p_correo_autor 
-      AND fk_contenido_fecha = p_fecha_creacion;
+    WHERE fk_contenido = p_clave_contenido;
 
     -- 3. Contar Reacciones (Cada una vale 1 punto)
+    -- Se cuenta usando la FK simple (fk_contenido)
     SELECT COUNT(*) INTO v_total_reacciones
     FROM REACCIONA_CONTENIDO
-    WHERE correo_autor_contenido = p_correo_autor 
-      AND fecha_hora_creacion_contenido = p_fecha_creacion;
+    WHERE fk_contenido = p_clave_contenido;
 
     -- 4. Aplicar la Fórmula de Negocio Ponderada
     v_score_impacto := (v_total_comentarios * 3) + (v_total_reacciones * 1);
 
-    -- 5. Retornar el resultado
     RETURN v_score_impacto;
 
 EXCEPTION
     WHEN OTHERS THEN
-        -- En caso de error inesperado, retornar -1 para alertar
         RETURN -1;
 END;
 $$ LANGUAGE plpgsql;
 
 
-
--- 2. PROCEDIMIENTO: CERRAR EVENTO Y CREAR RESEÑA
--- Descripción: Finaliza un evento activo y genera el borrador de la reseña.
--- =============================================================================
-CREATE OR REPLACE PROCEDURE SP_CERRAR_EVENTO_Y_CREAR_RESEÑA(p_correo_autor VARCHAR, p_fecha_creacion TIMESTAMP)
+-- 2. PROCEDIMIENTO: CERRAR EVENTO Y CREAR RESEÑA (CORREGIDO)
+-- CAMBIO: El procedimiento ahora recibe el ID simple del EVENTO padre
+CREATE OR REPLACE PROCEDURE SP_CERRAR_EVENTO_Y_CREAR_RESEÑA(p_clave_contenido INTEGER)
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_titulo_evento VARCHAR(255);
+    v_correo_autor VARCHAR(255);
     v_fecha_actual TIMESTAMP := NOW();
 BEGIN
-    -- A. Verificar datos del evento
-    SELECT e.titulo
-    INTO v_titulo_evento
-    FROM EVENTO e
-    WHERE e.correo_autor = p_correo_autor 
-      AND e.fecha_hora_creacion = p_fecha_creacion
-      -- Asumiendo que el estado se determina por la fecha o si queremos agregar una columna de estado.
-      -- El modelo relacional NO TIENE columna 'estado' en EVENTO (solo fechas).
-      -- Usaremos la fecha_fin para validar si ya pasó, o simplemente ignoramos el estado explícito
-      -- ya que el modelo "bueno" NO tiene estado.
-      -- Sin embargo, el requerimiento implicaba "cerrarlo". 
-      -- Si no hay columna estado, tal vez "cerrar" signifique actualizar fecha_fin a NOW() si era futuro?
-      -- O tal vez el usuario olvidó el estado en el Modelo Relacional?
-      -- Siguiendo DDL estricto: NO HAY ESTADO.
-      -- Vamos a suponer que la lógica de negocio solo crea la reseña.
-      ;
+    -- A. Obtener datos del evento usando la clave_contenido
+    SELECT ev.titulo, c.correo_autor
+    INTO v_titulo_evento, v_correo_autor
+    FROM EVENTO ev
+    JOIN CONTENIDO c ON ev.fk_contenido = c.clave_contenido
+    WHERE c.clave_contenido = p_clave_contenido;
 
     IF NOT FOUND THEN
-        RAISE NOTICE 'Aviso: El evento no existe.';
+        RAISE NOTICE 'Aviso: El evento no existe o no tiene contenido asociado.';
         RETURN;
     END IF;
 
-    -- B. "Cerrar" el evento
-    -- Como no hay campo estado, no hacemos nada de update de estado.
-    -- (Nota: Esto es una discrepancia entre la lógica antigua y el modelo relacional "bueno").
-
+    -- B. Lógica de "Cerrar" el evento (Si la hubiera)
+    
     -- C. Crear borrador de Reseña (Insert Padre)
     INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
     VALUES (
-        p_correo_autor,
+        v_correo_autor,
         v_fecha_actual,
         'Reseña del Evento: ' || v_titulo_evento || '. [Borrador Automático]',
-        'Privado' -- Nace privado para edición
+        'Privado'
     );
 
     -- D. Crear detalle Publicación (Insert Hijo)
-    INSERT INTO PUBLICACION (correo_autor, fecha_hora_creacion)
-    VALUES (p_correo_autor, v_fecha_actual);
+    INSERT INTO PUBLICACION (fk_contenido) -- Usamos el nuevo ID generado por el trigger de CONTENIDO (si existiera) o se asume manejo de clave
+    VALUES ( (SELECT clave_contenido FROM CONTENIDO WHERE correo_autor = v_correo_autor AND fecha_hora_creacion = v_fecha_actual) );
 
-    RAISE NOTICE 'Reseña creada exitosamente para el autor % en fecha %.', p_correo_autor, v_fecha_actual;
+    RAISE NOTICE 'Reseña creada exitosamente para el autor % en fecha %.', v_correo_autor, v_fecha_actual;
 END;
 $$;
