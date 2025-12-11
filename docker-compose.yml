@@ -89,18 +89,35 @@ services:
       - soyucab-network
 
   # ============================================
-  # SERVICIO FRONTEND (React + Vite)
+  # SERVICIO FRONTEND ORIGINAL (COMENTADO PARA ENTREGA 3)
+  # Descomentar si se necesita la red social completa
   # ============================================
-  frontend:
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: soyucab_frontend
+  #   restart: always
+  #   environment:
+  #     VITE_API_URL: http://localhost:3000
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - soyucab-network
+
+  # ============================================
+  # FRONTEND ENTREGA 3 - Dashboard de Reportes
+  # ============================================
+  reports_dashboard:
     build:
-      context: ./frontend
+      context: ./frontend_dashboard
       dockerfile: Dockerfile
-    container_name: soyucab_frontend
+    container_name: soyucab_reports_dashboard
     restart: always
-    environment:
-      VITE_API_URL: http://localhost:3000
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - backend
     networks:
