@@ -152,6 +152,8 @@ $$;
 
 --Pedro
 
+-- Función para calcular tasas de cierre de ofertas
+-- CORREGIDO: Usa el nuevo schema con fk_oferta
 CREATE OR REPLACE FUNCTION fn_calcular_tasas_cierre_ofertas()
 RETURNS TABLE (
     titulo_oferta VARCHAR(255),
@@ -166,18 +168,59 @@ BEGIN
         OL.titulo_oferta,
         COUNT(SP.correo_persona) AS total_postulaciones,
         SUM(CASE WHEN SP.estado_postulacion IN ('Aceptada', 'Rechazada') THEN 1 ELSE 0 END) AS total_cerradas,
-        (CAST(SUM(CASE WHEN SP.estado_postulacion IN ('Aceptada', 'Rechazada') THEN 1 ELSE 0 END) AS NUMERIC) * 100 / COUNT(SP.correo_persona)) AS tasa_cierre
+        CASE 
+            WHEN COUNT(SP.correo_persona) > 0 THEN
+                (CAST(SUM(CASE WHEN SP.estado_postulacion IN ('Aceptada', 'Rechazada') THEN 1 ELSE 0 END) AS NUMERIC) * 100 / COUNT(SP.correo_persona))
+            ELSE 0
+        END AS tasa_cierre
     FROM
         OFERTA_LABORAL OL
-    JOIN
-        SE_POSTULA SP ON OL.correo_organizacion = SP.correo_organizacion_oferta
-        AND OL.fecha_publicacion = SP.fecha_publicacion_oferta
-        AND OL.titulo_oferta = SP.titulo_oferta
+    LEFT JOIN
+        SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta
     GROUP BY
-        OL.titulo_oferta
+        OL.clave_oferta, OL.titulo_oferta
     HAVING
         COUNT(SP.correo_persona) > 0
     ORDER BY
         tasa_cierre DESC;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Procedimiento para publicar oferta con validación de nexo activo
+-- Valida que la organización tenga un nexo vigente antes de permitir publicar ofertas
+CREATE OR REPLACE PROCEDURE sp_publicar_oferta_validada(
+    p_correo_organizacion VARCHAR,
+    p_fecha_publicacion TIMESTAMP,
+    p_titulo_oferta VARCHAR,
+    p_descripcion_cargo TEXT,
+    p_requisitos TEXT,
+    p_modalidad VARCHAR
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    nexo_activo_encontrado BOOLEAN;
+BEGIN
+    -- Verificar si la organización tiene al menos un nexo vigente
+    SELECT EXISTS (
+        SELECT 1
+        FROM TIENE_NEXO TN
+        WHERE 
+            TN.correo_organizacion = p_correo_organizacion
+            AND (TN.fecha_fin IS NULL OR TN.fecha_fin >= NOW()::DATE)
+    ) INTO nexo_activo_encontrado;
+
+    IF nexo_activo_encontrado THEN
+        -- Insertar la oferta
+        INSERT INTO OFERTA_LABORAL (
+            correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad
+        ) VALUES (
+            p_correo_organizacion, p_fecha_publicacion, p_titulo_oferta, p_descripcion_cargo, p_requisitos, p_modalidad
+        );
+        RAISE NOTICE 'Oferta "%" publicada exitosamente.', p_titulo_oferta;
+    ELSE
+        RAISE EXCEPTION 
+            'La entidad organizacional (%) no está autorizada para publicar vacantes sin nexos vigentes.', p_correo_organizacion;
+    END IF;
+END;
+$$;

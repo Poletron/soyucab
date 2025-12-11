@@ -79,6 +79,33 @@ async function getReferentesReportData(userEmail) {
     return result.rows;
 }
 
+/**
+ * Obtiene datos del reporte de áreas de conocimiento más demandadas en tutorías
+ */
+async function getTutoriasReportData(userEmail) {
+    const sql = `SELECT * FROM vista_top5_areas_conocimiento_demanda`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
+/**
+ * Obtiene datos del reporte de nexos vigentes vs por vencer
+ */
+async function getNexosReportData(userEmail) {
+    const sql = `SELECT * FROM vista_nexos_vigentes_vs_por_vencer`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
+/**
+ * Obtiene datos del reporte de ofertas laborales más postuladas
+ */
+async function getOfertasReportData(userEmail) {
+    const sql = `SELECT * FROM vista_top10_ofertas_mas_postuladas`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
 // ============================================
 // TEMPLATES HTML
 // ============================================
@@ -93,7 +120,10 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
         eventos: 'Proyección de Interés en Eventos',
         crecimiento: 'Crecimiento Demográfico',
         grupos: 'Grupos Más Activos',
-        referentes: 'Top Referentes de la Comunidad'
+        referentes: 'Top Referentes de la Comunidad',
+        tutorias: 'Top Áreas de Conocimiento en Tutorías',
+        nexos: 'Nexos Vigentes vs Por Vencer',
+        ofertas: 'Top 10 Ofertas Más Postuladas'
     };
 
     const subtitles = {
@@ -102,7 +132,10 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
         eventos: 'Predicción de asistencia basada en interacciones',
         crecimiento: 'Nuevos registros por mes y tipo de ocupación',
         grupos: 'Grupos de interés ordenados por cantidad de miembros',
-        referentes: 'Usuarios con mayor autoridad en la comunidad'
+        referentes: 'Usuarios con mayor autoridad en la comunidad',
+        tutorias: 'Top 5 áreas de conocimiento más demandadas',
+        nexos: 'Estado de convenios y relaciones institucionales',
+        ofertas: 'Ofertas laborales con más postulaciones'
     };
 
     const title = titles[reportType] || 'Reporte SoyUCAB';
@@ -306,6 +339,97 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
                 <td class="center"><span class="score-badge">${row.score_autoridad || 0}</span></td>
             </tr>
         `).join('');
+    } else if (reportType === 'tutorias') {
+        // Top Áreas de Conocimiento en Tutorías
+        const totalSolicitudes = data.reduce((sum, r) => sum + (parseInt(r.total_solicitudes_area) || 0), 0);
+        const totalTutores = data.reduce((sum, r) => sum + (parseInt(r.total_tutores_disponibles) || 0), 0);
+        const areasCount = data.length;
+        const topArea = data[0]?.area_conocimiento || 'N/A';
+
+        kpis = [
+            { label: 'Total Solicitudes', value: totalSolicitudes, color: '#40b4e5', sublabel: 'demanda tutorías' },
+            { label: 'Áreas Analizadas', value: areasCount, color: '#047732', sublabel: 'top 5 áreas' },
+            { label: 'Tutores Totales', value: totalTutores, color: '#ffc526', sublabel: 'disponibles' },
+            { label: 'Área Top', value: topArea.substring(0, 15), color: '#12100c', sublabel: 'más demandada' }
+        ];
+
+        tableHeaders = `
+            <th class="rank-col">#</th>
+            <th>Área de Conocimiento</th>
+            <th class="center">Total Solicitudes</th>
+            <th class="center">Tutores Disponibles</th>
+        `;
+        tableRows = data.map((row, index) => `
+            <tr>
+                <td><span class="rank-badge ${index < 3 ? 'top3' : ''}">${index + 1}</span></td>
+                <td class="author">${row.area_conocimiento || '-'}</td>
+                <td class="center"><span class="score-badge">${row.total_solicitudes_area || 0}</span></td>
+                <td class="center">${row.total_tutores_disponibles || 0}</td>
+            </tr>
+        `).join('');
+    } else if (reportType === 'nexos') {
+        // Nexos Vigentes vs Por Vencer
+        const totalNexos = data.length;
+        const vigentes = data.filter(r => r.estado_vigencia === 'Vigente').length;
+        const porVencer = data.filter(r => r.estado_vigencia === 'Por Vencer').length;
+        const vencidos = data.filter(r => r.estado_vigencia === 'Vencido').length;
+
+        kpis = [
+            { label: 'Total Nexos', value: totalNexos, color: '#40b4e5', sublabel: 'convenios activos' },
+            { label: 'Vigentes', value: vigentes, color: '#047732', sublabel: 'en regla' },
+            { label: 'Por Vencer', value: porVencer, color: '#ffc526', sublabel: 'próximos 30 días' },
+            { label: 'Vencidos', value: vencidos, color: '#ef4444', sublabel: 'requieren acción' }
+        ];
+
+        tableHeaders = `
+            <th>Tipo Convenio</th>
+            <th>Persona</th>
+            <th>Organización</th>
+            <th class="center">Fecha Inicio</th>
+            <th class="center">Fecha Fin</th>
+            <th class="center">Estado</th>
+        `;
+        tableRows = data.map(row => {
+            const statusClass = row.estado_vigencia === 'Vigente' ? 'status-success'
+                : row.estado_vigencia === 'Por Vencer' ? 'status-warning' : 'status-danger';
+            return `
+            <tr>
+                <td class="author">${row.tipo_convenio || '-'}</td>
+                <td>${row.nombre_persona || '-'}</td>
+                <td>${row.nombre_organizacion || '-'}</td>
+                <td class="center date">${row.fecha_inicio ? new Date(row.fecha_inicio).toLocaleDateString('es-VE') : '-'}</td>
+                <td class="center date">${row.fecha_fin ? new Date(row.fecha_fin).toLocaleDateString('es-VE') : 'Indefinido'}</td>
+                <td class="center"><span class="status-badge ${statusClass}">${row.estado_vigencia || '-'}</span></td>
+            </tr>
+        `}).join('');
+    } else if (reportType === 'ofertas') {
+        // Top 10 Ofertas Más Postuladas
+        const totalOfertas = data.length;
+        const totalPostulantes = data.reduce((sum, r) => sum + (parseInt(r.cantidad_postulantes) || 0), 0);
+        const promedioPostulantes = totalOfertas > 0 ? (totalPostulantes / totalOfertas).toFixed(1) : 0;
+        const topOferta = data[0]?.titulo_oferta || 'N/A';
+
+        kpis = [
+            { label: 'Total Ofertas', value: totalOfertas, color: '#40b4e5', sublabel: 'ofertas analizadas' },
+            { label: 'Total Postulantes', value: totalPostulantes, color: '#047732', sublabel: 'aplicaciones' },
+            { label: 'Promedio', value: promedioPostulantes, color: '#ffc526', sublabel: 'postulantes/oferta' },
+            { label: 'Oferta Top', value: topOferta.substring(0, 15), color: '#12100c', sublabel: 'más popular' }
+        ];
+
+        tableHeaders = `
+            <th class="rank-col">#</th>
+            <th>Título Oferta</th>
+            <th>Organización</th>
+            <th class="center">Postulantes</th>
+        `;
+        tableRows = data.map((row, index) => `
+            <tr>
+                <td><span class="rank-badge ${index < 3 ? 'top3' : ''}">${index + 1}</span></td>
+                <td class="author">${row.titulo_oferta || '-'}</td>
+                <td>${row.nombre_organizacion || '-'}</td>
+                <td class="center"><span class="score-badge">${row.cantidad_postulantes || 0}</span></td>
+            </tr>
+        `).join('');
     }
 
     return `
@@ -425,6 +549,7 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
         .status-success { background: #dcfce7; color: #047732; }
         .status-warning { background: #fef3c7; color: #d97706; }
         .status-info { background: #e0f2fe; color: #0284c7; }
+        .status-danger { background: #fee2e2; color: #dc2626; }
         .event-name { font-weight: 500; }
         .footer {
             padding: 20px 32px;
@@ -562,6 +687,15 @@ async function generateReport(reportType, userEmail) {
         case 'referentes':
             data = await getReferentesReportData(userEmail);
             break;
+        case 'tutorias':
+            data = await getTutoriasReportData(userEmail);
+            break;
+        case 'nexos':
+            data = await getNexosReportData(userEmail);
+            break;
+        case 'ofertas':
+            data = await getOfertasReportData(userEmail);
+            break;
         default:
             throw new Error(`Tipo de reporte no válido: ${reportType}`);
     }
@@ -593,5 +727,8 @@ module.exports = {
     getEventosReportData,
     getCrecimientoReportData,
     getGruposActivosReportData,
-    getReferentesReportData
+    getReferentesReportData,
+    getTutoriasReportData,
+    getNexosReportData,
+    getOfertasReportData
 };

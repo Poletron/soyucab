@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { TrendingUp, Users, Calendar, BarChart3, UserCheck, Hash } from 'lucide-react';
+import { TrendingUp, Users, Calendar, BarChart3, UserCheck, Hash, BookOpen, Link2, Briefcase } from 'lucide-react';
 import TopViralReport from './components/TopViralReport';
 import LideresReport from './components/LideresReport';
 import EventosReport from './components/EventosReport';
 import CrecimientoReport from './components/CrecimientoReport';
 import GruposActivosReport from './components/GruposActivosReport';
 import ReferentesReport from './components/ReferentesReport';
+import TutoriasReport from './components/TutoriasReport';
+import NexosReport from './components/NexosReport';
+import OfertasReport from './components/OfertasReport';
 
 function App() {
     const [activeTab, setActiveTab] = useState('viralidad');
@@ -63,7 +66,7 @@ function App() {
 
                 {/* Tabs Navigation */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 mb-8 h-auto gap-1">
+                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-9 mb-8 h-auto gap-1">
                         <TabsTrigger
                             value="viralidad"
                             className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
@@ -115,6 +118,30 @@ function App() {
                             <span className="hidden lg:inline">Referentes</span>
                             <span className="lg:hidden text-xs">Ref.</span>
                         </TabsTrigger>
+                        <TabsTrigger
+                            value="tutorias"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <BookOpen className="h-4 w-4" />
+                            <span className="hidden lg:inline">Tutorías</span>
+                            <span className="lg:hidden text-xs">Tut.</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="nexos"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <Link2 className="h-4 w-4" />
+                            <span className="hidden lg:inline">Nexos</span>
+                            <span className="lg:hidden text-xs">Nex.</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="ofertas"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <Briefcase className="h-4 w-4" />
+                            <span className="hidden lg:inline">Ofertas</span>
+                            <span className="lg:hidden text-xs">Of.</span>
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="viralidad" className="mt-0">
@@ -139,6 +166,18 @@ function App() {
 
                     <TabsContent value="referentes" className="mt-0">
                         <ReferentesReport />
+                    </TabsContent>
+
+                    <TabsContent value="tutorias" className="mt-0">
+                        <TutoriasReport />
+                    </TabsContent>
+
+                    <TabsContent value="nexos" className="mt-0">
+                        <NexosReport />
+                    </TabsContent>
+
+                    <TabsContent value="ofertas" className="mt-0">
+                        <OfertasReport />
                     </TabsContent>
                 </Tabs>
             </main>

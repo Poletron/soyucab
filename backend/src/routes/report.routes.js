@@ -22,7 +22,7 @@ router.post('/generate', requireAuth, async (req, res) => {
         const { reportType } = req.body;
 
         // Validación
-        const validTypes = ['viralidad', 'lideres', 'eventos', 'crecimiento', 'grupos', 'referentes'];
+        const validTypes = ['viralidad', 'lideres', 'eventos', 'crecimiento', 'grupos', 'referentes', 'tutorias', 'nexos', 'ofertas'];
         if (!reportType || !validTypes.includes(reportType)) {
             return res.status(400).json({
                 success: false,
@@ -76,6 +76,15 @@ router.get('/preview/:type', requireAuth, async (req, res) => {
                 break;
             case 'referentes':
                 data = await reportService.getReferentesReportData(req.userEmail);
+                break;
+            case 'tutorias':
+                data = await reportService.getTutoriasReportData(req.userEmail);
+                break;
+            case 'nexos':
+                data = await reportService.getNexosReportData(req.userEmail);
+                break;
+            case 'ofertas':
+                data = await reportService.getOfertasReportData(req.userEmail);
                 break;
             default:
                 return res.status(400).json({
@@ -143,6 +152,24 @@ router.get('/types', (req, res) => {
                 name: 'Top Referentes Comunidad',
                 description: 'Top 15 usuarios por score de autoridad',
                 view: 'V_TOP_REFERENTES_COMUNIDAD'
+            },
+            {
+                id: 'tutorias',
+                name: 'Top Áreas de Tutorías',
+                description: 'Top 5 áreas de conocimiento más demandadas en tutorías',
+                view: 'vista_top5_areas_conocimiento_demanda'
+            },
+            {
+                id: 'nexos',
+                name: 'Nexos Vigentes vs Por Vencer',
+                description: 'Estado de convenios y relaciones institucionales',
+                view: 'vista_nexos_vigentes_vs_por_vencer'
+            },
+            {
+                id: 'ofertas',
+                name: 'Top 10 Ofertas Laborales',
+                description: 'Ofertas laborales con más postulaciones',
+                view: 'vista_top10_ofertas_mas_postuladas'
             }
         ]
     });

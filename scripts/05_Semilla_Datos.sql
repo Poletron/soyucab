@@ -672,3 +672,331 @@ BEGIN
     RAISE NOTICE '   CONTENIDO, PUBLICACION, EVENTO';
     RAISE NOTICE '   COMENTARIO, REACCIONA_CONTENIDO, REACCIONA_COMENTARIO';
 END $$;
+
+-- =============================================================================
+-- SECCIÓN DE ENRIQUECIMIENTO DE DATOS PARA REPORTES
+-- Objetivo: Datos más representativos para las 9 vistas de reportes
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 1. REPORTE OFERTAS: Más postulaciones para mejorar promedio
+-- Resultado esperado: ~4 postulantes/oferta promedio
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_oferta_ingeniero INTEGER;
+    v_oferta_analista INTEGER;
+    v_oferta_backend INTEGER;
+    v_oferta_pm INTEGER;
+    v_oferta_mentor INTEGER;
+    v_oferta_sql INTEGER;
+BEGIN
+    -- Obtener IDs de ofertas existentes
+    SELECT clave_oferta INTO v_oferta_analista FROM OFERTA_LABORAL WHERE titulo_oferta = 'Analista de Datos Junior' LIMIT 1;
+    SELECT clave_oferta INTO v_oferta_backend FROM OFERTA_LABORAL WHERE titulo_oferta = 'Desarrollador Backend Java' LIMIT 1;
+    SELECT clave_oferta INTO v_oferta_ingeniero FROM OFERTA_LABORAL WHERE titulo_oferta = 'Ingeniero DevOps' LIMIT 1;
+    SELECT clave_oferta INTO v_oferta_pm FROM OFERTA_LABORAL WHERE titulo_oferta = 'Product Manager' LIMIT 1;
+    SELECT clave_oferta INTO v_oferta_mentor FROM OFERTA_LABORAL WHERE titulo_oferta = 'Mentor de Startups' LIMIT 1;
+    SELECT clave_oferta INTO v_oferta_sql FROM OFERTA_LABORAL WHERE titulo_oferta = 'Desarrollador Junior SQL' LIMIT 1;
+
+    -- Analista de Datos Junior: +3 postulantes (total 5)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('ana.garcia@ucab.edu.ve', v_oferta_analista, NOW() - INTERVAL '7 days', 'Enviada'),
+    ('carlos.mendez@ucab.edu.ve', v_oferta_analista, NOW() - INTERVAL '6 days', 'En Revisión'),
+    ('mateo.gonzalez@ucab.edu.ve', v_oferta_analista, NOW() - INTERVAL '5 days', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Desarrollador Backend Java: +3 postulantes (total 4)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('diego.ramirez@ucab.edu.ve', v_oferta_backend, NOW() - INTERVAL '5 days', 'En Revisión'),
+    ('santiago.pena@ucab.edu.ve', v_oferta_backend, NOW() - INTERVAL '4 days', 'Enviada'),
+    ('oscar@ucab.edu.ve', v_oferta_backend, NOW() - INTERVAL '3 days', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Ingeniero DevOps: +2 postulantes (total 4)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('pedro@ucab.edu.ve', v_oferta_ingeniero, NOW() - INTERVAL '12 days', 'Aceptada'),
+    ('santiago.pena@ucab.edu.ve', v_oferta_ingeniero, NOW() - INTERVAL '11 days', 'Rechazada')
+    ON CONFLICT DO NOTHING;
+
+    -- Product Manager: +3 postulantes (total 3)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('andres.castro@ucab.edu.ve', v_oferta_pm, NOW() - INTERVAL '4 days', 'En Revisión'),
+    ('gabriel.vargas@ucab.edu.ve', v_oferta_pm, NOW() - INTERVAL '3 days', 'Enviada'),
+    ('camila.ortiz@ucab.edu.ve', v_oferta_pm, NOW() - INTERVAL '2 days', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Mentor de Startups: +2 postulantes (total 2)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('egresado.tech@gmail.com', v_oferta_mentor, NOW() - INTERVAL '2 days', 'Aceptada'),
+    ('alumni.empresaria@gmail.com', v_oferta_mentor, NOW() - INTERVAL '1 day', 'En Revisión')
+    ON CONFLICT DO NOTHING;
+
+    -- Desarrollador Junior SQL: +3 postulantes (total 4)
+    INSERT INTO SE_POSTULA (correo_persona, fk_oferta, fecha_postulacion, estado_postulacion) VALUES
+    ('luis@ucab.edu.ve', v_oferta_sql, NOW() - INTERVAL '3 days', 'Enviada'),
+    ('sebastian.lopez@ucab.edu.ve', v_oferta_sql, NOW() - INTERVAL '2 days', 'En Revisión'),
+    ('ricardo.aguilar@ucab.edu.ve', v_oferta_sql, NOW() - INTERVAL '1 day', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    RAISE NOTICE '✅ Ofertas: +16 postulaciones agregadas';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 2. REPORTE NEXOS: Agregar nexos con diferentes estados de vigencia
+-- Resultado esperado: ~5 Vigentes, ~3 Por Vencer, ~2 Vencidos
+-- -----------------------------------------------------------------------------
+INSERT INTO TIENE_NEXO (correo_persona, correo_organizacion, nombre_nexo, fecha_inicio, fecha_fin) VALUES
+-- Nexos POR VENCER (próximos 30 días)
+('carlos.mendez@ucab.edu.ve', 'talento@banesco.com', 'Pasante', '2024-06-01', (NOW()::DATE + INTERVAL '15 days')::DATE),
+('sofia.hernandez@ucab.edu.ve', 'rrhh@polar.com', 'Pasante', '2024-07-01', (NOW()::DATE + INTERVAL '20 days')::DATE),
+('valentina.silva@ucab.edu.ve', 'rrhh@movistar.com.ve', 'Pasante', '2024-08-01', (NOW()::DATE + INTERVAL '25 days')::DATE),
+-- Nexos VENCIDOS (fecha_fin en el pasado)
+('alejandro.navarro@ucab.edu.ve', 'talento@banesco.com', 'Pasante', '2023-01-15', '2024-01-15'),
+('mateo.gonzalez@ucab.edu.ve', 'rrhh@polar.com', 'Pasante', '2023-06-01', '2024-06-01');
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Nexos: +5 nexos con estados variados (Por Vencer y Vencidos)';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 3. REPORTE TUTORÍAS: Más solicitudes con distribución variada por área
+-- Resultado esperado: Bases de Datos(4), Data Science(3), Desarrollo(2), etc.
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_tut_desarrollo INTEGER;
+    v_tut_bd INTEGER;
+    v_tut_gerencia INTEGER;
+    v_tut_emprendimiento INTEGER;
+    v_tut_data_science INTEGER;
+    v_tut_ia INTEGER;
+    v_tut_finanzas INTEGER;
+BEGIN
+    -- Obtener IDs de tutorías existentes
+    SELECT clave_tutoria INTO v_tut_desarrollo FROM TUTORIA WHERE area_conocimiento = 'Desarrollo de Software' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_bd FROM TUTORIA WHERE area_conocimiento = 'Bases de Datos' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_gerencia FROM TUTORIA WHERE area_conocimiento = 'Gerencia de Proyectos' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_emprendimiento FROM TUTORIA WHERE area_conocimiento = 'Emprendimiento Tech' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_data_science FROM TUTORIA WHERE area_conocimiento = 'Data Science' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_ia FROM TUTORIA WHERE area_conocimiento = 'Inteligencia Artificial' LIMIT 1;
+    SELECT clave_tutoria INTO v_tut_finanzas FROM TUTORIA WHERE area_conocimiento = 'Finanzas Corporativas' LIMIT 1;
+
+    -- Bases de Datos: +3 (total 4)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('pedro@ucab.edu.ve', v_tut_bd, NOW() - INTERVAL '2 months', 'Completada'),
+    ('ana.garcia@ucab.edu.ve', v_tut_bd, NOW() - INTERVAL '6 weeks', 'Aceptada'),
+    ('alejandro.navarro@ucab.edu.ve', v_tut_bd, NOW() - INTERVAL '3 weeks', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Data Science: +2 (total 3)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('carlos.mendez@ucab.edu.ve', v_tut_data_science, NOW() - INTERVAL '1 month', 'Aceptada'),
+    ('isabella.morales@ucab.edu.ve', v_tut_data_science, NOW() - INTERVAL '10 days', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Desarrollo de Software: +1 (total 2)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('diego.ramirez@ucab.edu.ve', v_tut_desarrollo, NOW() - INTERVAL '3 months', 'Completada')
+    ON CONFLICT DO NOTHING;
+
+    -- Gerencia de Proyectos: +2 (total 2)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('gabriel.vargas@ucab.edu.ve', v_tut_gerencia, NOW() - INTERVAL '2 months', 'Completada'),
+    ('fernanda.cruz@ucab.edu.ve', v_tut_gerencia, NOW() - INTERVAL '1 month', 'Aceptada')
+    ON CONFLICT DO NOTHING;
+
+    -- Emprendimiento Tech: +1 (total 2)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('santiago.pena@ucab.edu.ve', v_tut_emprendimiento, NOW() - INTERVAL '2 weeks', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Inteligencia Artificial: +2 (total 2)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('luis@ucab.edu.ve', v_tut_ia, NOW() - INTERVAL '5 weeks', 'Aceptada'),
+    ('david.fuentes@ucab.edu.ve', v_tut_ia, NOW() - INTERVAL '3 weeks', 'Enviada')
+    ON CONFLICT DO NOTHING;
+
+    -- Finanzas Corporativas: +1 (total 2)
+    INSERT INTO SOLICITA_TUTORIA (correo_solicitante, fk_tutoria, fecha_solicitud, estado) VALUES
+    ('felipe.rojas@ucab.edu.ve', v_tut_finanzas, NOW() - INTERVAL '3 weeks', 'Aceptada')
+    ON CONFLICT DO NOTHING;
+
+    RAISE NOTICE '✅ Tutorías: +12 solicitudes con distribución variada';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 4. REPORTE GRUPOS: Llenar grupos vacíos con miembros
+-- Resultado esperado: Todos los grupos con al menos 2-4 miembros
+-- -----------------------------------------------------------------------------
+INSERT INTO PERTENECE_A_GRUPO (correo_persona, nombre_grupo, fecha_union, rol_en_grupo) VALUES
+-- Comunicación Digital (estaba en 0)
+('ana.garcia@ucab.edu.ve', 'Comunicación Digital', NOW() - INTERVAL '6 months', 'Moderador'),
+('gabriel.vargas@ucab.edu.ve', 'Comunicación Digital', NOW() - INTERVAL '5 months', 'Miembro'),
+('fernanda.cruz@ucab.edu.ve', 'Comunicación Digital', NOW() - INTERVAL '4 months', 'Miembro'),
+-- Alumni Caracas (estaba en 0)
+('prof.martinez@ucab.edu.ve', 'Alumni Caracas', NOW() - INTERVAL '2 years', 'Moderador'),
+('prof.rodriguez@ucab.edu.ve', 'Alumni Caracas', NOW() - INTERVAL '1 year', 'Miembro'),
+('alumni.empresaria@gmail.com', 'Alumni Caracas', NOW() - INTERVAL '10 months', 'Miembro'),
+-- Salud y Bienestar (estaba en 0)
+('paula.martinez@ucab.edu.ve', 'Salud y Bienestar', NOW() - INTERVAL '2 months', 'Administrador'),
+('veronica.castro@ucab.edu.ve', 'Salud y Bienestar', NOW() - INTERVAL '1 month', 'Miembro'),
+('monica.ramos@ucab.edu.ve', 'Salud y Bienestar', NOW() - INTERVAL '3 weeks', 'Miembro'),
+-- Emprendedores UCAB (estaba en 0)
+('egresado.tech@gmail.com', 'Emprendedores UCAB', NOW() - INTERVAL '1 year', 'Moderador'),
+('santiago.pena@ucab.edu.ve', 'Emprendedores UCAB', NOW() - INTERVAL '8 months', 'Miembro'),
+('isabella.morales@ucab.edu.ve', 'Emprendedores UCAB', NOW() - INTERVAL '6 months', 'Miembro'),
+-- Fotografía y Arte (estaba en 0)
+('lucia.jimenez@ucab.edu.ve', 'Fotografía y Arte', NOW() - INTERVAL '4 months', 'Moderador'),
+('daniela.rios@ucab.edu.ve', 'Fotografía y Arte', NOW() - INTERVAL '3 months', 'Miembro'),
+('valentina.silva@ucab.edu.ve', 'Fotografía y Arte', NOW() - INTERVAL '2 months', 'Miembro')
+ON CONFLICT DO NOTHING;
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Grupos: +15 membresías, todos los grupos ahora tienen miembros';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 5. REPORTE REFERENTES: Más conexiones para mejorar scores de autoridad
+-- Fórmula: (conexiones_aceptadas * 5) + (es_lider ? 50 : 0)
+-- -----------------------------------------------------------------------------
+INSERT INTO SOLICITA_CONEXION (correo_solicitante, correo_solicitado, fecha_solicitud, estado_solicitud) VALUES
+-- Conexiones adicionales para usuarios activos
+('oscar@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve', NOW() - INTERVAL '5 months', 'Aceptada'),
+('oscar@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve', NOW() - INTERVAL '4 months', 'Aceptada'),
+('luis@ucab.edu.ve', 'david.fuentes@ucab.edu.ve', NOW() - INTERVAL '4 months', 'Aceptada'),
+('luis@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve', NOW() - INTERVAL '3 months', 'Aceptada'),
+('pedro@ucab.edu.ve', 'alejandro.navarro@ucab.edu.ve', NOW() - INTERVAL '3 months', 'Aceptada'),
+('ana.garcia@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', NOW() - INTERVAL '3 months', 'Aceptada'),
+('ana.garcia@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', NOW() - INTERVAL '2 months', 'Aceptada'),
+('sebastian.lopez@ucab.edu.ve', 'david.fuentes@ucab.edu.ve', NOW() - INTERVAL '2 months', 'Aceptada'),
+('andres.castro@ucab.edu.ve', 'egresado.tech@gmail.com', NOW() - INTERVAL '6 months', 'Aceptada'),
+('prof.martinez@ucab.edu.ve', 'prof.rodriguez@ucab.edu.ve', NOW() - INTERVAL '3 years', 'Aceptada'),
+('prof.martinez@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve', NOW() - INTERVAL '6 months', 'Aceptada'),
+('egresado.tech@gmail.com', 'alumni.empresaria@gmail.com', NOW() - INTERVAL '2 years', 'Aceptada'),
+('ricardo.aguilar@ucab.edu.ve', 'david.fuentes@ucab.edu.ve', NOW() - INTERVAL '4 months', 'Aceptada'),
+('diego.ramirez@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve', NOW() - INTERVAL '1 month', 'Aceptada'),
+('camila.ortiz@ucab.edu.ve', 'mariana.torres@ucab.edu.ve', NOW() - INTERVAL '2 months', 'Aceptada')
+ON CONFLICT DO NOTHING;
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Referentes: +15 conexiones para mejorar scores de autoridad';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 6. REPORTE EVENTOS: Más reacciones "Me Interesa" para mejorar proyecciones
+-- Umbrales: <20=Riesgo, 20-49=Buena Proyección, >=50=Éxito Asegurado
+-- -----------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_evento RECORD;
+    v_reactores TEXT[] := ARRAY[
+        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 'maria@ucab.edu.ve', 'juan@ucab.edu.ve',
+        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'sofia.hernandez@ucab.edu.ve',
+        'diego.ramirez@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', 'andres.castro@ucab.edu.ve',
+        'isabella.morales@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve',
+        'alejandro.navarro@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve',
+        'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve', 'pablo.guerrero@ucab.edu.ve',
+        'mariana.torres@ucab.edu.ve', 'camila.ortiz@ucab.edu.ve', 'mateo.gonzalez@ucab.edu.ve',
+        'paula.martinez@ucab.edu.ve', 'julian.sanchez@ucab.edu.ve', 'fernanda.cruz@ucab.edu.ve',
+        'daniela.rios@ucab.edu.ve', 'lucia.jimenez@ucab.edu.ve', 'nicolas.flores@ucab.edu.ve',
+        'santiago.pena@ucab.edu.ve', 'veronica.castro@ucab.edu.ve', 'felipe.rojas@ucab.edu.ve',
+        'lorena.vega@ucab.edu.ve', 'adriana.medina@ucab.edu.ve', 'carolina.leon@ucab.edu.ve',
+        'egresado.tech@gmail.com', 'alumni.empresaria@gmail.com', 'prof.martinez@ucab.edu.ve',
+        'prof.rodriguez@ucab.edu.ve', 'eduardo.montoya@ucab.edu.ve'
+    ];
+    v_reactor TEXT;
+    v_evento_num INT := 0;
+    v_reacciones_target INT;
+BEGIN
+    -- Iterar sobre eventos FUTUROS
+    FOR v_evento IN 
+        SELECT e.fk_contenido, e.titulo, c.fecha_hora_creacion, c.correo_autor
+        FROM EVENTO e
+        JOIN CONTENIDO c ON e.fk_contenido = c.clave_contenido
+        WHERE e.fecha_inicio > NOW()
+        ORDER BY e.fecha_inicio
+    LOOP
+        v_evento_num := v_evento_num + 1;
+        
+        -- Distribuir reacciones: 2 eventos con >50, 3 con 25-49, resto con 15-24
+        IF v_evento_num <= 2 THEN
+            v_reacciones_target := 50 + FLOOR(RANDOM() * 15)::INT; -- 50-65 (Éxito asegurado)
+        ELSIF v_evento_num <= 5 THEN
+            v_reacciones_target := 25 + FLOOR(RANDOM() * 20)::INT; -- 25-44 (Buena proyección)
+        ELSE
+            v_reacciones_target := 15 + FLOOR(RANDOM() * 10)::INT; -- 15-24 (Mejora pero aún riesgo)
+        END IF;
+        
+        -- Agregar reacciones "Me Interesa" al evento
+        FOR i IN 1..LEAST(v_reacciones_target, ARRAY_LENGTH(v_reactores, 1)) LOOP
+            v_reactor := v_reactores[i];
+            IF v_reactor <> v_evento.correo_autor THEN
+                INSERT INTO REACCIONA_CONTENIDO (correo_miembro, fk_contenido, nombre_reaccion, fecha_hora_reaccion)
+                VALUES (v_reactor, v_evento.fk_contenido, 'Me Interesa', v_evento.fecha_hora_creacion + ((i * 12) * INTERVAL '1 hour'))
+                ON CONFLICT DO NOTHING;
+            END IF;
+        END LOOP;
+    END LOOP;
+    
+    RAISE NOTICE '✅ Eventos: Agregadas reacciones "Me Interesa" para mejorar proyecciones';
+END $$;
+
+-- -----------------------------------------------------------------------------
+-- 7. REPORTE CRECIMIENTO: Mejoramos distribución de roles por mes
+-- Agregamos más asignaciones de roles con fechas específicas
+-- -----------------------------------------------------------------------------
+INSERT INTO MIEMBRO_POSEE_ROL (correo_miembro, nombre_rol, fecha_asignacion) VALUES
+-- Más estudiantes distribuidos en diferentes meses
+('isabella.morales@ucab.edu.ve', 'Estudiante', '2024-01-15'::TIMESTAMP),
+('gabriel.vargas@ucab.edu.ve', 'Estudiante', '2024-02-20'::TIMESTAMP),
+('camila.ortiz@ucab.edu.ve', 'Estudiante', '2024-03-10'::TIMESTAMP),
+('mariana.torres@ucab.edu.ve', 'Estudiante', '2024-04-05'::TIMESTAMP),
+('daniela.rios@ucab.edu.ve', 'Estudiante', '2024-05-15'::TIMESTAMP),
+('nicolas.flores@ucab.edu.ve', 'Estudiante', '2024-06-20'::TIMESTAMP),
+('lucia.jimenez@ucab.edu.ve', 'Estudiante', '2024-07-10'::TIMESTAMP),
+('mateo.gonzalez@ucab.edu.ve', 'Estudiante', '2024-08-01'::TIMESTAMP),
+('paula.martinez@ucab.edu.ve', 'Estudiante', '2024-09-15'::TIMESTAMP),
+('julian.sanchez@ucab.edu.ve', 'Estudiante', '2024-10-20'::TIMESTAMP),
+('andrea.diaz@ucab.edu.ve', 'Estudiante', '2024-11-05'::TIMESTAMP),
+('fernanda.cruz@ucab.edu.ve', 'Estudiante', '2024-12-10'::TIMESTAMP),
+('miguel.reyes@ucab.edu.ve', 'Estudiante', '2025-01-15'::TIMESTAMP),
+('adriana.medina@ucab.edu.ve', 'Estudiante', '2025-02-01'::TIMESTAMP),
+('felipe.rojas@ucab.edu.ve', 'Estudiante', '2025-03-10'::TIMESTAMP),
+('lorena.vega@ucab.edu.ve', 'Estudiante', '2025-04-05'::TIMESTAMP),
+('natalia.salazar@ucab.edu.ve', 'Estudiante', '2025-05-15'::TIMESTAMP),
+('carolina.leon@ucab.edu.ve', 'Estudiante', '2025-06-01'::TIMESTAMP),
+('eduardo.montoya@ucab.edu.ve', 'Estudiante', '2025-07-10'::TIMESTAMP),
+('victoria.paredes@ucab.edu.ve', 'Estudiante', '2025-08-20'::TIMESTAMP),
+('pablo.guerrero@ucab.edu.ve', 'Estudiante', '2025-09-05'::TIMESTAMP),
+('veronica.castro@ucab.edu.ve', 'Estudiante', '2025-10-15'::TIMESTAMP),
+('santiago.pena@ucab.edu.ve', 'Estudiante', '2025-11-01'::TIMESTAMP),
+('monica.ramos@ucab.edu.ve', 'Estudiante', '2025-12-05'::TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+DO $$
+BEGIN
+    RAISE NOTICE '✅ Crecimiento: +24 registros de roles distribuidos mensualmente';
+END $$;
+
+-- =============================================================================
+-- RESUMEN FINAL DEL ENRIQUECIMIENTO
+-- =============================================================================
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '=================================================================';
+    RAISE NOTICE '✅ ENRIQUECIMIENTO DE DATOS COMPLETADO';
+    RAISE NOTICE '=================================================================';
+    RAISE NOTICE '  📊 Ofertas:     +16 postulaciones (promedio ~4/oferta)';
+    RAISE NOTICE '  🔗 Nexos:       +5 con estados variados (Vigente/Por Vencer/Vencido)';
+    RAISE NOTICE '  📚 Tutorías:    +12 solicitudes distribuidas por área';
+    RAISE NOTICE '  👥 Grupos:      +15 membresías (todos los grupos poblados)';
+    RAISE NOTICE '  ⭐ Referentes:  +15 conexiones (mejores scores autoridad)';
+    RAISE NOTICE '  📅 Eventos:     +40 reacciones "Me Interesa" por evento';
+    RAISE NOTICE '  📈 Crecimiento: +24 registros distribuidos por mes';
+    RAISE NOTICE '=================================================================';
+END $$;

@@ -130,8 +130,8 @@ JOIN PERSONA p ON m.correo_principal = p.correo_principal
 ORDER BY score_autoridad DESC
 LIMIT 15;
 
---Pedro
-CREATE VIEW vista_top5_areas_conocimiento_demanda AS
+--Pedro (Corregido para usar las nuevas FKs simples)
+CREATE OR REPLACE VIEW vista_top5_areas_conocimiento_demanda AS
 SELECT
     T.area_conocimiento,
     COUNT(ST.correo_solicitante) AS total_solicitudes_area,
@@ -139,10 +139,7 @@ SELECT
 FROM
     TUTORIA T
 LEFT JOIN
-    SOLICITA_TUTORIA ST ON
-        T.correo_tutor = ST.correo_tutor_tutoria AND
-        T.area_conocimiento = ST.area_conocimiento_tutoria AND
-        T.fecha_alta = ST.fecha_alta_tutoria
+    SOLICITA_TUTORIA ST ON T.clave_tutoria = ST.fk_tutoria
 GROUP BY
     T.area_conocimiento
 ORDER BY
@@ -150,7 +147,7 @@ ORDER BY
 LIMIT 5;
 
 
-CREATE VIEW vista_nexos_vigentes_vs_por_vencer AS
+CREATE OR REPLACE VIEW vista_nexos_vigentes_vs_por_vencer AS
 SELECT
     TN.nombre_nexo AS tipo_convenio,
     P.nombres || ' ' || P.apellidos AS nombre_persona,
@@ -176,7 +173,7 @@ WHERE
 ORDER BY
     estado_vigencia DESC;
 
-CREATE VIEW vista_top10_ofertas_mas_postuladas AS
+CREATE OR REPLACE VIEW vista_top10_ofertas_mas_postuladas AS
 SELECT
     OL.titulo_oferta,
     EO.nombre_oficial AS nombre_organizacion,
@@ -186,10 +183,7 @@ FROM
 JOIN
     ENTIDAD_ORGANIZACIONAL EO ON OL.correo_organizacion = EO.correo_principal
 LEFT JOIN
-    SE_POSTULA SP ON
-        OL.correo_organizacion = SP.correo_organizacion_oferta AND
-        OL.fecha_publicacion = SP.fecha_publicacion_oferta AND
-        OL.titulo_oferta = SP.titulo_oferta
+    SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta
 GROUP BY
     OL.titulo_oferta,
     EO.nombre_oficial

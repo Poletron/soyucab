@@ -216,12 +216,34 @@ USING (
 -- =============================================================================
 -- Solo el MODERADOR y AUDITOR tienen acceso a los reportes estratégicos
 
--- Reportes principales de interacción
+-- Reportes principales de interacción (Oscar)
 GRANT SELECT ON V_REPORTE_TOP_VIRAL TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_REPORTE_LIDERES_OPINION TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_REPORTE_INTERES_EVENTOS TO rol_moderador, rol_auditor;
 
--- Reportes adicionales de análisis
+-- Reportes adicionales de análisis (Luis)
 GRANT SELECT ON V_REPORTE_CRECIMIENTO_DEMOGRAFICO TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_GRUPOS_MAS_ACTIVOS TO rol_moderador, rol_auditor;
 GRANT SELECT ON V_TOP_REFERENTES_COMUNIDAD TO rol_moderador, rol_auditor;
+
+-- Reportes de Pedro (Tutorías, Nexos, Ofertas)
+GRANT SELECT ON vista_top5_areas_conocimiento_demanda TO rol_moderador, rol_auditor;
+GRANT SELECT ON vista_nexos_vigentes_vs_por_vencer TO rol_moderador, rol_auditor;
+GRANT SELECT ON vista_top10_ofertas_mas_postuladas TO rol_moderador, rol_auditor;
+
+
+-- =============================================================================
+-- 10. PERMISOS PARA FUNCIONES Y PROCEDIMIENTOS
+-- =============================================================================
+-- Funciones de lógica de negocio usadas por las vistas de reportes
+
+-- Funciones de cálculo de métricas (usadas internamente por las vistas)
+GRANT EXECUTE ON FUNCTION FN_CALCULAR_NIVEL_IMPACTO(INTEGER) TO rol_moderador, rol_auditor;
+GRANT EXECUTE ON FUNCTION FN_CALCULAR_NIVEL_AUTORIDAD(VARCHAR) TO rol_moderador, rol_auditor;
+GRANT EXECUTE ON FUNCTION fn_calcular_tasas_cierre_ofertas() TO rol_moderador, rol_auditor;
+
+-- Procedimiento de publicación de ofertas (solo entidades)
+GRANT EXECUTE ON PROCEDURE sp_publicar_oferta_validada(VARCHAR, TIMESTAMP, VARCHAR, TEXT, TEXT, VARCHAR) TO rol_entidad;
+
+-- Función de identidad (todos los usuarios autenticados)
+GRANT EXECUTE ON FUNCTION fn_get_auth_correo() TO rol_persona, rol_entidad, rol_moderador, rol_auditor;

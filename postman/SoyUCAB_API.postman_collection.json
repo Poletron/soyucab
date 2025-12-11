@@ -488,6 +488,186 @@
                         },
                         "description": "Genera y descarga el PDF del reporte Top Referentes."
                     }
+                },
+                {
+                    "name": "Preview - Áreas Tutorías",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/tutorias",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "tutorias"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Top 5 Áreas de Conocimiento en Tutorías."
+                    }
+                },
+                {
+                    "name": "Preview - Nexos Vigentes",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/nexos",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "nexos"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Nexos Vigentes vs Por Vencer."
+                    }
+                },
+                {
+                    "name": "Preview - Ofertas Laborales",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/ofertas",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "ofertas"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Top 10 Ofertas Laborales Más Postuladas."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Tutorías",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"tutorias\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Top 5 Áreas de Conocimiento en Tutorías."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Nexos",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"nexos\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Nexos Vigentes vs Por Vencer."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Ofertas",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"ofertas\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Top 10 Ofertas Laborales Más Postuladas."
+                    }
                 }
             ]
         }
