@@ -63,44 +63,38 @@ BEFORE INSERT ON MENSAJE
 FOR EACH ROW
 EXECUTE FUNCTION FN_TRG_SEGURIDAD_MENSAJERIA();
 
--- =============================================================================
--- Pedro Urdaneta
--- TRIGGER: Validar que no se postule a ofertas vencidas
--- Regla de Negocio: Una oferta laboral es válida por 30 días desde su publicación
--- =============================================================================
+--Pedro
+-- En 03_Triggers.sql:
 
-CREATE OR REPLACE FUNCTION FN_TRG_VALIDAR_POSTULACION_VENCIDA()
+-- =============================================================================
+-- OBJETO: FUNCIÓN DE TRIGGER
+-- Nombre: FN_TRG_VALIDAR_POSTULACION_VENCIDA
+-- =============================================================================
+-- En 03_Triggers.sql:
+
+CREATE OR REPLACE FUNCTION FN_TRG_CERRAR_POSTULACION_VENCIDA()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_fecha_publicacion TIMESTAMP;
-    v_fecha_vencimiento TIMESTAMP;
-    v_titulo_oferta VARCHAR(255);
-    v_dias_vigencia CONSTANT INTEGER := 30; -- Regla de Negocio: La oferta es válida por 30 días.
+    vencimiento TIMESTAMP;
 BEGIN
-    -- 1. Obtener la fecha de publicación y título de la oferta referenciada (usando la FK simple)
-    SELECT fecha_publicacion, titulo_oferta
-    INTO v_fecha_publicacion, v_titulo_oferta
+    -- CAMBIO CLAVE: Buscar la fecha de vencimiento usando la FK simple (NEW.fk_oferta)
+    SELECT fecha_vencimiento
+    INTO vencimiento
     FROM OFERTA_LABORAL
-    WHERE clave_oferta = NEW.fk_oferta;
+    WHERE clave_oferta = NEW.fk_oferta; 
 
-    -- 2. Calcular la fecha de cierre de la oferta
-    v_fecha_vencimiento := v_fecha_publicacion + (v_dias_vigencia * INTERVAL '1 day');
-
-    -- 3. Lógica de Bloqueo: Si la fecha de postulación es posterior a la fecha de vencimiento, bloquear.
-    IF NEW.fecha_postulacion > v_fecha_vencimiento THEN
-        RAISE EXCEPTION 'Violación de Integridad: La oferta "%" (publicada el %) está expirada (Vence el %).',
-            v_titulo_oferta,
-            v_fecha_publicacion::DATE,
-            v_fecha_vencimiento::DATE;
+    -- Si la fecha de vencimiento existe y es anterior a la postulación, bloquear.
+    IF vencimiento IS NOT NULL AND vencimiento < NEW.fecha_postulacion THEN
+        RAISE EXCEPTION 
+            'Postulación denegada: La oferta laboral ID % venció el %', 
+            NEW.fk_oferta, vencimiento::DATE;
     END IF;
-
-    -- Si la postulación está dentro del plazo, permitir la inserción
-    RETURN NEW; 
+    
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Vincular la función a la tabla SE_POSTULA
-CREATE TRIGGER TRG_VALIDAR_POSTULACION_VENCIDA
+CREATE OR REPLACE TRIGGER TRG_CERRAR_POSTULACION_VENCIDA
 BEFORE INSERT ON SE_POSTULA
 FOR EACH ROW
-EXECUTE FUNCTION FN_TRG_VALIDAR_POSTULACION_VENCIDA();
+EXECUTE FUNCTION FN_TRG_CERRAR_POSTULACION_VENCIDA();

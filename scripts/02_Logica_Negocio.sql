@@ -152,8 +152,8 @@ $$;
 
 --Pedro
 
--- Función para calcular tasas de cierre de ofertas
--- CORREGIDO: Usa el nuevo schema con fk_oferta
+-- En 02_Logica_Negocio.sql (Sección Pedro):
+
 CREATE OR REPLACE FUNCTION fn_calcular_tasas_cierre_ofertas()
 RETURNS TABLE (
     titulo_oferta VARCHAR(255),
@@ -175,8 +175,8 @@ BEGIN
         END AS tasa_cierre
     FROM
         OFERTA_LABORAL OL
-    LEFT JOIN
-        SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta
+    JOIN
+        SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta -- CORRECCIÓN CLAVE: Usar la PK/FK simple
     GROUP BY
         OL.clave_oferta, OL.titulo_oferta
     HAVING
@@ -186,8 +186,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Procedimiento para publicar oferta con validación de nexo activo
--- Valida que la organización tenga un nexo vigente antes de permitir publicar ofertas
+-- En 02_Logica_Negocio.sql (Sección Pedro):
+
+-- NOTA: Este SP no requiere cambios si el DDL fue corregido
 CREATE OR REPLACE PROCEDURE sp_publicar_oferta_validada(
     p_correo_organizacion VARCHAR,
     p_fecha_publicacion TIMESTAMP,
@@ -201,23 +202,22 @@ AS $$
 DECLARE
     nexo_activo_encontrado BOOLEAN;
 BEGIN
-    -- Verificar si la organización tiene al menos un nexo vigente
+    -- Lógica de validación de nexo (PARTE FALTANTE)
     SELECT EXISTS (
         SELECT 1
         FROM TIENE_NEXO TN
         WHERE 
             TN.correo_organizacion = p_correo_organizacion
+            -- Verifica que la fecha de fin sea NULL (indefinida) O que sea posterior o igual a la fecha actual
             AND (TN.fecha_fin IS NULL OR TN.fecha_fin >= NOW()::DATE)
-    ) INTO nexo_activo_encontrado;
+    ) INTO nexo_activo_encontrado; -- SE ASIGNA EL RESULTADO A LA VARIABLE BOOLEANA
 
     IF nexo_activo_encontrado THEN
-        -- Insertar la oferta
         INSERT INTO OFERTA_LABORAL (
             correo_organizacion, fecha_publicacion, titulo_oferta, descripcion_cargo, requisitos, modalidad
         ) VALUES (
             p_correo_organizacion, p_fecha_publicacion, p_titulo_oferta, p_descripcion_cargo, p_requisitos, p_modalidad
         );
-        RAISE NOTICE 'Oferta "%" publicada exitosamente.', p_titulo_oferta;
     ELSE
         RAISE EXCEPTION 
             'La entidad organizacional (%) no está autorizada para publicar vacantes sin nexos vigentes.', p_correo_organizacion;

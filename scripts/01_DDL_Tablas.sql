@@ -263,6 +263,8 @@ CREATE TABLE OFERTA_LABORAL (
     clave_oferta SERIAL PRIMARY KEY,
     correo_organizacion VARCHAR(255) NOT NULL,
     fecha_publicacion TIMESTAMP NOT NULL,
+    -- AÑADIDO: La columna que tu compañero quiere agregar
+    fecha_vencimiento TIMESTAMP, 
     titulo_oferta VARCHAR(255) NOT NULL,
     descripcion_cargo TEXT NOT NULL,
     requisitos TEXT,

@@ -130,21 +130,23 @@ JOIN PERSONA p ON m.correo_principal = p.correo_principal
 ORDER BY score_autoridad DESC
 LIMIT 15;
 
---Pedro (Corregido para usar las nuevas FKs simples)
+--Pedro
 CREATE OR REPLACE VIEW vista_top5_areas_conocimiento_demanda AS
-SELECT
-    T.area_conocimiento,
-    COUNT(ST.correo_solicitante) AS total_solicitudes_area,
-    COUNT(DISTINCT T.correo_tutor) AS total_tutores_disponibles
-FROM
-    TUTORIA T
-LEFT JOIN
-    SOLICITA_TUTORIA ST ON T.clave_tutoria = ST.fk_tutoria
-GROUP BY
-    T.area_conocimiento
-ORDER BY
-    total_solicitudes_area DESC
-LIMIT 5;
+    SELECT
+        T.area_conocimiento,
+        COUNT(ST.correo_solicitante) AS total_solicitudes_area,
+        COUNT(DISTINCT T.correo_tutor) AS total_tutores_disponibles
+    FROM
+        TUTORIA T
+    LEFT JOIN
+        SOLICITA_TUTORIA ST ON
+            -- CORRECCIÓN CLAVE: Unir por el ID simple de TUTORIA
+            T.clave_tutoria = ST.fk_tutoria 
+    GROUP BY
+        T.area_conocimiento
+    ORDER BY
+        total_solicitudes_area DESC
+    LIMIT 5;
 
 
 CREATE OR REPLACE VIEW vista_nexos_vigentes_vs_por_vencer AS
@@ -173,6 +175,8 @@ WHERE
 ORDER BY
     estado_vigencia DESC;
 
+-- En 04_Reportes.sql (Sección Pedro):
+
 CREATE OR REPLACE VIEW vista_top10_ofertas_mas_postuladas AS
 SELECT
     OL.titulo_oferta,
@@ -183,7 +187,7 @@ FROM
 JOIN
     ENTIDAD_ORGANIZACIONAL EO ON OL.correo_organizacion = EO.correo_principal
 LEFT JOIN
-    SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta
+    SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta -- CORRECCIÓN CLAVE: Usar la PK/FK simple
 GROUP BY
     OL.titulo_oferta,
     EO.nombre_oficial
