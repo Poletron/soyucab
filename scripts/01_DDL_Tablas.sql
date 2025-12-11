@@ -176,7 +176,9 @@ CREATE TABLE SOLICITA_CONEXION (
     correo_solicitante VARCHAR(255) NOT NULL,
     correo_solicitado VARCHAR(255) NOT NULL,
     fecha_solicitud TIMESTAMP NOT NULL,
-    estado_solicitud VARCHAR(20) NOT NULL CHECK (estado_solicitud IN ('Pendiente', 'Aceptada', 'Rechazada')),
+    estado_solicitud VARCHAR(20) NOT NULL,
+    CONSTRAINT CK_FLUJO_SOLICITUD CHECK (estado_solicitud IN ('Pendiente', 'Aceptada', 'Rechazada')),
+    CONSTRAINT CK_GRAFO_ANTI_REFLEXIVO CHECK (correo_solicitante <> correo_solicitado),
     CONSTRAINT fk_solicitante FOREIGN KEY (correo_solicitante) REFERENCES PERSONA(correo_principal),
     CONSTRAINT fk_solicitado FOREIGN KEY (correo_solicitado) REFERENCES PERSONA(correo_principal),
     CONSTRAINT check_narcisismo CHECK (correo_solicitante <> correo_solicitado)
@@ -206,10 +208,11 @@ CREATE TABLE TIENE_NEXO (
 CREATE TABLE GRUPO_INTERES (
     nombre_grupo VARCHAR(150) PRIMARY KEY,
     descripcion_grupo TEXT,
-    visibilidad VARCHAR(20) NOT NULL CHECK (visibilidad IN ('Público', 'Privado')),
+    visibilidad VARCHAR(20) NOT NULL,
     correo_creador VARCHAR(255) NOT NULL,
     fecha_creacion TIMESTAMP NOT NULL,
-    CONSTRAINT fk_grupo_creador FOREIGN KEY (correo_creador) REFERENCES PERSONA(correo_principal)
+    CONSTRAINT CK_VISIBILIDAD_SEGURA CHECK (visibilidad IN ('Público', 'Privado')),
+    CONSTRAINT fk_grupo_creador FOREIGN KEY (correo_creador) REFERENCES MIEMBRO(correo_principal)
 );
 
 CREATE TABLE PERTENECE_A_GRUPO (

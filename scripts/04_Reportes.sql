@@ -78,3 +78,52 @@ LEFT JOIN REACCIONA_CONTENIDO r
 WHERE e.fecha_inicio > CURRENT_TIMESTAMP 
 GROUP BY e.fk_contenido, e.titulo, e.fecha_inicio, e.ciudad_ubicacion
 ORDER BY e.fecha_inicio ASC;
+
+-- En 04_Reportes.sql:
+
+CREATE OR REPLACE VIEW V_REPORTE_CRECIMIENTO_DEMOGRAFICO AS
+SELECT 
+    -- Agrupación mensual
+    TO_CHAR(m.fecha_registro, 'YYYY-MM') as mes_registro,
+    
+    -- Ocupación (asumiendo que los roles en MIEMBRO_POSEE_ROL se usan como ocupación)
+    r.nombre_rol as ocupacion,
+    
+    -- Conteo
+    COUNT(m.correo_principal) as nuevos_registros
+    
+FROM MIEMBRO m
+JOIN MIEMBRO_POSEE_ROL mpr ON m.correo_principal = mpr.correo_miembro
+JOIN ROL r ON mpr.nombre_rol = r.nombre_rol
+WHERE r.nombre_rol IN ('Estudiante', 'Profesor', 'Egresado')
+GROUP BY mes_registro, ocupacion
+ORDER BY mes_registro, ocupacion;
+
+-- En 04_Reportes.sql:
+
+-- 2. REPORTE: GRUPOS MÁS ACTIVOS
+-- =============================================================================
+CREATE OR REPLACE VIEW V_GRUPOS_MAS_ACTIVOS AS
+SELECT
+    g.nombre_grupo,
+    g.descripcion_grupo,
+    -- Conteo de miembros
+    COUNT(p.correo_persona) as total_miembros
+    
+FROM GRUPO_INTERES g
+LEFT JOIN PERTENECE_A_GRUPO p ON g.nombre_grupo = p.nombre_grupo
+GROUP BY g.nombre_grupo, g.descripcion_grupo
+ORDER BY total_miembros DESC
+LIMIT 10;
+
+
+CREATE OR REPLACE VIEW V_TOP_REFERENTES_COMUNIDAD AS
+SELECT
+    p.nombres || ' ' || p.apellidos as referente,
+    m.correo_principal as correo,
+    -- Llamada a la función de lógica de negocio (ya implementada)
+    FN_CALCULAR_NIVEL_AUTORIDAD(m.correo_principal) as score_autoridad
+FROM MIEMBRO m
+JOIN PERSONA p ON m.correo_principal = p.correo_principal
+ORDER BY score_autoridad DESC
+LIMIT 15;
