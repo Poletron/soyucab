@@ -32,7 +32,7 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
 // Reportes
 // ============================================
 
-export type ReportType = 'viralidad' | 'lideres' | 'eventos';
+export type ReportType = 'viralidad' | 'lideres' | 'eventos' | 'crecimiento' | 'grupos' | 'referentes';
 
 export async function getReportPreview(reportType: ReportType) {
     const res = await apiFetch(`/api/report/preview/${reportType}`);
@@ -70,7 +70,10 @@ export async function downloadReportPDF(reportType: ReportType, filename?: strin
         const reportNames: Record<ReportType, string> = {
             viralidad: 'contenido_viral',
             lideres: 'lideres_opinion',
-            eventos: 'interes_eventos'
+            eventos: 'interes_eventos',
+            crecimiento: 'crecimiento_demografico',
+            grupos: 'grupos_activos',
+            referentes: 'referentes_comunidad'
         };
         const downloadFilename = filename || `reporte_${reportNames[reportType]}_${date}.pdf`;
 

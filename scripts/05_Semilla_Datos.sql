@@ -440,86 +440,144 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 11. CONTENIDO + PUBLICACION (80+ publicaciones) (CORREGIDO)
+-- 11. CONTENIDO + PUBLICACION (80+ publicaciones)
 -- =============================================================================
 
 DO $$
 DECLARE
-    contenidos TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
-    autores TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
+    contenidos TEXT[] := ARRAY[
+        '¡Acabo de terminar mi proyecto final de bases de datos! PostgreSQL es increíble 🐘',
+        'Reflexión del día: El éxito no es la clave de la felicidad 💭',
+        'Increíble charla sobre inteligencia artificial en el auditorio 🤖',
+        'Buscando compañeros para proyecto de emprendimiento fintech 💰',
+        'Nuevo tutorial de React publicado en mi blog 👨‍💻',
+        '¡Primer día de pasantías! Nervios y emoción 🎉',
+        'Aprendiendo Docker y Kubernetes. DevOps is the way! 🐳',
+        'Conferencia de periodismo digital este viernes 📰',
+        'Terminé de leer Clean Code. Altamente recomendado 📚',
+        'Feliz de anunciar que fui aceptado en intercambio 🌍',
+        'Workshop de diseño UX mañana a las 3pm 🎨',
+        'La importancia de las soft skills en el mundo laboral 💼',
+        'Nuevo paper publicado sobre machine learning en medicina 📄',
+        '¿Alguien emocionado por el torneo de FIFA? ⚽🎮',
+        'Tips para sobrevivir la semana de parciales ☕',
+        'Networking en el evento de la cámara de comercio 🤝',
+        'Mi experiencia implementando metodologías ágiles 📊',
+        'Celebrando 1 año en mi primera empresa 🎂',
+        'Webinar gratuito sobre inversiones para principiantes 💹',
+        'La UCAB siempre será mi segundo hogar ❤️',
+        'Preparando presentación para defensa de tesis 🎓',
+        'Nuevo proyecto de investigación aprobado 🔬',
+        'El poder del networking: cómo conseguí mi empleo 🚀',
+        'Iniciando curso de certificación en AWS ☁️',
+        'Compartiendo mi experiencia en el hackathon 💻',
+        'Meditación y productividad: mindfulness 🧘',
+        'Nuevo episodio de mi podcast sobre emprendimiento 🎙️',
+        '¿Interesados en grupo de estudio para TOEFL? 📝',
+        'Graduación de mi hermana hoy. Orgulloso! 👩‍🎓',
+        'Review de las mejores laptops para programadores 💻'
+    ];
+    autores TEXT[] := ARRAY[
+        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 
+        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'sofia.hernandez@ucab.edu.ve',
+        'diego.ramirez@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', 'andres.castro@ucab.edu.ve',
+        'isabella.morales@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', 'camila.ortiz@ucab.edu.ve',
+        'sebastian.lopez@ucab.edu.ve', 'mariana.torres@ucab.edu.ve', 'alejandro.navarro@ucab.edu.ve',
+        'daniela.rios@ucab.edu.ve', 'nicolas.flores@ucab.edu.ve', 'lucia.jimenez@ucab.edu.ve',
+        'mateo.gonzalez@ucab.edu.ve', 'paula.martinez@ucab.edu.ve', 'julian.sanchez@ucab.edu.ve',
+        'roberto.herrera@ucab.edu.ve', 'fernanda.cruz@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve',
+        'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve', 'pablo.guerrero@ucab.edu.ve',
+        'santiago.pena@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
+    ];
     v_fecha TIMESTAMP;
     v_autor TEXT;
     v_contenido TEXT;
     vis TEXT[] := ARRAY['Público', 'Público', 'Público', 'Solo Conexiones'];
-    v_id_contenido INTEGER; -- NUEVO: Variable para capturar el ID de CONTENIDO
+    v_id_contenido INTEGER;
 BEGIN
     FOR i IN 1..80 LOOP
         v_fecha := NOW() - (RANDOM() * INTERVAL '180 days');
         v_autor := autores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(autores, 1))::INT];
         v_contenido := contenidos[1 + FLOOR(RANDOM() * ARRAY_LENGTH(contenidos, 1))::INT] || ' #' || i;
         
-        -- 1. INSERTAR CONTENIDO y CAPTURAR el ID
         INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
         VALUES (v_autor, v_fecha, v_contenido, vis[1 + FLOOR(RANDOM() * ARRAY_LENGTH(vis, 1))::INT])
-        RETURNING clave_contenido INTO v_id_contenido; -- CAPTURAR EL ID
+        RETURNING clave_contenido INTO v_id_contenido;
         
-        -- 2. INSERTAR PUBLICACION usando la FK simple
-        INSERT INTO PUBLICACION (fk_contenido) -- Solo necesitamos el ID!
-        VALUES (v_id_contenido);
+        INSERT INTO PUBLICACION (fk_contenido) VALUES (v_id_contenido);
     END LOOP;
 END $$;
 
 -- =============================================================================
--- 12. EVENTO (15 eventos pasados y futuros) (CORREGIDO)
+-- 12. EVENTO (15 eventos pasados y futuros)
 -- =============================================================================
 
 DO $$
 DECLARE
-    eventos TEXT[][] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
+    eventos TEXT[][] := ARRAY[
+        ['rrhh@polar.com', 'Feria Polar 2024', 'Feria de empleo corporativo', '-45', '6', 'Caracas'],
+        ['innovacion@ucab.edu.ve', 'Startup Weekend', 'Competencia emprendimiento 54h', '-30', '54', 'Caracas'],
+        ['giia@ucab.edu.ve', 'Simposio IA', 'Presentación papers investigación', '-20', '8', 'Caracas'],
+        ['oscar@ucab.edu.ve', 'Hackathon BD', 'Competencia SQL y PostgreSQL', '-15', '24', 'Caracas'],
+        ['talento@banesco.com', 'Workshop Finanzas', 'Finanzas personales para jóvenes', '-10', '3', 'Caracas'],
+        ['pedro@ucab.edu.ve', 'Torneo FIFA', 'Esports universitarios', '-5', '8', 'Caracas'],
+        ['prof.martinez@ucab.edu.ve', 'Seminario Software', 'Patrones de diseño', '-3', '4', 'Caracas'],
+        ['innovacion@ucab.edu.ve', 'Demo Day 2024', 'Startups presentan a inversores', '7', '4', 'Caracas'],
+        ['giia@ucab.edu.ve', 'Workshop ML', 'Introducción práctica a ML', '14', '6', 'Caracas'],
+        ['sebastian.lopez@ucab.edu.ve', 'Data Science Meetup', 'Networking DS community', '21', '3', 'Caracas'],
+        ['rrhh@movistar.com.ve', 'Programa Pasantías', 'Oportunidades 2025', '30', '2', 'Caracas'],
+        ['andres.castro@ucab.edu.ve', 'Conferencia Liderazgo', 'Casos de éxito empresarial', '45', '5', 'Caracas'],
+        ['victoria.paredes@ucab.edu.ve', 'Congreso Periodismo', 'Futuro de medios digitales', '60', '8', 'Caracas'],
+        ['pablo.guerrero@ucab.edu.ve', 'Expo Fotográfica', 'Galería artística Campus', '75', '72', 'Caracas'],
+        ['andrea.diaz@ucab.edu.ve', 'Maratón Wellness', 'Carrera 5K saludable', '90', '4', 'Caracas']
+    ];
     ev TEXT[];
     v_fecha_creacion TIMESTAMP;
     v_fecha_inicio TIMESTAMP;
     v_fecha_fin TIMESTAMP;
-    v_id_contenido INTEGER; -- NUEVO: Variable para capturar el ID de CONTENIDO
+    v_id_contenido INTEGER;
 BEGIN
     FOREACH ev SLICE 1 IN ARRAY eventos LOOP
         v_fecha_creacion := NOW() + (ev[4]::INT * INTERVAL '1 day') - INTERVAL '5 days';
         v_fecha_inicio := NOW() + (ev[4]::INT * INTERVAL '1 day');
         v_fecha_fin := v_fecha_inicio + (ev[5]::INT * INTERVAL '1 hour');
         
-        -- 1. INSERTAR CONTENIDO y CAPTURAR el ID
         INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
         VALUES (ev[1], v_fecha_creacion, ev[3], 'Público')
-        RETURNING clave_contenido INTO v_id_contenido; -- CAPTURAR EL ID
+        RETURNING clave_contenido INTO v_id_contenido;
         
-        -- 2. INSERTAR EVENTO usando la FK simple
         INSERT INTO EVENTO (fk_contenido, titulo, fecha_inicio, fecha_fin, ciudad_ubicacion, pais_ubicacion)
         VALUES (v_id_contenido, ev[2], v_fecha_inicio, v_fecha_fin, ev[6], 'Venezuela');
     END LOOP;
 END $$;
 
 -- =============================================================================
--- 13. REACCIONA_CONTENIDO (400+ reacciones) (CORREGIDO)
+-- 13. REACCIONA_CONTENIDO (400+ reacciones)
 -- =============================================================================
 
 DO $$
 DECLARE
-    reactores TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
-    reacciones TEXT[] := ARRAY[ /* ... (Mismo array, no necesita cambio) ... */ ];
-    -- CAMBIO: Usamos el ID simple para iterar
+    reactores TEXT[] := ARRAY[
+        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 'maria@ucab.edu.ve', 'juan@ucab.edu.ve',
+        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'sofia.hernandez@ucab.edu.ve',
+        'diego.ramirez@ucab.edu.ve', 'valentina.silva@ucab.edu.ve', 'andres.castro@ucab.edu.ve',
+        'isabella.morales@ucab.edu.ve', 'gabriel.vargas@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve',
+        'alejandro.navarro@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve', 'ricardo.aguilar@ucab.edu.ve',
+        'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve', 'pablo.guerrero@ucab.edu.ve',
+        'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com', 'alumni.empresaria@gmail.com'
+    ];
+    reacciones TEXT[] := ARRAY['Me Gusta', 'Me Gusta', 'Me Gusta', 'Me Encanta', 'Me Encanta', 'Me Divierte', 'Me Asombra', 'Me Interesa'];
     v_contenido RECORD; 
     v_reactor TEXT;
     v_reaccion TEXT;
     num_reacciones INT;
 BEGIN
-    -- Iterar sobre los IDs de CONTENIDO
     FOR v_contenido IN SELECT clave_contenido, correo_autor, fecha_hora_creacion FROM CONTENIDO LOOP
         num_reacciones := 3 + FLOOR(RANDOM() * 10)::INT;
         FOR i IN 1..num_reacciones LOOP
             v_reactor := reactores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reactores, 1))::INT];
             v_reaccion := reacciones[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reacciones, 1))::INT];
             IF v_reactor <> v_contenido.correo_autor THEN
-                -- INSERTAR REACCIÓN usando el ID de contenido
                 INSERT INTO REACCIONA_CONTENIDO (correo_miembro, fk_contenido, nombre_reaccion, fecha_hora_reaccion)
                 VALUES (v_reactor, v_contenido.clave_contenido, v_reaccion, v_contenido.fecha_hora_creacion + (RANDOM() * INTERVAL '48 hours'))
                 ON CONFLICT DO NOTHING;
@@ -529,21 +587,33 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 14. COMENTARIO (150+ comentarios) (CORREGIDO)
+-- 14. COMENTARIO (150+ comentarios)
 -- =============================================================================
 
 DO $$
 DECLARE
-    comentaristas TEXT[] := ARRAY[ /* ... */ ];
-    textos TEXT[] := ARRAY[ /* ... */ ];
-    -- CAMBIO: Usamos el ID simple para la tabla principal
+    comentaristas TEXT[] := ARRAY[
+        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve', 'maria@ucab.edu.ve',
+        'ana.garcia@ucab.edu.ve', 'carlos.mendez@ucab.edu.ve', 'diego.ramirez@ucab.edu.ve',
+        'sebastian.lopez@ucab.edu.ve', 'alejandro.navarro@ucab.edu.ve', 'roberto.herrera@ucab.edu.ve',
+        'ricardo.aguilar@ucab.edu.ve', 'david.fuentes@ucab.edu.ve', 'victoria.paredes@ucab.edu.ve',
+        'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
+    ];
+    textos TEXT[] := ARRAY[
+        '¡Excelente publicación! 👏', 'Totalmente de acuerdo', 'Muy inspirador',
+        '¿Podrías compartir más detalles?', 'Increíble trabajo! 🎉', '¿Cómo me inscribo?',
+        'Gracias por compartir', 'Esto me motiva 💪', 'Interesante perspectiva',
+        'Éxito en todo! 🚀', 'Muy buen contenido', '¿Cuándo es el próximo evento?',
+        'Excelente iniciativa', 'Esto debería viralizarse 🔥', 'Aprendí algo nuevo hoy',
+        'Cuenta conmigo', 'Qué orgullo ver esto', 'Información muy útil',
+        'Más eventos como este', 'Gran aporte a la comunidad'
+    ];
     v_contenido RECORD;
     v_comentarista TEXT;
     v_texto TEXT;
     num_comentarios INT;
     v_offset INT;
 BEGIN
-    -- Iterar sobre los IDs de CONTENIDO (limitamos a 50 contenidos públicos para crear comentarios)
     FOR v_contenido IN SELECT clave_contenido, correo_autor, fecha_hora_creacion FROM CONTENIDO WHERE visibilidad = 'Público' ORDER BY RANDOM() LIMIT 50 LOOP
         num_comentarios := 1 + FLOOR(RANDOM() * 5)::INT;
         v_offset := 0;
@@ -552,7 +622,6 @@ BEGIN
             v_texto := textos[1 + FLOOR(RANDOM() * ARRAY_LENGTH(textos, 1))::INT];
             v_offset := v_offset + 1 + FLOOR(RANDOM() * 30)::INT;
             IF v_comentarista <> v_contenido.correo_autor THEN
-                -- INSERTAR COMENTARIO usando el ID simple
                 INSERT INTO COMENTARIO (fk_contenido, fecha_hora_comentario, correo_autor_comentario, texto_comentario)
                 VALUES (v_contenido.clave_contenido, v_contenido.fecha_hora_creacion + (v_offset * INTERVAL '1 minute'), v_comentarista, v_texto)
                 ON CONFLICT DO NOTHING;
@@ -562,24 +631,25 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 15. REACCIONA_COMENTARIO (50+ reacciones a comentarios) (CORREGIDO)
+-- 15. REACCIONA_COMENTARIO (50+ reacciones a comentarios)
 -- =============================================================================
 
 DO $$
 DECLARE
-    reactores TEXT[] := ARRAY[ /* ... */ ];
-    reacciones TEXT[] := ARRAY[ /* ... */ ];
-    -- CAMBIO: Iterar sobre los IDs de los comentarios
+    reactores TEXT[] := ARRAY[
+        'oscar@ucab.edu.ve', 'luis@ucab.edu.ve', 'pedro@ucab.edu.ve',
+        'ana.garcia@ucab.edu.ve', 'diego.ramirez@ucab.edu.ve', 'sebastian.lopez@ucab.edu.ve',
+        'alejandro.navarro@ucab.edu.ve', 'prof.martinez@ucab.edu.ve', 'egresado.tech@gmail.com'
+    ];
+    reacciones TEXT[] := ARRAY['Me Gusta', 'Me Gusta', 'Me Encanta', 'Me Divierte'];
     v_comentario RECORD; 
     v_reactor TEXT;
     v_reaccion TEXT;
 BEGIN
-    -- Iterar sobre los IDs de los comentarios
     FOR v_comentario IN SELECT clave_comentario, fecha_hora_comentario FROM COMENTARIO ORDER BY RANDOM() LIMIT 50 LOOP
         v_reactor := reactores[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reactores, 1))::INT];
         v_reaccion := reacciones[1 + FLOOR(RANDOM() * ARRAY_LENGTH(reacciones, 1))::INT];
         
-        -- INSERTAR REACCIÓN usando el ID simple de COMENTARIO
         INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
         VALUES (v_reactor, v_comentario.clave_comentario, v_reaccion, v_comentario.fecha_hora_comentario + INTERVAL '1 hour')
         ON CONFLICT DO NOTHING;

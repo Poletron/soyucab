@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { TrendingUp, Users, Calendar, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, Calendar, BarChart3, UserCheck, Hash } from 'lucide-react';
 import TopViralReport from './components/TopViralReport';
 import LideresReport from './components/LideresReport';
 import EventosReport from './components/EventosReport';
+import CrecimientoReport from './components/CrecimientoReport';
+import GruposActivosReport from './components/GruposActivosReport';
+import ReferentesReport from './components/ReferentesReport';
 
 function App() {
     const [activeTab, setActiveTab] = useState('viralidad');
@@ -36,14 +39,13 @@ function App() {
                             </div>
                         </div>
 
-                        {/* Brand Colors Indicator */}
-                        <div className="hidden md:flex items-center space-x-2">
-                            <span className="text-sm text-gray-500">Colores UCAB:</span>
-                            <div className="flex space-x-1">
-                                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#40b4e5' }} title="Azul UCAB"></div>
-                                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#047732' }} title="Verde UCAB"></div>
-                                <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ffc526' }} title="Oro UCAB"></div>
-                            </div>
+                        {/* Logo UCAB */}
+                        <div className="hidden md:flex items-center">
+                            <img
+                                src="/logo.png"
+                                alt="UCAB Logo"
+                                className="h-10 w-auto"
+                            />
                         </div>
                     </div>
                 </div>
@@ -61,33 +63,57 @@ function App() {
 
                 {/* Tabs Navigation */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-8 h-12">
+                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 mb-8 h-auto gap-1">
                         <TabsTrigger
                             value="viralidad"
-                            className="flex items-center space-x-2 data-[state=active]:bg-white"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
                             style={{
                                 '--tw-ring-color': '#40b4e5'
                             } as React.CSSProperties}
                         >
                             <TrendingUp className="h-4 w-4" />
-                            <span className="hidden sm:inline">Contenido Viral</span>
-                            <span className="sm:hidden">Viralidad</span>
+                            <span className="hidden lg:inline">Contenido Viral</span>
+                            <span className="lg:hidden text-xs">Viral</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="lideres"
-                            className="flex items-center space-x-2 data-[state=active]:bg-white"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
                         >
                             <Users className="h-4 w-4" />
-                            <span className="hidden sm:inline">Líderes de Opinión</span>
-                            <span className="sm:hidden">Líderes</span>
+                            <span className="hidden lg:inline">Líderes Opinión</span>
+                            <span className="lg:hidden text-xs">Líderes</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="eventos"
-                            className="flex items-center space-x-2 data-[state=active]:bg-white"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
                         >
                             <Calendar className="h-4 w-4" />
-                            <span className="hidden sm:inline">Proyección Eventos</span>
-                            <span className="sm:hidden">Eventos</span>
+                            <span className="hidden lg:inline">Proyección Eventos</span>
+                            <span className="lg:hidden text-xs">Eventos</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="crecimiento"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <BarChart3 className="h-4 w-4" />
+                            <span className="hidden lg:inline">Crecimiento</span>
+                            <span className="lg:hidden text-xs">Crec.</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="grupos"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <Hash className="h-4 w-4" />
+                            <span className="hidden lg:inline">Grupos Activos</span>
+                            <span className="lg:hidden text-xs">Grupos</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="referentes"
+                            className="flex items-center space-x-2 data-[state=active]:bg-white py-2"
+                        >
+                            <UserCheck className="h-4 w-4" />
+                            <span className="hidden lg:inline">Referentes</span>
+                            <span className="lg:hidden text-xs">Ref.</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -101,6 +127,18 @@ function App() {
 
                     <TabsContent value="eventos" className="mt-0">
                         <EventosReport />
+                    </TabsContent>
+
+                    <TabsContent value="crecimiento" className="mt-0">
+                        <CrecimientoReport />
+                    </TabsContent>
+
+                    <TabsContent value="grupos" className="mt-0">
+                        <GruposActivosReport />
+                    </TabsContent>
+
+                    <TabsContent value="referentes" className="mt-0">
+                        <ReferentesReport />
                     </TabsContent>
                 </Tabs>
             </main>

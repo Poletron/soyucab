@@ -52,6 +52,33 @@ async function getEventosReportData(userEmail) {
     return result.rows;
 }
 
+/**
+ * Obtiene datos del reporte de crecimiento demográfico
+ */
+async function getCrecimientoReportData(userEmail) {
+    const sql = `SELECT * FROM V_REPORTE_CRECIMIENTO_DEMOGRAFICO ORDER BY mes_registro DESC`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
+/**
+ * Obtiene datos del reporte de grupos más activos
+ */
+async function getGruposActivosReportData(userEmail) {
+    const sql = `SELECT * FROM V_GRUPOS_MAS_ACTIVOS`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
+/**
+ * Obtiene datos del reporte de referentes de la comunidad
+ */
+async function getReferentesReportData(userEmail) {
+    const sql = `SELECT * FROM V_TOP_REFERENTES_COMUNIDAD`;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
 // ============================================
 // TEMPLATES HTML
 // ============================================
@@ -63,13 +90,19 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
     const titles = {
         viralidad: 'Top Contenido Viral',
         lideres: 'Líderes de Opinión',
-        eventos: 'Proyección de Interés en Eventos'
+        eventos: 'Proyección de Interés en Eventos',
+        crecimiento: 'Crecimiento Demográfico',
+        grupos: 'Grupos Más Activos',
+        referentes: 'Top Referentes de la Comunidad'
     };
 
     const subtitles = {
         viralidad: 'Ranking de publicaciones con mayor impacto',
         lideres: 'Usuarios más activos en generación de contenido',
-        eventos: 'Predicción de asistencia basada en interacciones'
+        eventos: 'Predicción de asistencia basada en interacciones',
+        crecimiento: 'Nuevos registros por mes y tipo de ocupación',
+        grupos: 'Grupos de interés ordenados por cantidad de miembros',
+        referentes: 'Usuarios con mayor autoridad en la comunidad'
     };
 
     const title = titles[reportType] || 'Reporte SoyUCAB';
@@ -188,6 +221,91 @@ function renderHtmlTemplate(reportType, data, generatedAt) {
                 <td class="center"><span class="status-badge ${statusClass}">${row.status_proyeccion || '-'}</span></td>
             </tr>
         `}).join('');
+    } else if (reportType === 'crecimiento') {
+        // Crecimiento Demográfico
+        const totalRegistros = data.reduce((sum, r) => sum + (parseInt(r.nuevos_registros) || 0), 0);
+        const mesesUnicos = [...new Set(data.map(r => r.mes_registro))].length;
+        const ocupaciones = [...new Set(data.map(r => r.ocupacion))];
+        const topOcupacion = data.reduce((max, r) =>
+            (parseInt(r.nuevos_registros) || 0) > (parseInt(max?.nuevos_registros) || 0) ? r : max, data[0])?.ocupacion || 'N/A';
+
+        kpis = [
+            { label: 'Total Registros', value: totalRegistros, color: '#40b4e5', sublabel: 'nuevos miembros' },
+            { label: 'Meses Analizados', value: mesesUnicos, color: '#047732', sublabel: 'períodos' },
+            { label: 'Tipos Ocupación', value: ocupaciones.length, color: '#ffc526', sublabel: 'categorías' },
+            { label: 'Más Registros', value: topOcupacion, color: '#12100c', sublabel: 'ocupación líder' }
+        ];
+
+        tableHeaders = `
+            <th>Mes</th>
+            <th>Ocupación</th>
+            <th class="center">Nuevos Registros</th>
+        `;
+        tableRows = data.map(row => `
+            <tr>
+                <td class="date">${row.mes_registro || '-'}</td>
+                <td>${row.ocupacion || '-'}</td>
+                <td class="center"><span class="score-badge">${row.nuevos_registros || 0}</span></td>
+            </tr>
+        `).join('');
+    } else if (reportType === 'grupos') {
+        // Grupos Más Activos
+        const totalGrupos = data.length;
+        const totalMiembros = data.reduce((sum, r) => sum + (parseInt(r.total_miembros) || 0), 0);
+        const promedioMiembros = totalGrupos > 0 ? (totalMiembros / totalGrupos).toFixed(1) : 0;
+        const grupoTop = data[0]?.nombre_grupo || 'N/A';
+
+        kpis = [
+            { label: 'Total Grupos', value: totalGrupos, color: '#40b4e5', sublabel: 'grupos activos' },
+            { label: 'Total Miembros', value: totalMiembros, color: '#047732', sublabel: 'participantes' },
+            { label: 'Promedio', value: promedioMiembros, color: '#ffc526', sublabel: 'miembros/grupo' },
+            { label: 'Grupo #1', value: grupoTop.substring(0, 15), color: '#12100c', sublabel: 'más activo' }
+        ];
+
+        tableHeaders = `
+            <th class="rank-col">#</th>
+            <th>Nombre del Grupo</th>
+            <th>Descripción</th>
+            <th class="center">Miembros</th>
+        `;
+        tableRows = data.map((row, index) => `
+            <tr>
+                <td><span class="rank-badge ${index < 3 ? 'top3' : ''}">${index + 1}</span></td>
+                <td class="author">${row.nombre_grupo || '-'}</td>
+                <td class="content-title">${(row.descripcion_grupo || '-').substring(0, 50)}...</td>
+                <td class="center"><span class="score-badge">${row.total_miembros || 0}</span></td>
+            </tr>
+        `).join('');
+    } else if (reportType === 'referentes') {
+        // Top Referentes Comunidad
+        const totalReferentes = data.length;
+        const maxScore = data.length > 0 ? Math.max(...data.map(r => parseFloat(r.score_autoridad) || 0)) : 0;
+        const avgScore = data.length > 0
+            ? (data.reduce((sum, r) => sum + (parseFloat(r.score_autoridad) || 0), 0) / data.length).toFixed(1)
+            : 0;
+        const topReferente = data[0]?.referente || 'N/A';
+
+        kpis = [
+            { label: 'Total Referentes', value: totalReferentes, color: '#40b4e5', sublabel: 'líderes identificados' },
+            { label: 'Score Máximo', value: maxScore.toFixed(0), color: '#047732', sublabel: 'autoridad más alta' },
+            { label: 'Score Promedio', value: avgScore, color: '#ffc526', sublabel: 'nivel medio' },
+            { label: 'Top Referente', value: topReferente.split(' ')[0], color: '#12100c', sublabel: '#1 autoridad' }
+        ];
+
+        tableHeaders = `
+            <th class="rank-col">#</th>
+            <th>Referente</th>
+            <th>Correo</th>
+            <th class="center">Score Autoridad</th>
+        `;
+        tableRows = data.map((row, index) => `
+            <tr>
+                <td><span class="rank-badge ${index < 3 ? 'top3' : ''}">${index + 1}</span></td>
+                <td class="author">${row.referente || '-'}</td>
+                <td class="date">${row.correo || '-'}</td>
+                <td class="center"><span class="score-badge">${row.score_autoridad || 0}</span></td>
+            </tr>
+        `).join('');
     }
 
     return `
@@ -435,6 +553,15 @@ async function generateReport(reportType, userEmail) {
         case 'eventos':
             data = await getEventosReportData(userEmail);
             break;
+        case 'crecimiento':
+            data = await getCrecimientoReportData(userEmail);
+            break;
+        case 'grupos':
+            data = await getGruposActivosReportData(userEmail);
+            break;
+        case 'referentes':
+            data = await getReferentesReportData(userEmail);
+            break;
         default:
             throw new Error(`Tipo de reporte no válido: ${reportType}`);
     }
@@ -463,5 +590,8 @@ module.exports = {
     generateReport,
     getViralReportData,
     getLideresReportData,
-    getEventosReportData
+    getEventosReportData,
+    getCrecimientoReportData,
+    getGruposActivosReportData,
+    getReferentesReportData
 };

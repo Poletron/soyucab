@@ -22,7 +22,7 @@ router.post('/generate', requireAuth, async (req, res) => {
         const { reportType } = req.body;
 
         // Validación
-        const validTypes = ['viralidad', 'lideres', 'eventos'];
+        const validTypes = ['viralidad', 'lideres', 'eventos', 'crecimiento', 'grupos', 'referentes'];
         if (!reportType || !validTypes.includes(reportType)) {
             return res.status(400).json({
                 success: false,
@@ -67,6 +67,15 @@ router.get('/preview/:type', requireAuth, async (req, res) => {
                 break;
             case 'eventos':
                 data = await reportService.getEventosReportData(req.userEmail);
+                break;
+            case 'crecimiento':
+                data = await reportService.getCrecimientoReportData(req.userEmail);
+                break;
+            case 'grupos':
+                data = await reportService.getGruposActivosReportData(req.userEmail);
+                break;
+            case 'referentes':
+                data = await reportService.getReferentesReportData(req.userEmail);
                 break;
             default:
                 return res.status(400).json({
@@ -116,6 +125,24 @@ router.get('/types', (req, res) => {
                 name: 'Interés en Eventos',
                 description: 'Proyección de asistencia a eventos futuros',
                 view: 'V_REPORTE_INTERES_EVENTOS'
+            },
+            {
+                id: 'crecimiento',
+                name: 'Crecimiento Demográfico',
+                description: 'Nuevos registros por mes y ocupación',
+                view: 'V_REPORTE_CRECIMIENTO_DEMOGRAFICO'
+            },
+            {
+                id: 'grupos',
+                name: 'Grupos Más Activos',
+                description: 'Top 10 grupos por cantidad de miembros',
+                view: 'V_GRUPOS_MAS_ACTIVOS'
+            },
+            {
+                id: 'referentes',
+                name: 'Top Referentes Comunidad',
+                description: 'Top 15 usuarios por score de autoridad',
+                view: 'V_TOP_REFERENTES_COMUNIDAD'
             }
         ]
     });
