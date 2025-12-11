@@ -308,6 +308,186 @@
                         },
                         "description": "Genera y descarga el PDF del reporte Interés en Eventos."
                     }
+                },
+                {
+                    "name": "Preview - Crecimiento Demográfico",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/crecimiento",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "crecimiento"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Crecimiento Demográfico por Carrera."
+                    }
+                },
+                {
+                    "name": "Preview - Grupos Más Activos",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/grupos",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "grupos"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Grupos Más Activos."
+                    }
+                },
+                {
+                    "name": "Preview - Top Referentes",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/report/preview/referentes",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "preview",
+                                "referentes"
+                            ]
+                        },
+                        "description": "Preview JSON del reporte Top Referentes de la Comunidad."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Crecimiento",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"crecimiento\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Crecimiento Demográfico."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Grupos",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"grupos\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Grupos Más Activos."
+                    }
+                },
+                {
+                    "name": "Generar PDF - Referentes",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "x-user-email",
+                                "value": "{{user_email}}",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"reportType\": \"referentes\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/report/generate",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "report",
+                                "generate"
+                            ]
+                        },
+                        "description": "Genera y descarga el PDF del reporte Top Referentes."
+                    }
                 }
             ]
         }
