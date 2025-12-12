@@ -145,6 +145,9 @@ INSERT INTO MAPEO_USUARIO_POSTGRES (usuario_postgres, correo_aplicacion, descrip
 ('usr_auditor', 'auditor@ucab.edu.ve', 'Auditor de reportes')
 ON CONFLICT (usuario_postgres) DO UPDATE SET correo_aplicacion = EXCLUDED.correo_aplicacion;
 
+-- IMPORTANTE: Dar acceso a todos los roles para que fn_get_auth_correo() funcione
+GRANT SELECT ON MAPEO_USUARIO_POSTGRES TO rol_persona, rol_entidad, rol_anonimo, rol_moderador, rol_auditor;
+
 
 -- =============================================================================
 -- 7. FUNCIÓN DE IDENTIDAD (MAPEO) - VERSIÓN DINÁMICA
