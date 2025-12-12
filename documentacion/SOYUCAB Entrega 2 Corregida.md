@@ -138,6 +138,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 
 * **PK:** (correo\_creador, fecha\_creacion\_chat)   
 * **FK:** correo\_creador referencia a PERSONA(correo\_principal)
+* **Restricción:** tipo\_conversacion IN ('Privada', 'Grupal')
 
 **PARTICIPA\_EN** (**correo\_creador\_chat, fecha\_creacion\_chat, correo\_participante,** fecha\_ingreso) 
 
@@ -208,6 +209,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 * **PK:** (**correo\_persona**, nombre\_grupo)  
 * **FK:** correo\_persona referencia a PERSONA(correo\_principal)  
 * **FK:** nombre\_grupo referencia a GRUPO\_INTERES(nombre\_grupo)
+* **Restricción:** rol\_en\_grupo IN ('Miembro', 'Moderador', 'Administrador')
 
 **TUTORIA** (**correo\_tutor, area\_conocimiento, fecha\_alta,** descripcion\_enfoque)
 
@@ -219,6 +221,8 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 * **PK:** (correo\_solicitante, correo\_tutor\_tutoria, area\_conocimiento, fecha\_alta\_tutoria)  
 * **FK:** correo\_solicitante referencia a PERSONA(correo\_principal)  
 * **FK:** (correo\_tutor\_tutoria, area\_conocimiento, fecha\_alta\_tutoria) referencia a TUTORIA(correo\_tutor, area\_conocimiento, fecha\_alta)
+* **Restricción:** estado IN ('Enviada', 'Aceptada', 'Rechazada', 'Completada')
+* **Unicidad:** Una persona solo puede tener una solicitud por tutoría (uq\_solicitud\_tutoria\_unica).
 
 **CONFIGURACION** (**correo\_miembro**, visibilidad\_perfil, notif\_comentarios, notif\_eventos)
 
@@ -235,7 +239,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 
 | Atributo | Tipo de Dato | Tipo de Atributo | Restricciones | Descripción |
 | :---- | :---- | :---- | :---- | :---- |
-| correo\_principal | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, NOT NULL, UNIQUE | Correo electrónico único del miembro. Usado para login. Llave Primaria. |
+| correo\_principal | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, NOT NULL, UNIQUE, CHECK | Correo electrónico único del miembro. Usado para login. Llave Primaria. Validación de formato email (Regex). |
 | contrasena\_hash | VARCHAR(255) | Simple, Monovaluado, Almacenado | NOT NULL | Hash de la contraseña (ej. SHA-256) por seguridad. |
 | fecha\_registro | TIMESTAMP | Simple, Monovaluado, Almacenado | NOT NULL | Fecha y hora exactas en que el miembro se registró en la plataforma. |
 | fotografia\_url | VARCHAR(255) | Simple, Monovaluado, Almacenado | NULL | URL de la fotografía de perfil del miembro. Opcional. |
@@ -249,13 +253,12 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | correo\_principal | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Llave primaria que identifica a la persona. Es una FK que referencia a MIEMBRO(correo\_principal). |
 | nombres | VARCHAR(100) | Simple, Monovaluado, Almacenado | NOT NULL | Nombres de pila de la persona. |
 | apellidos | VARCHAR(100) | Simple, Monovaluado, Almacenado | NOT NULL | Apellidos de la persona. |
-| fecha\_nacimiento | DATE | Simple, Monovaluado, Almacenado | NULL | Fecha de nacimiento. Opcional. |
+| fecha\_nacimiento | DATE | Simple, Monovaluado, Almacenado | NULL, CHECK | Fecha de nacimiento. Opcional. Debe ser anterior a la fecha actual. |
 | sexo | VARCHAR(20) | Simple, Monovaluado, Almacenado | NULL, CHECK | Dominio: 'Masculino', 'Femenino', 'Otro', 'Prefiero no decirlo'. Opcional. |
 | pais\_residencia | VARCHAR(100) | Simple, Monovaluado, Almacenado | NULL | País de residencia actual. Usado para el Mapa de la Diáspora. |
 | ciudad\_residencia | VARCHAR(100) | Simple, Monovaluado, Almacenado | NULL | Ciudad de residencia actual. Usado para el Mapa de la Diáspora. |
 | biografia | TEXT | Simple, Monovaluado, Almacenado | NULL | Texto descriptivo corto del perfil de la persona. Opcional. |
 
-### 
 
 ### **Tabla: ENTIDAD\_ORGANIZACIONAL**
 
@@ -264,7 +267,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | Atributo | Tipo de Dato | Tipo de Atributo | Restricciones | Descripción |
 | :---- | :---- | :---- | :---- | :---- |
 | correo\_principal | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Llave primaria que identifica a la organización. Es una FK que referencia a MIEMBRO(correo\_principal). |
-| rif | VARCHAR(20) | Simple, Monovaluado, Almacenado | NOT NULL, UNIQUE | Registro de Información Fiscal (RIF) de la organización. Formato: J-12345678-9. |
+| rif | VARCHAR(20) | Simple, Monovaluado, Almacenado | NOT NULL, UNIQUE, CHECK | Registro de Información Fiscal (RIF) de la organización. Formato validado: [JVEGP]-[0-9]+-[0-9]. |
 | nombre\_oficial | VARCHAR(255) | Simple, Monovaluado, Almacenado | NOT NULL | Nombre legal o comercial completo de la organización. |
 | descripcion\_detallada | TEXT | Simple, Monovaluado, Almacenado | NULL | Descripción de la organización, su misión y visión. Opcional. |
 | tipo\_entidad | VARCHAR(50) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Dependencia UCAB', 'Aliado Externo', 'Grupo de Investigación'. (RF 1.3) |
@@ -293,7 +296,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | nombre\_nexo | VARCHAR(100) | Simple, Monovaluado, Almacenado | PK, NOT NULL, UNIQUE | Llave primaria. El nombre descriptivo del tipo de nexo. |
 | descripcion | TEXT | Simple, Monovaluado, Almacenado | NULL | Explicación del alcance y significado del nexo. |
 
-### 
 
 ### **Tabla: TIENE\_NEXO**
 
@@ -305,7 +307,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | correo\_organizacion | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia a la ENTIDAD\_ORGANIZACIONAL. |
 | nombre\_nexo | VARCHAR(100) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia al TIPO\_NEXO. |
 | fecha\_inicio | DATE | Simple, Monovaluado, Almacenado | NOT NULL | Fecha en que comenzó este vínculo institucional. |
-| fecha\_fin | DATE | Simple, Monovaluado, Almacenado | NULL | Fecha en que finalizó el vínculo. NULL si está activo. |
+| fecha\_fin | DATE | Simple, Monovaluado, Almacenado | NULL, CHECK | Fecha en que finalizó el vínculo. NULL si está activo. Debe ser >= fecha\_inicio. |
 
 ## **Módulo 3: Contenido e Interacciones (El Feed)**
 
@@ -319,6 +321,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | fecha\_hora\_creacion | TIMESTAMP | Simple, Monovaluado, Almacenado | PK, NOT NULL | Parte de la PK (clave parcial). Momento exacto de la creación. |
 | texto\_contenido | TEXT | Simple, Monovaluado, Almacenado | NULL | El cuerpo principal del contenido (post o descripción del evento). |
 | visibilidad | VARCHAR(30) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Público', 'Solo Conexiones', 'Privado'. |
+| archivo\_url | VARCHAR(255) | Simple, Monovaluado, Almacenado | NULL | URL del archivo multimedia adjunto al contenido. Opcional. |
 
 ### **Tabla: PUBLICACION**
 
@@ -353,7 +356,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | fk\_contenido\_fecha | TIMESTAMP | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia a CONTENIDO(fecha\_hora\_creacion). |
 | fecha\_hora\_comentario | TIMESTAMP | Simple, Monovaluado, Almacenado | PK, NOT NULL | Parte de la PK (clave parcial). Momento exacto del comentario. |
 | correo\_autor\_comentario | VARCHAR(255) | Simple, Monovaluado, Almacenado | FK, NOT NULL | Referencia al MIEMBRO que escribió el comentario. |
-| texto\_comentario | TEXT | Simple, Monovaluado, Almacenado | NOT NULL | El cuerpo del comentario. |
+| texto\_comentario | TEXT | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | El cuerpo del comentario. No puede estar vacío (LENGTH(TRIM) > 0). |
 | fk\_padre\_autor\_cont | VARCHAR(255) | Simple, Monovaluado, Almacenado | FK, NULL | PK (Parte 1) del comentario padre al que responde. |
 | fk\_padre\_fecha\_cont | TIMESTAMP | Simple, Monovaluado, Almacenado | FK, NULL | PK (Parte 2) del comentario padre al que responde. |
 | fk\_padre\_fecha\_coment | TIMESTAMP | Simple, Monovaluado, Almacenado | FK, NULL | PK (Parte 3) del comentario padre al que responde. |
@@ -407,6 +410,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | descripcion\_cargo | TEXT | Simple, Monovaluado, Almacenado | NOT NULL | Descripción detallada de responsabilidades y funciones. |
 | requisitos | TEXT | Simple, Monovaluado, Almacenado | NULL | Requisitos y calificaciones deseadas. Opcional. |
 | modalidad | VARCHAR(20) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Presencial', 'Remoto', 'Híbrido' (RF 4.1). |
+| fecha\_vencimiento | TIMESTAMP | Simple, Monovaluado, Almacenado | NULL, CHECK | Fecha límite para postulaciones. Opcional. Debe ser > fecha\_publicacion. |
 
 ### **Tabla: SE\_POSTULA**
 
@@ -432,9 +436,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | fecha\_alta | TIMESTAMP | Simple, Monovaluado, Almacenado | PK, NOT NULL | Parte de la PK (clave parcial). Fecha en que se registró el servicio. |
 | descripcion\_enfoque | TEXT | Simple, Monovaluado, Almacenado | NULL | Breve descripción del enfoque pedagógico o temas cubiertos. |
 
-### 
-
-### 
 
 ### **Tabla: SOLICITA\_TUTORIA**
 
@@ -449,13 +450,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | fecha\_solicitud | TIMESTAMP | Simple, Monovaluado, Almacenado | NOT NULL | Momento exacto en que se solicita la tutoría. |
 | estado\_solicitud | VARCHAR(20) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Enviada', 'Aceptada', 'Rechazada', 'Completada'. |
 
-## 
-
-## 
-
-## 
-
-## 
 
 ## **Módulo 5: Soporte y Administración**
 
@@ -478,11 +472,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | nombre\_rol | VARCHAR(50) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia a ROL. |
 | fecha\_asignacion | TIMESTAMP | Simple, Monovaluado, Almacenado | NOT NULL | Momento exacto en que el rol fue asignado al miembro. |
 
-### 
-
-### 
-
-### 
 
 ### **Tabla: CONFIGURACION**
 
@@ -521,9 +510,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | fecha\_union | TIMESTAMP | Simple, Monovaluado, Almacenado | NOT NULL | Momento en que la persona se unió al grupo. |
 | rol\_en\_grupo | VARCHAR(30) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Miembro', 'Moderador', 'Administrador'. |
 
-## 
-
-## 
 
 ## **Mensajería Privada (Chats)**
 
@@ -536,7 +522,7 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | correo\_creador | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia a PERSONA (creador). |
 | fecha\_creacion\_chat | TIMESTAMP | Simple, Monovaluado, Almacenado | PK, NOT NULL | Parte de la PK. Momento en que se inició la conversación. |
 | titulo\_chat | VARCHAR(100) | Simple, Monovaluado, Almacenado | NULL | Título opcional del chat (para chats grupales o 1-a-1). |
-| tipo\_conversacion | VARCHAR(20) | Simple, Monovaluado, Almacenado | NULL | Tipo de conversación. |
+| tipo\_conversacion | VARCHAR(20) | Simple, Monovaluado, Almacenado | NOT NULL, CHECK | Dominio: 'Privada', 'Grupal'. |
 
 ### **Tabla: PARTICIPA\_EN**
 
@@ -549,7 +535,6 @@ A continuación, se presenta el listado formal de las reglas de negocio (Restric
 | correo\_participante | VARCHAR(255) | Simple, Monovaluado, Almacenado | PK, FK, NOT NULL | Parte de la PK. Referencia a la PERSONA participante. |
 | fecha\_ingreso | TIMESTAMP | Simple, Monovaluado, Almacenado | NOT NULL | Momento en que la persona se unió a la conversación. |
 
-### 
 
 ### **Tabla: MENSAJE**
 

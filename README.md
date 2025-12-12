@@ -127,7 +127,7 @@ Los scripts se ejecutan automáticamente al iniciar la base de datos:
 | Script | Contenido |
 |--------|-----------|
 | `01_DDL_Tablas.sql` | 25 tablas del modelo relacional |
-| `02_Logica_Negocio.sql` | Funciones y procedimientos almacenados |
+| `02_Funciones_Procedimientos.sql` | Funciones y procedimientos almacenados |
 | `03_Triggers.sql` | Triggers de auditoría y validación |
 | `04_Reportes.sql` | 6 vistas para reportes analíticos |
 | `05_Semilla_Datos.sql` | Datos de prueba (~500 registros) |

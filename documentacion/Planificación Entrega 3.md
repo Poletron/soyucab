@@ -33,6 +33,10 @@ Enfoque: Dinámica del "Feed", viralidad y ciclo de vida de publicaciones.
      * *Justificación:* Estandariza el cálculo de popularidad para los reportes. Aplica una fórmula ponderada (Comentarios \> Reacciones) para medir el "Engagement" real.  
   3. **Trigger TRG\_EVITAR\_AUTO\_REACCION:**  
      * *Justificación:* Regla de integridad de negocio (Anti-Spam). Impide que un usuario infle artificialmente sus métricas reaccionando a su propio contenido.
+* **Vistas / Reportes:**
+  1. `V_REPORTE_TOP_VIRAL`: Ranking de contenido con mayor impacto.
+  2. `V_REPORTE_LIDERES_OPINION`: Usuarios más activos en generación de contenido.
+  3. `V_REPORTE_INTERES_EVENTOS`: Proyección de asistencia a eventos futuros.
 
 ### **2.2. Módulo: Usuarios, Grupos y Comunicación**
 
@@ -51,6 +55,10 @@ Enfoque: Integridad estructural de la red social, privacidad y mensajería.
      * *Justificación:* Centraliza la compleja lógica de privacidad. Determina si un usuario A puede ver al usuario B basándose en configuración ('Público', 'Solo Amigos') y el estado de la conexión.  
   3. **Trigger TRG\_SEGURIDAD\_MENSAJERIA:**  
      * *Justificación:* Seguridad crítica. Intercepta cada mensaje para verificar que el remitente sea un participante legítimo de la conversación antes de guardarlo.
+* **Vistas / Reportes:**
+  1. `V_REPORTE_CRECIMIENTO_DEMOGRAFICO`: Análisis mensual de nuevos registros.
+  2. `V_GRUPOS_MAS_ACTIVOS`: Top comunidades por número de miembros.
+  3. `V_TOP_REFERENTES_COMUNIDAD`: Usuarios con mayor autoridad en la red.
 
 ### **2.3. Módulo: Oportunidades y Vinculación Institucional**
 
@@ -65,7 +73,11 @@ Enfoque: Gestión de Recursos Humanos, alianzas estratégicas y empleabilidad.
 * **Objetos Programables:**  
   1. **SP SP\_PUBLICAR\_OFERTA\_VALIDADA:**  
      * *Justificación:* Control de calidad y legalidad. Impide la publicación de ofertas si la organización no posee un convenio (nexo) vigente y activo con la Universidad.  
-  2. **Función FN\_CONTAR\_POSTULANTES\_OFERTA:**  
-     * *Justificación:* Métrica operativa para RRHH. Permite consultar en tiempo real la demanda de una vacante sin realizar conteos manuales repetitivos en base de datos.  
+  2. **Función FN_CALCULAR_TASAS_CIERRE_OFERTAS:**  
+     * *Justificación:* Métrica avanzada para RRHH. Calcula no solo el volumen de postulantes por oferta, sino también la eficiencia del proceso de selección (tasa de cierre/aceptación) para medir el éxito de cada vacante.  
   3. **Trigger TRG\_CERRAR\_POSTULACION\_VENCIDA:**  
      * *Justificación:* Integridad del proceso de selección. Bloquea automáticamente intentos de postulación a ofertas cuyo estado sea 'CERRADA' o cuya fecha límite haya expirado.
+* **Vistas / Reportes:**
+  1. `vista_top5_areas_conocimiento_demanda`: Áreas más solicitadas para tutorías.
+  2. `vista_nexos_vigentes_vs_por_vencer`: Auditoría de convenios institucionales.
+  3. `vista_top10_ofertas_mas_postuladas`: Vacantes con mayor atracción de talento.
