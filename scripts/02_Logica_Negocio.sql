@@ -1,8 +1,12 @@
 -- =============================================================================
--- OBJETO: FUNCIÓN DE LÓGICA DE NEGOCIO (CORREGIDA)
+-- SCRIPT DE FUNCIONES Y PROCEDIMIENTOS ALMACENADOS
 -- =============================================================================
---Oscar Jaramillo
--- CAMBIO: La función ahora recibe el ID simple de contenido (clave_contenido)
+
+-- =============================================================================
+-- 1. FUNCIÓN: CALCULAR NIVEL DE IMPACTO
+-- Autor: Oscar Jaramillo
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_IMPACTO(p_clave_contenido INTEGER) 
 RETURNS DECIMAL AS $$
 DECLARE
@@ -13,7 +17,6 @@ DECLARE
 BEGIN
     -- 1. Validación: Verificar si el contenido existe
     SELECT EXISTS(
-        -- Se valida directamente sobre la PK simple
         SELECT 1 FROM CONTENIDO 
         WHERE clave_contenido = p_clave_contenido
     ) INTO v_existe;
@@ -23,13 +26,11 @@ BEGIN
     END IF;
 
     -- 2. Contar Comentarios (Cada uno vale 3 puntos)
-    -- Se cuenta usando la FK simple (fk_contenido)
     SELECT COUNT(*) INTO v_total_comentarios
     FROM COMENTARIO
     WHERE fk_contenido = p_clave_contenido;
 
     -- 3. Contar Reacciones (Cada una vale 1 punto)
-    -- Se cuenta usando la FK simple (fk_contenido)
     SELECT COUNT(*) INTO v_total_reacciones
     FROM REACCIONA_CONTENIDO
     WHERE fk_contenido = p_clave_contenido;
@@ -45,8 +46,11 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. PROCEDIMIENTO: CERRAR EVENTO Y CREAR RESEÑA (CORREGIDO)
--- CAMBIO: El procedimiento ahora recibe el ID simple del EVENTO padre
+-- =============================================================================
+-- 2. PROCEDIMIENTO: CERRAR EVENTO Y CREAR RESEÑA AUTOMÁTICA
+-- Autor: Oscar Jaramillo
+-- =============================================================================
+
 CREATE OR REPLACE PROCEDURE SP_CERRAR_EVENTO_Y_CREAR_RESEÑA(p_clave_contenido INTEGER)
 LANGUAGE plpgsql
 AS $$
@@ -66,10 +70,8 @@ BEGIN
         RAISE NOTICE 'Aviso: El evento no existe o no tiene contenido asociado.';
         RETURN;
     END IF;
-
-    -- B. Lógica de "Cerrar" el evento (Si la hubiera)
     
-    -- C. Crear borrador de Reseña (Insert Padre)
+    -- B. Crear borrador de Reseña (Insert Padre)
     INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
     VALUES (
         v_correo_autor,
@@ -78,16 +80,18 @@ BEGIN
         'Privado'
     );
 
-    -- D. Crear detalle Publicación (Insert Hijo)
-    INSERT INTO PUBLICACION (fk_contenido) -- Usamos el nuevo ID generado por el trigger de CONTENIDO (si existiera) o se asume manejo de clave
+    -- C. Crear detalle Publicación (Insert Hijo)
+    INSERT INTO PUBLICACION (fk_contenido)
     VALUES ( (SELECT clave_contenido FROM CONTENIDO WHERE correo_autor = v_correo_autor AND fecha_hora_creacion = v_fecha_actual) );
 
     RAISE NOTICE 'Reseña creada exitosamente para el autor % en fecha %.', v_correo_autor, v_fecha_actual;
 END;
 $$;
 
---Luis
--- En 02_Logica_Negocio.sql:
+-- =============================================================================
+-- 3. FUNCIÓN: CALCULAR NIVEL DE AUTORIDAD (REFERENTES)
+-- Autor: Luis Torres
+-- =============================================================================
 
 CREATE OR REPLACE FUNCTION FN_CALCULAR_NIVEL_AUTORIDAD(p_correo_miembro VARCHAR)
 RETURNS DECIMAL AS $$
@@ -117,10 +121,12 @@ BEGIN
 
     RETURN v_score;
 END;
-
 $$ LANGUAGE plpgsql STABLE;
 
--- En 02_Logica_Negocio.sql:
+-- =============================================================================
+-- 4. PROCEDIMIENTO: CREAR GRUPO CON FUNDADOR
+-- Autor: Luis Torres
+-- =============================================================================
 
 CREATE OR REPLACE PROCEDURE SP_CREAR_GRUPO_CON_FUNDADOR(
     p_nombre_grupo VARCHAR, 
@@ -150,9 +156,10 @@ EXCEPTION
 END;
 $$;
 
---Pedro
-
--- En 02_Logica_Negocio.sql (Sección Pedro):
+-- =============================================================================
+-- 5. FUNCIÓN: CALCULAR TASAS DE CIERRE DE OFERTAS
+-- Autor: Pedro Urdaneta
+-- =============================================================================
 
 CREATE OR REPLACE FUNCTION fn_calcular_tasas_cierre_ofertas()
 RETURNS TABLE (
@@ -176,7 +183,7 @@ BEGIN
     FROM
         OFERTA_LABORAL OL
     JOIN
-        SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta -- CORRECCIÓN CLAVE: Usar la PK/FK simple
+        SE_POSTULA SP ON OL.clave_oferta = SP.fk_oferta
     GROUP BY
         OL.clave_oferta, OL.titulo_oferta
     HAVING
@@ -186,9 +193,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- En 02_Logica_Negocio.sql (Sección Pedro):
+-- =============================================================================
+-- 6. PROCEDIMIENTO: PUBLICAR OFERTA VALIDADA (CON NEXO)
+-- Autor: Pedro Urdaneta
+-- =============================================================================
 
--- NOTA: Este SP no requiere cambios si el DDL fue corregido
 CREATE OR REPLACE PROCEDURE sp_publicar_oferta_validada(
     p_correo_organizacion VARCHAR,
     p_fecha_publicacion TIMESTAMP,
@@ -202,7 +211,7 @@ AS $$
 DECLARE
     nexo_activo_encontrado BOOLEAN;
 BEGIN
-    -- Lógica de validación de nexo (PARTE FALTANTE)
+    -- Lógica de validación de nexo vigentes
     SELECT EXISTS (
         SELECT 1
         FROM TIENE_NEXO TN
@@ -210,7 +219,7 @@ BEGIN
             TN.correo_organizacion = p_correo_organizacion
             -- Verifica que la fecha de fin sea NULL (indefinida) O que sea posterior o igual a la fecha actual
             AND (TN.fecha_fin IS NULL OR TN.fecha_fin >= NOW()::DATE)
-    ) INTO nexo_activo_encontrado; -- SE ASIGNA EL RESULTADO A LA VARIABLE BOOLEANA
+    ) INTO nexo_activo_encontrado;
 
     IF nexo_activo_encontrado THEN
         INSERT INTO OFERTA_LABORAL (

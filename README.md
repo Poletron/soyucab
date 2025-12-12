@@ -78,6 +78,9 @@ curl http://localhost:3000/api/reports/preview/lideres
 | `crecimiento` | Crecimiento demográfico | V_REPORTE_CRECIMIENTO_DEMOGRAFICO |
 | `grupos` | Grupos más activos | V_GRUPOS_MAS_ACTIVOS |
 | `referentes` | Top referentes | V_TOP_REFERENTES_COMUNIDAD |
+| `tutorias` | Top Áreas de Tutorías | vista_top5_areas_conocimiento_demanda |
+| `nexos` | Nexos Vigentes vs Por Vencer | vista_nexos_vigentes_vs_por_vencer |
+| `ofertas` | Top 10 Ofertas Laborales | vista_top10_ofertas_mas_postuladas |
 
 ---
 
@@ -112,6 +115,8 @@ curl http://localhost:3000/api/reports/preview/lideres
 | `usr_polar` | rrhh@polar.com | Entidad | `1234` |
 | `usr_auditor` | auditor@ucab.edu.ve | Auditor | `audit123` |
 | `usr_admin_moderador` | moderador@ucab.edu.ve | Moderador | `admin123` |
+| `usr_extrano` | nuevo.ingreso@ucab.edu.ve | Persona | `1234` |
+| `usr_anonimo` | (sin autenticar) | Anónimo | `guest` |
 
 ---
 
@@ -180,14 +185,14 @@ docker compose -f docker-compose.alt-ports.yml up -d --build
 
 ```
 ┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  📊 Dashboard       │────▶│   🔗 Backend     │────▶│  🐘 PostgreSQL  │
+│  📊 Dashboard      │ ───▶│   🔗 Backend    │────▶│ 🐘 PostgreSQL  │
 │  React + Nginx      │     │  Node.js/Express │     │    + Views      │
 │     Puerto 80       │     │   Puerto 3000    │     │   Puerto 5432   │
 └─────────────────────┘     └────────┬─────────┘     └─────────────────┘
                                      │
                                      ▼
                             ┌──────────────────┐
-                            │   📄 JsReport    │
+                            │   📄 JsReport   │
                             │  (Generador PDF) │
                             │   Puerto 5488    │
                             └──────────────────┘

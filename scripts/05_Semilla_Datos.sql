@@ -9,6 +9,7 @@ SET client_min_messages TO WARNING;
 -- 1. CATÁLOGOS BASE (TIPO_REACCION, TIPO_NEXO, ROL)
 -- =============================================================================
 
+
 INSERT INTO TIPO_REACCION (nombre_reaccion, descripcion, url_icono) VALUES 
 ('Me Gusta', 'Indicador de agrado general', '👍'),
 ('Me Encanta', 'Indicador de alto agrado', '❤️'),
@@ -88,8 +89,8 @@ DECLARE
         ['egresado.tech@gmail.com', 'V-20000001', 'Fernando', 'Tech Egresado', '1990-04-20', 'Masculino', 'CTO Startup', 'Venezuela', 'Caracas'],
         ['alumni.empresaria@gmail.com', 'V-20000002', 'Patricia', 'Empresaria Alumni', '1988-11-05', 'Femenino', 'CEO Consultora', 'Venezuela', 'Caracas'],
         ['nuevo.ingreso@ucab.edu.ve', 'V-31000001', 'Leonardo', 'Nuevo Ingreso', '2005-01-15', 'Masculino', 'Primer Semestre', 'Venezuela', 'Caracas'],
-        ['moderador@ucab.edu.ve', 'V-10000001', 'Staff', 'Moderador', '1995-01-01', 'No Especificado', 'Staff de Moderación y Contenido.', 'Venezuela', 'Caracas'],
-        ['auditor@ucab.edu.ve', 'V-10000002', 'Staff', 'Auditor', '1990-01-01', 'No Especificado', 'Staff de Auditoría y BI.', 'Venezuela', 'Caracas']
+        ['moderador@ucab.edu.ve', 'V-10000001', 'Staff', 'Moderador', '1995-01-01', 'Prefiero no decirlo', 'Staff de Moderación y Contenido.', 'Venezuela', 'Caracas'],
+        ['auditor@ucab.edu.ve', 'V-10000002', 'Staff', 'Auditor', '1990-01-01', 'Prefiero no decirlo', 'Staff de Auditoría y BI.', 'Venezuela', 'Caracas']
     ];
     u TEXT[];
     vis TEXT[] := ARRAY['Público', 'Público', 'Solo Conexiones'];
@@ -240,7 +241,7 @@ INSERT INTO PERTENECE_A_GRUPO (correo_persona, nombre_grupo, fecha_union, rol_en
 ('luis@ucab.edu.ve', 'Investigación IA', NOW() - INTERVAL '8 months', 'Miembro');
 
 -- =============================================================================
--- 8. CONVERSACION + PARTICIPA_EN + MENSAJE (CORREGIDO)
+-- 8. CONVERSACION + PARTICIPA_EN + MENSAJE
 -- =============================================================================
 
 DO $$
@@ -248,14 +249,14 @@ DECLARE
     v_fecha_chat1 TIMESTAMP := NOW() - INTERVAL '2 months';
     v_fecha_chat2 TIMESTAMP := NOW() - INTERVAL '1 month';
     v_fecha_chat3 TIMESTAMP := NOW() - INTERVAL '2 weeks';
-    v_id_conv1 INTEGER; -- NUEVO: Variable para guardar el ID de la conversación
+    v_id_conv1 INTEGER;
     v_id_conv2 INTEGER;
     v_id_conv3 INTEGER;
 BEGIN
     -- Chat 1: Oscar y Luis
     -- 1. INSERTAR CONVERSACIÓN y capturar el ID generado por SERIAL
     INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
-    VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'Proyecto BD', 'Privado')
+    VALUES ('oscar@ucab.edu.ve', v_fecha_chat1, 'Proyecto BD', 'Privada')
     RETURNING clave_conversacion INTO v_id_conv1; -- CAPTURAR EL ID
 
     -- 2. INSERTAR PARTICIPANTES usando el ID (fk_conversacion)
@@ -274,7 +275,7 @@ BEGIN
 
     -- Chat 2: Grupo Gaming
     INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
-    VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'Torneo FIFA', 'Grupo')
+    VALUES ('pedro@ucab.edu.ve', v_fecha_chat2, 'Torneo FIFA', 'Grupal')
     RETURNING clave_conversacion INTO v_id_conv2;
 
     INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
@@ -293,7 +294,7 @@ BEGIN
 
     -- Chat 3: Sebastián y Ricardo (Data Science)
     INSERT INTO CONVERSACION (correo_creador, fecha_creacion_chat, titulo_chat, tipo_conversacion) 
-    VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'Paper ML', 'Privado')
+    VALUES ('sebastian.lopez@ucab.edu.ve', v_fecha_chat3, 'Paper ML', 'Privada')
     RETURNING clave_conversacion INTO v_id_conv3;
 
     INSERT INTO PARTICIPA_EN (fk_conversacion, correo_participante, fecha_ingreso) 
@@ -308,7 +309,7 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 9. TUTORIA + SOLICITA_TUTORIA (CORREGIDO)
+-- 9. TUTORIA + SOLICITA_TUTORIA
 -- =============================================================================
 
 DO $$
@@ -321,7 +322,8 @@ DECLARE
     v_fecha_tut6 TIMESTAMP := NOW() - INTERVAL '8 months';
     v_fecha_tut7 TIMESTAMP := NOW() - INTERVAL '2 years';
     
-    v_id_tut1 INTEGER; -- NUEVO: Variables para guardar el ID de la tutoría
+    v_id_tut1 INTEGER;
+
     v_id_tut2 INTEGER;
     v_id_tut3 INTEGER;
     v_id_tut4 INTEGER;
@@ -376,7 +378,7 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 10. OFERTA_LABORAL + SE_POSTULA (CORREGIDO)
+-- 10. OFERTA_LABORAL + SE_POSTULA
 -- =============================================================================
 
 DO $$
@@ -387,7 +389,8 @@ DECLARE
     v_fecha4 TIMESTAMP := NOW() - INTERVAL '5 days';
     v_fecha5 TIMESTAMP := NOW() - INTERVAL '3 days';
     
-    v_id_oferta1 INTEGER; -- NUEVO: Variables para guardar el ID de la oferta
+    v_id_oferta1 INTEGER;
+
     v_id_oferta2 INTEGER;
     v_id_oferta3 INTEGER;
     v_id_oferta4 INTEGER;

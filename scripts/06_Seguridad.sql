@@ -7,12 +7,12 @@
 -- =============================================================================
 -- 1. LIMPIEZA INICIAL - POLÍTICAS RLS
 -- =============================================================================
--- Eliminamos políticas de seguridad a nivel de fila que recrearemos
+-- Limpieza inicial de políticas
 DROP POLICY IF EXISTS p_contenido_publico ON CONTENIDO;
 DROP POLICY IF EXISTS p_contenido_privado ON CONTENIDO;
 DROP POLICY IF EXISTS p_contenido_conexiones ON CONTENIDO;
 
--- Eliminamos la función de identidad que recrearemos en este script
+-- Eliminamos la función de identidad
 DROP FUNCTION IF EXISTS fn_get_auth_correo();
 
 

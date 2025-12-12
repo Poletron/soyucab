@@ -2,7 +2,6 @@
 -- SCRIPT DE CREACIÓN DE TABLAS - PROYECTO SOYUCAB
 -- Base de Datos: PostgreSQL
 -- Equipo: Oscar Jaramillo, Luis Torres, Pedro Urdaneta
--- Versión Corregida según Modelo Relacional
 -- =============================================================================
 
 -- =============================================================================
@@ -13,12 +12,13 @@ CREATE TABLE MIEMBRO (
     correo_principal VARCHAR(255) PRIMARY KEY,
     contrasena_hash VARCHAR(255) NOT NULL,
     fecha_registro TIMESTAMP NOT NULL,
-    fotografia_url VARCHAR(255)
+    fotografia_url VARCHAR(255),
+    CONSTRAINT check_formato_correo CHECK (correo_principal ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 
 CREATE TABLE PERSONA (
     correo_principal VARCHAR(255) PRIMARY KEY,
-    cedula VARCHAR(20), -- Agregado para integridad con MD, aunque no en DD original
+    cedula VARCHAR(20),
     nombres VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
     fecha_nacimiento DATE,
@@ -26,7 +26,9 @@ CREATE TABLE PERSONA (
     biografia TEXT,
     pais_residencia VARCHAR(100),
     ciudad_residencia VARCHAR(100),
-    CONSTRAINT fk_persona_miembro FOREIGN KEY (correo_principal) REFERENCES MIEMBRO(correo_principal)
+    CONSTRAINT fk_persona_miembro FOREIGN KEY (correo_principal) REFERENCES MIEMBRO(correo_principal),
+    CONSTRAINT check_sexo_valido CHECK (sexo IN ('Masculino', 'Femenino', 'Otro', 'Prefiero no decirlo')),
+    CONSTRAINT check_fecha_nacimiento CHECK (fecha_nacimiento < CURRENT_DATE)
 );
 
 CREATE TABLE ENTIDAD_ORGANIZACIONAL (
@@ -37,7 +39,8 @@ CREATE TABLE ENTIDAD_ORGANIZACIONAL (
     tipo_entidad VARCHAR(50) NOT NULL CHECK (tipo_entidad IN ('Dependencia UCAB', 'Aliado Externo', 'Grupo de Investigación')),
     pais_ubicacion VARCHAR(100),
     ciudad_ubicacion VARCHAR(100),
-    CONSTRAINT fk_entidad_miembro FOREIGN KEY (correo_principal) REFERENCES MIEMBRO(correo_principal)
+    CONSTRAINT fk_entidad_miembro FOREIGN KEY (correo_principal) REFERENCES MIEMBRO(correo_principal),
+    CONSTRAINT check_formato_rif CHECK (rif ~ '^[JVEGP]-[0-9]+-[0-9]$')
 );
 
 -- =============================================================================
@@ -50,31 +53,29 @@ CREATE TABLE CONVERSACION (
     fecha_creacion_chat TIMESTAMP NOT NULL,
     titulo_chat VARCHAR(100),
     tipo_conversacion VARCHAR(20),
-    CONSTRAINT fk_conv_creador FOREIGN KEY (correo_creador) REFERENCES PERSONA(correo_principal)
+    CONSTRAINT fk_conv_creador FOREIGN KEY (correo_creador) REFERENCES PERSONA(correo_principal),
+    CONSTRAINT check_tipo_conversacion CHECK (tipo_conversacion IN ('Privada', 'Grupal'))
 );
 
 CREATE TABLE PARTICIPA_EN (
     clave_participacion SERIAL PRIMARY KEY,
-    fk_conversacion INTEGER NOT NULL, -- NUEVA FK simple
+    fk_conversacion INTEGER NOT NULL,
     correo_participante VARCHAR(255) NOT NULL,
     fecha_ingreso TIMESTAMP NOT NULL,
     
-    -- CORRECCIÓN CLAVE: Apunta a la PK simple de CONVERSACION
     CONSTRAINT fk_participa_chat FOREIGN KEY (fk_conversacion) REFERENCES CONVERSACION(clave_conversacion),
     CONSTRAINT fk_participa_persona FOREIGN KEY (correo_participante) REFERENCES PERSONA(correo_principal),
-    -- Agregamos una restricción para asegurar que una persona solo participe una vez por chat
     CONSTRAINT uq_participa_chat UNIQUE (fk_conversacion, correo_participante) 
 );
 
 CREATE TABLE MENSAJE (
     clave_mensaje SERIAL PRIMARY KEY,
-    fk_conversacion INTEGER NOT NULL, -- NUEVA FK simple
+    fk_conversacion INTEGER NOT NULL,
     fecha_hora_envio TIMESTAMP NOT NULL,
     correo_autor_mensaje VARCHAR(255) NOT NULL,
     texto_mensaje TEXT NOT NULL,
     estado_mensaje VARCHAR(20) NOT NULL CHECK (estado_mensaje IN ('Enviado', 'Leído', 'Entregado')),
     
-    -- CORRECCIÓN CLAVE: Apunta a la PK simple de CONVERSACION
     CONSTRAINT fk_mensaje_chat FOREIGN KEY (fk_conversacion) REFERENCES CONVERSACION(clave_conversacion),
     CONSTRAINT fk_mensaje_autor FOREIGN KEY (correo_autor_mensaje) REFERENCES PERSONA(correo_principal)
 );
@@ -86,7 +87,7 @@ CREATE TABLE MENSAJE (
 CREATE TABLE CONTENIDO (
     clave_contenido SERIAL PRIMARY KEY,
     correo_autor VARCHAR(255) NOT NULL,
-    fecha_hora_creacion TIMESTAMP NOT NULL, -- Se mantiene como dato de auditoría
+    fecha_hora_creacion TIMESTAMP NOT NULL,
     texto_contenido TEXT,
     visibilidad VARCHAR(30) NOT NULL CHECK (visibilidad IN ('Público', 'Solo Conexiones', 'Privado')),
     archivo_url VARCHAR(255),
@@ -95,14 +96,12 @@ CREATE TABLE CONTENIDO (
 
 CREATE TABLE PUBLICACION (
     clave_publicacion SERIAL PRIMARY KEY,
-    -- CAMBIO: Referencia al ID simple de CONTENIDO. Debe ser UNIQUE
     fk_contenido INTEGER NOT NULL UNIQUE,
     CONSTRAINT fk_publicacion_contenido FOREIGN KEY (fk_contenido) REFERENCES CONTENIDO(clave_contenido)
 );
 
 CREATE TABLE EVENTO (
     clave_evento SERIAL PRIMARY KEY,
-    -- CAMBIO: Referencia al ID simple de CONTENIDO. Debe ser UNIQUE
     fk_contenido INTEGER NOT NULL UNIQUE,
     titulo VARCHAR(255) NOT NULL,
     fecha_inicio TIMESTAMP NOT NULL,
@@ -115,22 +114,18 @@ CREATE TABLE EVENTO (
 
 CREATE TABLE COMENTARIO (
     clave_comentario SERIAL PRIMARY KEY,
-    -- CAMBIO: Referencia al ID simple de CONTENIDO
     fk_contenido INTEGER NOT NULL, 
     fecha_hora_comentario TIMESTAMP NOT NULL,
     correo_autor_comentario VARCHAR(255) NOT NULL,
-    -- CAMBIO: Referencia al ID simple del COMENTARIO Padre (anidamiento)
     fk_comentario_padre INTEGER, 
     texto_comentario TEXT NOT NULL,
     
-    -- CORRECCIÓN FKs:
     CONSTRAINT fk_comentario_contenido FOREIGN KEY (fk_contenido) REFERENCES CONTENIDO(clave_contenido),
     CONSTRAINT fk_comentario_autor FOREIGN KEY (correo_autor_comentario) REFERENCES MIEMBRO(correo_principal),
     CONSTRAINT fk_comentario_padre_ref FOREIGN KEY (fk_comentario_padre) REFERENCES COMENTARIO(clave_comentario),
     CONSTRAINT check_comentario_no_vacio CHECK (LENGTH(TRIM(texto_comentario)) > 0)
 );
 
--- Catálogo de Reacciones (Implícito en Constraints)
 CREATE TABLE TIPO_REACCION (
     nombre_reaccion VARCHAR(50) PRIMARY KEY,
     descripcion VARCHAR(255),
@@ -140,12 +135,10 @@ CREATE TABLE TIPO_REACCION (
 CREATE TABLE REACCIONA_CONTENIDO (
     clave_reaccion SERIAL PRIMARY KEY,
     correo_miembro VARCHAR(255) NOT NULL,
-    -- CAMBIO: Referencia al ID simple de CONTENIDO
     fk_contenido INTEGER NOT NULL,
     nombre_reaccion VARCHAR(50) NOT NULL,
     fecha_hora_reaccion TIMESTAMP NOT NULL,
     
-    -- CORRECCIÓN FK:
     CONSTRAINT fk_reacc_cont_miembro FOREIGN KEY (correo_miembro) REFERENCES MIEMBRO(correo_principal),
     CONSTRAINT fk_reacc_cont_contenido FOREIGN KEY (fk_contenido) REFERENCES CONTENIDO(clave_contenido),
     CONSTRAINT fk_reacc_cont_tipo FOREIGN KEY (nombre_reaccion) REFERENCES TIPO_REACCION(nombre_reaccion)
@@ -154,12 +147,10 @@ CREATE TABLE REACCIONA_CONTENIDO (
 CREATE TABLE REACCIONA_COMENTARIO (
     clave_reaccion SERIAL PRIMARY KEY,
     correo_miembro VARCHAR(255) NOT NULL,
-    -- CAMBIO: Referencia al ID simple de COMENTARIO
     fk_comentario INTEGER NOT NULL,
     nombre_reaccion VARCHAR(50) NOT NULL,
     fecha_hora_reaccion TIMESTAMP NOT NULL,
     
-    -- CORRECCIÓN FK:
     CONSTRAINT fk_reacc_coment_miembro FOREIGN KEY (correo_miembro) REFERENCES MIEMBRO(correo_principal),
     CONSTRAINT fk_reacc_coment_comentario FOREIGN KEY (fk_comentario) REFERENCES COMENTARIO(clave_comentario),
     CONSTRAINT fk_reacc_coment_tipo FOREIGN KEY (nombre_reaccion) REFERENCES TIPO_REACCION(nombre_reaccion)
@@ -198,7 +189,8 @@ CREATE TABLE TIENE_NEXO (
     fecha_fin DATE,
     CONSTRAINT fk_nexo_persona FOREIGN KEY (correo_persona) REFERENCES PERSONA(correo_principal),
     CONSTRAINT fk_nexo_org FOREIGN KEY (correo_organizacion) REFERENCES ENTIDAD_ORGANIZACIONAL(correo_principal),
-    CONSTRAINT fk_nexo_tipo FOREIGN KEY (nombre_nexo) REFERENCES TIPO_NEXO(nombre_nexo)
+    CONSTRAINT fk_nexo_tipo FOREIGN KEY (nombre_nexo) REFERENCES TIPO_NEXO(nombre_nexo),
+    CONSTRAINT check_fechas_nexo CHECK (fecha_fin IS NULL OR fecha_fin >= fecha_inicio)
 );
 
 -- =============================================================================
@@ -237,14 +229,13 @@ CREATE TABLE TUTORIA (
 CREATE TABLE SOLICITA_TUTORIA (
     clave_solicitud SERIAL PRIMARY KEY,
     correo_solicitante VARCHAR(255) NOT NULL,
-    -- CAMBIO: Referencia al ID simple de TUTORIA
     fk_tutoria INTEGER NOT NULL, 
     fecha_solicitud TIMESTAMP NOT NULL,
     estado VARCHAR(20) NOT NULL CHECK (estado IN ('Enviada', 'Aceptada', 'Rechazada', 'Completada')),
     
-    -- CORRECCIÓN FK:
     CONSTRAINT fk_sol_tut_solicitante FOREIGN KEY (correo_solicitante) REFERENCES PERSONA(correo_principal),
-    CONSTRAINT fk_sol_tut_tutoria FOREIGN KEY (fk_tutoria) REFERENCES TUTORIA(clave_tutoria)
+    CONSTRAINT fk_sol_tut_tutoria FOREIGN KEY (fk_tutoria) REFERENCES TUTORIA(clave_tutoria),
+    CONSTRAINT uq_solicitud_tutoria_unica UNIQUE (correo_solicitante, fk_tutoria)
 );
 
 CREATE TABLE CONFIGURACION (
@@ -256,37 +247,36 @@ CREATE TABLE CONFIGURACION (
 );
 
 -- =============================================================================
--- 6. OPORTUNIDADES (OFERTAS LABORALES) - Agregado según Data Dictionary
+-- 6. OPORTUNIDADES (OFERTAS LABORALES)
 -- =============================================================================
 
 CREATE TABLE OFERTA_LABORAL (
     clave_oferta SERIAL PRIMARY KEY,
     correo_organizacion VARCHAR(255) NOT NULL,
     fecha_publicacion TIMESTAMP NOT NULL,
-    -- AÑADIDO: La columna que tu compañero quiere agregar
     fecha_vencimiento TIMESTAMP, 
     titulo_oferta VARCHAR(255) NOT NULL,
     descripcion_cargo TEXT NOT NULL,
     requisitos TEXT,
     modalidad VARCHAR(20) NOT NULL CHECK (modalidad IN ('Presencial', 'Remoto', 'Híbrido')),
-    CONSTRAINT fk_oferta_org FOREIGN KEY (correo_organizacion) REFERENCES ENTIDAD_ORGANIZACIONAL(correo_principal)
+    CONSTRAINT fk_oferta_org FOREIGN KEY (correo_organizacion) REFERENCES ENTIDAD_ORGANIZACIONAL(correo_principal),
+    CONSTRAINT check_fechas_oferta CHECK (fecha_vencimiento IS NULL OR fecha_vencimiento > fecha_publicacion)
 );
 
 CREATE TABLE SE_POSTULA (
     clave_postulacion SERIAL PRIMARY KEY,
     correo_persona VARCHAR(255) NOT NULL,
-    -- CAMBIO: Referencia al ID simple de OFERTA_LABORAL
     fk_oferta INTEGER NOT NULL,
     fecha_postulacion TIMESTAMP NOT NULL,
     estado_postulacion VARCHAR(20) NOT NULL CHECK (estado_postulacion IN ('Enviada', 'En Revisión', 'Rechazada', 'Aceptada')),
     
-    -- CORRECCIÓN FK:
     CONSTRAINT fk_postula_persona FOREIGN KEY (correo_persona) REFERENCES PERSONA(correo_principal),
-    CONSTRAINT fk_postula_oferta FOREIGN KEY (fk_oferta) REFERENCES OFERTA_LABORAL(clave_oferta)
+    CONSTRAINT fk_postula_oferta FOREIGN KEY (fk_oferta) REFERENCES OFERTA_LABORAL(clave_oferta),
+    CONSTRAINT uq_postulacion_unica UNIQUE (correo_persona, fk_oferta)
 );
 
 -- =============================================================================
--- 7. ROLES Y PERMISOS (Implícito en Constraints / DD)
+-- 7. ROLES Y PERMISOS
 -- =============================================================================
 
 CREATE TABLE ROL (
