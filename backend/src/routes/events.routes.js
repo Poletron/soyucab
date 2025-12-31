@@ -18,7 +18,7 @@ router.post('/', requireAuth, async (req, res) => {
         const fechaFin = fecha_fin ? (fecha_fin + (hora_fin ? ` ${hora_fin}:00` : ' 23:59:59')) : fechaInicio;
 
         const result = await db.queryAsUser(correo_autor, `
-            INSERT INTO red_social.contenido (
+            INSERT INTO contenido (
                 correo_autor, 
                 texto_contenido, 
                 visibilidad, 
@@ -32,7 +32,7 @@ router.post('/', requireAuth, async (req, res) => {
 
         // Insertar en tabla evento
         await db.queryAsUser(correo_autor, `
-            INSERT INTO red_social.evento (
+            INSERT INTO evento (
                 clave_evento,
                 titulo_evento,
                 fecha_hora_inicio,
@@ -72,9 +72,9 @@ router.get('/', async (req, res) => {
                 c.fecha_hora_creacion,
                 p.nombres,
                 p.apellidos
-            FROM red_social.evento e
-            JOIN red_social.contenido c ON e.clave_evento = c.clave_contenido
-            LEFT JOIN red_social.persona p ON c.correo_autor = p.correo_electronico
+            FROM evento e
+            JOIN contenido c ON e.clave_evento = c.clave_contenido
+            LEFT JOIN persona p ON c.correo_autor = p.correo_electronico
             WHERE c.eliminado = FALSE
             ORDER BY e.fecha_hora_inicio DESC
             LIMIT 50
@@ -105,9 +105,9 @@ router.get('/:id', async (req, res) => {
                 c.fecha_hora_creacion,
                 p.nombres,
                 p.apellidos
-            FROM red_social.evento e
-            JOIN red_social.contenido c ON e.clave_evento = c.clave_contenido
-            LEFT JOIN red_social.persona p ON c.correo_autor = p.correo_electronico
+            FROM evento e
+            JOIN contenido c ON e.clave_evento = c.clave_contenido
+            LEFT JOIN persona p ON c.correo_autor = p.correo_electronico
             WHERE e.clave_evento = $1 AND c.eliminado = FALSE
         `, [id]);
 
