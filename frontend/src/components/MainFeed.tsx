@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send } from 'lucide-react';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, commentOnPost, sendConnectionRequest, getCurrentUser } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents } from '../services/api';
 import { useRole } from '../hooks/useRole';
+
+interface Comment {
+  clave_comentario: number;
+  texto_comentario: string;
+  fecha_hora_comentario: string;
+  correo_autor_comentario: string;
+  nombres?: string;
+  apellidos?: string;
+}
 
 interface Post {
   clave_contenido?: number;
@@ -21,6 +31,7 @@ interface Post {
   archivo_url?: string;
   likes_count?: number;
   comments_count?: number;
+  user_has_reacted?: boolean;
 }
 
 const MainFeed = () => {
@@ -30,6 +41,13 @@ const MainFeed = () => {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userStats, setUserStats] = useState<{ total_conexiones: number; total_grupos: number; total_publicaciones: number } | null>(null);
+
+  // Comments state
+  const [activePostId, setActivePostId] = useState<number | null>(null);
+  const [currentComments, setCurrentComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [loadingComments, setLoadingComments] = useState(false);
 
   const currentUser = getCurrentUser();
 
@@ -48,8 +66,20 @@ const MainFeed = () => {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const result = await getUserStats();
+      if (result.success && result.stats) {
+        setUserStats(result.stats);
+      }
+    } catch (err) {
+      console.error('Error loading stats:', err);
+    }
+  };
+
   useEffect(() => {
     loadPosts();
+    loadStats();
   }, []);
 
   const handleCreatePost = async () => {
@@ -69,17 +99,71 @@ const MainFeed = () => {
     }
   };
 
-  const handleLike = async (postId: number) => {
+  const handleLike = async (postId: number, postAuthor: string, hasReacted: boolean) => {
+    // Prevent self-reactions
+    if (postAuthor === currentUser?.email) {
+      alert('No puedes reaccionar a tu propia publicación');
+      return;
+    }
+
     try {
-      await reactToPost(postId, 'Me Gusta');
-      // Optimistic update
-      setPosts(posts.map(p =>
-        p.clave_contenido === postId
-          ? { ...p, likes_count: (p.likes_count || 0) + 1 }
-          : p
-      ));
+      if (hasReacted) {
+        // Remove reaction
+        await removeReaction(postId);
+      } else {
+        // Add reaction
+        await reactToPost(postId, 'Me Gusta');
+      }
+      // Reload feed to get updated counts and reaction status
+      await loadPosts();
+    } catch (err: any) {
+      console.error('Error toggling reaction:', err);
+      if (err.message?.includes('Auto-Like prohibido') || err.message?.includes('propio contenido')) {
+        alert('No puedes reaccionar a tu propia publicación');
+      } else {
+        alert('Error al reaccionar. Intenta de nuevo.');
+      }
+    }
+  };
+
+  const handleCommentClick = async (postId: number) => {
+    if (activePostId === postId) {
+      setActivePostId(null);
+      return;
+    }
+
+    setActivePostId(postId);
+    setLoadingComments(true);
+    try {
+      const result = await getComments(postId);
+      if (result.success) {
+        setCurrentComments(result.data || []);
+      }
     } catch (err) {
-      console.error('Error liking post:', err);
+      console.error('Error loading comments:', err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleSubmitComment = async (postId: number) => {
+    if (!commentText.trim()) return;
+
+    try {
+      const result = await commentOnPost(postId, commentText);
+      if (result.success) {
+        setCommentText('');
+        // Refresh comments
+        const commentsResult = await getComments(postId);
+        if (commentsResult.success) {
+          setCurrentComments(commentsResult.data || []);
+        }
+        // Refresh post list (to update comment count)
+        loadPosts();
+      }
+    } catch (err) {
+      console.error('Error posting comment:', err);
+      alert('Error al publicar comentario');
     }
   };
 
@@ -95,19 +179,74 @@ const MainFeed = () => {
     return date.toLocaleDateString('es-VE');
   };
 
-  // TODO: Fetch from API - GET /api/connections/suggested
-  const suggestedConnections = [
-    { name: 'Luis Hernández', role: 'Estudiante 6to Semestre', mutualConnections: 12, email: 'luis@ucab.edu.ve' },
-    { name: 'Dra. Patricia Morales', role: 'Directora Escuela Informática', mutualConnections: 8, email: 'patricia@ucab.edu.ve' },
-    { name: 'Roberto Silva', role: 'Egresado - Ing. Industrial', mutualConnections: 5, email: 'roberto@ucab.edu.ve' }
-  ];
+  // Connection suggestions state
+  interface Suggestion {
+    correo_principal: string;
+    nombres: string;
+    apellidos?: string;
+    fotografia_url?: string;
+    conexiones_comunes?: number;
+  }
+  const [suggestedConnections, setSuggestedConnections] = useState<Suggestion[]>([]);
 
-  // TODO: Fetch from API - GET /api/events/upcoming
-  const upcomingEvents = [
-    { name: 'Conferencia de IA', date: 'Nov 20, 2024', attendees: 156 },
-    { name: 'Feria de Empleo UCAB', date: 'Dic 5, 2024', attendees: 234 },
-    { name: 'Workshop de Blockchain', date: 'Dic 12, 2024', attendees: 89 }
-  ];
+  const loadSuggestions = async () => {
+    try {
+      const result = await getConnectionSuggestions();
+      if (result.success && result.data) {
+        setSuggestedConnections(result.data);
+      }
+    } catch (err) {
+      console.error('Error loading suggestions:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadSuggestions();
+    loadEvents();
+  }, []);
+
+  interface Event {
+    clave_evento: number;
+    titulo_evento: string;
+    fecha_hora_inicio: string;
+  }
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+
+  const loadEvents = async () => {
+    try {
+      const result = await getUpcomingEvents();
+      if (result.success && result.data) {
+        setUpcomingEvents(result.data.slice(0, 3));
+      }
+    } catch (err) {
+      console.error('Error loading events:', err);
+    }
+  };
+
+
+  /* Share Handler */
+  const handleShare = async (post: Post) => {
+    const shareData = {
+      title: post.evento_titulo || 'Publicación en SoyUCAB',
+      text: post.texto_contenido,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.log('Error sharing:', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareData.title}\n\n${shareData.text}\n\n${shareData.url}`);
+        alert('Enlace copiado al portapapeles');
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -125,15 +264,14 @@ const MainFeed = () => {
                 <p className="text-sm text-gray-500">Ver perfil</p>
               </div>
             </div>
-            {/* TODO: Fetch from API - user stats endpoint */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Conexiones</span>
-                <span className="font-medium">--</span>
+                <span className="font-medium">{userStats?.total_conexiones ?? '--'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Grupos</span>
-                <span className="font-medium">--</span>
+                <span className="font-medium">{userStats?.total_grupos ?? '--'}</span>
               </div>
             </div>
           </CardContent>
@@ -279,22 +417,99 @@ const MainFeed = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-gray-600 hover:text-red-600"
-                    onClick={() => post.clave_contenido && handleLike(post.clave_contenido)}
+                    className={post.user_has_reacted ? "text-red-600" : "text-gray-600 hover:text-red-600"}
+                    onClick={() => post.clave_contenido && handleLike(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
                   >
-                    <Heart className="h-4 w-4 mr-1" />
-                    {post.likes_count || 0}
+                    <Heart className={`h-4 w-4 mr-1 ${post.user_has_reacted ? 'fill-red-600' : ''}`} />
+                    {Number(post.likes_count) || 0}
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-600 hover:text-blue-600"
+                    onClick={() => post.clave_contenido && handleCommentClick(post.clave_contenido)}
+                  >
                     <MessageCircle className="h-4 w-4 mr-1" />
                     {post.comments_count || 0}
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-green-600">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-600 hover:text-green-600"
+                    onClick={() => handleShare(post)}
+                  >
                     <Share2 className="h-4 w-4 mr-1" />
                     Compartir
                   </Button>
                 </div>
               </div>
+
+              {/* Comments Section */}
+              {activePostId === post.clave_contenido && (
+                <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 -mx-4 -mb-4 p-4">
+                  {loadingComments ? (
+                    <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin text-gray-500" /></div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Comments List */}
+                      {currentComments.length > 0 ? (
+                        <div className="space-y-3 mb-4">
+                          {currentComments.map((comment) => (
+                            <div key={comment.clave_comentario} className="flex space-x-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent((comment.nombres || '') + ' ' + (comment.apellidos || ''))}`} />
+                                <AvatarFallback>{(comment.nombres?.[0] || 'U')}</AvatarFallback>
+                              </Avatar>
+                              <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm flex-1">
+                                <div className="flex justify-between items-start">
+                                  <p className="text-xs font-semibold text-gray-900">
+                                    {comment.nombres} {comment.apellidos}
+                                  </p>
+                                  <span className="text-xs text-gray-400">{formatDate(comment.fecha_hora_comentario)}</span>
+                                </div>
+                                <p className="text-sm text-gray-700 mt-1">{comment.texto_comentario}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-center text-gray-400 py-2">Sé el primero en comentar</p>
+                      )}
+
+                      {/* Comment Input */}
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={currentUser?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}`} />
+                          <AvatarFallback>{currentUser?.name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 relative">
+                          <Input
+                            placeholder="Escribe un comentario..."
+                            value={commentText}
+                            onChange={(e) => setCommentText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                post.clave_contenido && handleSubmitComment(post.clave_contenido);
+                              }
+                            }}
+                            className="pr-10"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="absolute right-0 top-0 h-full text-blue-500 hover:text-blue-700 hover:bg-transparent"
+                            onClick={() => post.clave_contenido && handleSubmitComment(post.clave_contenido)}
+                            disabled={!commentText.trim()}
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -310,28 +525,32 @@ const MainFeed = () => {
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className="space-y-3">
-                {suggestedConnections.map((person, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`} />
-                      <AvatarFallback>{person.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{person.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{person.role}</p>
-                      <p className="text-xs text-gray-400">{person.mutualConnections} conexiones en común</p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-2 text-xs h-6"
-                        style={{ borderColor: '#40b4e5', color: '#40b4e5' }}
-                        onClick={() => sendConnectionRequest(person.email)}
-                      >
-                        Conectar
-                      </Button>
+                {suggestedConnections.length === 0 ? (
+                  <p className="text-sm text-gray-500">No hay sugerencias disponibles</p>
+                ) : suggestedConnections.map((person, index) => {
+                  const fullName = `${person.nombres || ''} ${person.apellidos || ''}`.trim() || 'Usuario';
+                  return (
+                    <div key={index} className="flex items-start space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={person.fotografia_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}`} />
+                        <AvatarFallback>{fullName[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{fullName}</p>
+                        <p className="text-xs text-gray-400">{person.conexiones_comunes || 0} conexiones en común</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="mt-2 text-xs h-6"
+                          style={{ borderColor: '#40b4e5', color: '#40b4e5' }}
+                          onClick={() => sendConnectionRequest(person.correo_principal)}
+                        >
+                          Conectar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -358,11 +577,12 @@ const MainFeed = () => {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="space-y-3">
-              {upcomingEvents.map((event, index) => (
-                <div key={index} className="border-l-2 pl-3" style={{ borderColor: '#ffc526' }}>
-                  <p className="text-sm font-medium">{event.name}</p>
-                  <p className="text-xs text-gray-500">{event.date}</p>
-                  <p className="text-xs text-gray-400">{event.attendees} asistentes</p>
+              {upcomingEvents.length === 0 ? (
+                <p className="text-sm text-gray-500">No hay eventos próximos</p>
+              ) : upcomingEvents.map((event, index) => (
+                <div key={event.clave_evento || index} className="border-l-2 pl-3" style={{ borderColor: '#ffc526' }}>
+                  <p className="text-sm font-medium">{event.titulo_evento}</p>
+                  <p className="text-xs text-gray-500">{formatDate(event.fecha_hora_inicio)}</p>
                 </div>
               ))}
             </div>

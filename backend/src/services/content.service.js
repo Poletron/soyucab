@@ -1,0 +1,120 @@
+/**
+ * Content Service - SoyUCAB
+ * Business logic for content (posts/events), reactions, and comments
+ */
+
+const db = require('../config/db');
+
+/**
+ * Create new content (post or event)
+ */
+async function createContent(userEmail, texto, visibilidad, tipo, evento = null) {
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`SELECT set_config('app.user_email', $1, true)`, [userEmail]);
+
+        // Insert content
+        const insertContenido = await client.query(
+            `INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
+             VALUES ($1, NOW(), $2, $3)
+             RETURNING clave_contenido, fecha_hora_creacion`,
+            [userEmail, texto, visibilidad]
+        );
+        const { clave_contenido, fecha_hora_creacion } = insertContenido.rows[0];
+
+        // Insert into child table based on type
+        if (tipo === 'evento' && evento) {
+            await client.query(
+                `INSERT INTO EVENTO (fk_contenido, titulo, fecha_inicio, fecha_fin, ciudad_ubicacion, pais_ubicacion)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [clave_contenido, evento.titulo, evento.fecha_inicio, evento.fecha_fin, evento.ciudad || null, evento.pais || 'Venezuela']
+            );
+        } else {
+            await client.query(`INSERT INTO PUBLICACION (fk_contenido) VALUES ($1)`, [clave_contenido]);
+        }
+
+        await client.query('COMMIT');
+        return { clave_contenido, fecha_hora_creacion };
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Check if user owns content
+ */
+async function getContentAuthor(contentId) {
+    const result = await db.query('SELECT correo_autor FROM CONTENIDO WHERE clave_contenido = $1', [contentId]);
+    return result.rows.length > 0 ? result.rows[0].correo_autor : null;
+}
+
+/**
+ * Delete content
+ */
+async function deleteContent(contentId) {
+    await db.query('DELETE FROM CONTENIDO WHERE clave_contenido = $1', [contentId]);
+}
+
+/**
+ * Add reaction to content
+ */
+async function addReaction(userEmail, contentId, reaccion = 'Me Gusta') {
+    await db.query(
+        `INSERT INTO REACCIONA_CONTENIDO (correo_miembro, fk_contenido, nombre_reaccion, fecha_hora_reaccion)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT DO NOTHING`,
+        [userEmail, contentId, reaccion]
+    );
+}
+
+/**
+ * Remove reaction from content
+ */
+async function removeReaction(userEmail, contentId) {
+    await db.query(
+        `DELETE FROM REACCIONA_CONTENIDO WHERE correo_miembro = $1 AND fk_contenido = $2`,
+        [userEmail, contentId]
+    );
+}
+
+/**
+ * Add comment to content
+ */
+async function addComment(userEmail, contentId, texto) {
+    const result = await db.query(
+        `INSERT INTO COMENTARIO (fk_contenido, fecha_hora_comentario, correo_autor_comentario, texto_comentario)
+         VALUES ($1, NOW(), $2, $3)
+         RETURNING clave_comentario, fecha_hora_comentario`,
+        [contentId, userEmail, texto]
+    );
+    return result.rows[0];
+}
+
+/**
+ * Get comments for a content
+ */
+async function getComments(contentId) {
+    const result = await db.query(
+        `SELECT c.*, p.nombres, p.apellidos
+         FROM COMENTARIO c
+         LEFT JOIN PERSONA p ON c.correo_autor_comentario = p.correo_principal
+         WHERE c.fk_contenido = $1
+         ORDER BY c.fecha_hora_comentario ASC`,
+        [contentId]
+    );
+    return result.rows;
+}
+
+module.exports = {
+    createContent,
+    getContentAuthor,
+    deleteContent,
+    addReaction,
+    removeReaction,
+    addComment,
+    getComments
+};

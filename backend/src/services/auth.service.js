@@ -220,10 +220,32 @@ async function updateProfile(email, profileData) {
     return { success: true, message: 'Perfil actualizado' };
 }
 
+/**
+ * Get user statistics (connections, groups, posts)
+ */
+async function getUserStats(userEmail) {
+    const result = await db.query(`
+        SELECT 
+            (SELECT COUNT(*) 
+             FROM SOLICITA_CONEXION 
+             WHERE (correo_solicitante = $1 OR correo_solicitado = $1) 
+             AND estado_solicitud = 'Aceptada') as total_conexiones,
+            (SELECT COUNT(*) 
+             FROM PERTENECE_A_GRUPO 
+             WHERE correo_persona = $1) as total_grupos,
+            (SELECT COUNT(*) 
+             FROM CONTENIDO 
+             WHERE correo_autor = $1) as total_publicaciones
+    `, [userEmail]);
+
+    return result.rows[0];
+}
+
 module.exports = {
     login,
     register,
     getUserProfile,
+    getUserStats,
     updateProfile,
     hashPassword
 };

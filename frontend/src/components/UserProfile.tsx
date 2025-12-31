@@ -44,15 +44,16 @@ const UserProfile = () => {
     try {
       setLoading(true);
       const result = await getProfile();
+      console.log('Profile result:', result);
       if (result.success && result.profile) {
         setProfile({
           correo_principal: result.profile.email,
           nombres: result.profile.nombre,
           apellidos: result.profile.apellido,
           biografia: result.profile.biografia,
-          ciudad_residencia: result.profile.ubicacion?.split(',')[0],
-          pais_residencia: result.profile.ubicacion?.split(',')[1] || result.profile.pais_residencia || 'Venezuela',
-          fecha_registro: result.profile.fechaRegistro,
+          ciudad_residencia: result.profile.ciudad_residencia,
+          pais_residencia: result.profile.pais_residencia || 'Venezuela',
+          fecha_registro: result.profile.fecha_registro,
           fotografia_url: result.profile.foto,
           // Org specific
           tipo: result.profile.tipo,

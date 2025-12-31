@@ -55,7 +55,10 @@ import { useRole } from './hooks/useRole';
 
 function App() {
   const { isModerator } = useRole();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Inicializar estado de autenticación desde localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!localStorage.getItem('userEmail');
+  });
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentView, setCurrentView] = useState<View>('feed');
 
@@ -64,6 +67,12 @@ function App() {
   };
 
   const handleLogout = () => {
+    // Limpiar localStorage al cerrar sesión
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userFoto');
+    localStorage.removeItem('userRoles');
+    localStorage.removeItem('userType');
     setIsAuthenticated(false);
     setCurrentView('feed');
   };

@@ -141,7 +141,8 @@ CREATE TABLE REACCIONA_CONTENIDO (
     
     CONSTRAINT fk_reacc_cont_miembro FOREIGN KEY (correo_miembro) REFERENCES MIEMBRO(correo_principal),
     CONSTRAINT fk_reacc_cont_contenido FOREIGN KEY (fk_contenido) REFERENCES CONTENIDO(clave_contenido),
-    CONSTRAINT fk_reacc_cont_tipo FOREIGN KEY (nombre_reaccion) REFERENCES TIPO_REACCION(nombre_reaccion)
+    CONSTRAINT fk_reacc_cont_tipo FOREIGN KEY (nombre_reaccion) REFERENCES TIPO_REACCION(nombre_reaccion),
+    CONSTRAINT uq_reaccion_unica_por_usuario UNIQUE (correo_miembro, fk_contenido)
 );
 
 CREATE TABLE REACCIONA_COMENTARIO (

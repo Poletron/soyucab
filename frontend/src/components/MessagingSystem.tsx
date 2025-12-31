@@ -452,7 +452,7 @@ export default function MessagingSystem() {
   };
 
   return (
-    <div className="h-[calc(100vh-120px)] bg-gray-50 rounded-lg overflow-hidden relative">
+    <div className="h-[calc(100vh-140px)] bg-gray-50 rounded-lg overflow-hidden relative z-0">
       <div className="flex h-full">
         {/* Conversations sidebar */}
         <div className={`${showConversations ? 'block' : 'hidden'} md:block`}>

@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { 
-  BookOpen, 
-  Users, 
-  Search, 
-  Filter, 
+import React, { useState, useEffect } from 'react';
+import {
+  BookOpen,
+  Users,
+  Search,
+  Filter,
   Plus,
   GraduationCap,
   MessageSquare,
   Award,
-  ThumbsUp
+  ThumbsUp,
+  Loader2
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -21,111 +22,134 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
 import { Separator } from './ui/separator';
+import { searchTutors, getMyMentorships, requestMentorship, registerAsTutor, getCurrentUser } from '../services/api';
 
+/* Interfaces updated to match API */
 interface Tutor {
-  id: string;
-  name: string;
-  avatar: string;
-  school: string;
-  subjects: string[];
-  recommendedBy: number;
-  experience: string;
-  description: string;
-  status: 'certificado' | 'voluntario';
+  clave_tutoria: number;
+  correo_tutor: string;
+  nombres: string;
+  apellidos: string;
+  fotografia_url: string;
+  area_conocimiento: string;
+  descripcion_enfoque: string;
+  active_students: number;
 }
 
 interface MentorConnection {
-  id: string;
-  subject: string;
-  mentorName: string;
-  mentorAvatar: string;
-  status: 'conectado' | 'pendiente' | 'finalizada';
+  clave_solicitud: number;
+  area_conocimiento: string;
+  other_name: string;
+  other_lastname: string;
+  other_photo: string;
+  estado: 'Enviada' | 'Aceptada' | 'Rechazada' | 'Completada';
+  my_role: 'Mentor' | 'Mentoreado';
 }
 
 export default function Tutoring() {
   const [activeTab, setActiveTab] = useState('find');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [myConnections, setMyConnections] = useState<MentorConnection[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Form state
   const [tutorFormData, setTutorFormData] = useState({
     subjects: '',
-    experience: '',
+    experience: '1-2', // Default value
     description: ''
   });
+  const [registering, setRegistering] = useState(false);
 
-  // Mock data
-  const tutors: Tutor[] = [
-    {
-      id: '1',
-      name: 'Carlos Mendoza',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      school: 'Escuela de Ingeniería',
-      subjects: ['Cálculo I', 'Cálculo II', 'Álgebra Lineal', 'Física I'],
-      recommendedBy: 45,
-      experience: '3 años',
-      description: 'Estudiante de Ingeniería Civil con experiencia enseñando matemáticas y física. Me gusta ayudar a otros estudiantes a superar las materias más difíciles.',
-      status: 'certificado'
-    },
-    {
-      id: '2',
-      name: 'Ana Rodríguez',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b9e09b09?w=150',
-      school: 'Escuela de Comunicación Social',
-      subjects: ['Redacción', 'Comunicación Oral', 'Marketing Digital'],
-      recommendedBy: 32,
-      experience: '2 años',
-      description: 'Egresada de Comunicación Social, especializada en redacción y comunicación digital. Te ayudo a mejorar tus habilidades de escritura y presentación.',
-      status: 'voluntario'
-    },
-    {
-      id: '3',
-      name: 'Miguel Torres',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-      school: 'Escuela de Administración',
-      subjects: ['Contabilidad', 'Finanzas', 'Estadística', 'Excel Avanzado'],
-      recommendedBy: 28,
-      experience: '4 años',
-      description: 'Profesor de Contabilidad y Finanzas con amplia experiencia en el área empresarial. Especializado en Excel y análisis financiero.',
-      status: 'certificado'
-    }
-  ];
-
-  const myConnections: MentorConnection[] = [
-    {
-      id: '1',
-      subject: 'Cálculo II',
-      mentorName: 'Carlos Mendoza',
-      mentorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-      status: 'conectado'
-    },
-    {
-      id: '2',
-      subject: 'Marketing Digital',
-      mentorName: 'Ana Rodríguez',
-      mentorAvatar: 'https://images.unsplash.com/photo-1494790108755-2616b9e09b09?w=150',
-      status: 'finalizada'
-    }
-  ];
+  const currentUser = getCurrentUser();
 
   const subjects = [
-    'Cálculo I', 'Cálculo II', 'Álgebra Lineal', 'Física I', 'Física II',
+    'Calculo I', 'Calculo II', 'Algebra Lineal', 'Fisica I', 'Fisica II',
     'Contabilidad', 'Finanzas', 'Estadística', 'Programación', 'Marketing Digital'
   ];
 
-  const filteredTutors = tutors.filter(tutor => {
-    const matchesSearch = tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tutor.subjects.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesSubject = !selectedSubject || tutor.subjects.includes(selectedSubject);
-    
-    return matchesSearch && matchesSubject;
-  });
+  /* Load Tutors */
+  const loadTutors = async () => {
+    setLoading(true);
+    try {
+      const result = await searchTutors(searchTerm, selectedSubject);
+      if (result.success) {
+        setTutors(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading tutors:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Load Connections */
+  const loadConnections = async () => {
+    try {
+      const result = await getMyMentorships();
+      if (result.success) {
+        setMyConnections(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading connections:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'find') {
+      const timer = setTimeout(() => loadTutors(), 500); // Debounce
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'sessions') {
+      loadConnections();
+    }
+  }, [activeTab, searchTerm, selectedSubject]);
+
+  const handleRequestMentorship = async (tutoriaId: number) => {
+    try {
+      const result = await requestMentorship(tutoriaId);
+      if (result.success) {
+        alert('Solicitud enviada correctamente');
+        loadTutors(); // Refresh to potentially show status change? 
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al solicitar mentoría');
+    }
+  };
+
+  const handleRegisterTutor = async () => {
+    if (!tutorFormData.subjects || !tutorFormData.description) {
+      alert('Por favor completa todos los campos');
+      return;
+    }
+
+    setRegistering(true);
+    try {
+      const result = await registerAsTutor({
+        subjects: tutorFormData.subjects,
+        experience: tutorFormData.experience,
+        description: tutorFormData.description
+      });
+
+      if (result.success) {
+        alert('Te has registrado como mentor exitosamente');
+        setTutorFormData({ subjects: '', experience: '1-2', description: '' });
+        setActiveTab('sessions');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al registrarse como tutor');
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'conectado':
+      case 'Aceptada':
         return <Badge className="bg-blue-100 text-blue-800">✅ Conectado</Badge>;
-      case 'pendiente':
+      case 'Enviada':
         return <Badge className="bg-yellow-100 text-yellow-800">⏳ Pendiente</Badge>;
-      case 'finalizada':
+      case 'Completada':
         return <Badge className="bg-green-100 text-green-800">✓ Finalizada</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
@@ -141,9 +165,10 @@ export default function Tutoring() {
             Conecta con mentores y compañeros para apoyo académico
           </p>
         </div>
-        <Button 
+        <Button
           className="flex items-center space-x-2"
           style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
+          onClick={() => setActiveTab('mentor')}
         >
           <Plus className="h-4 w-4" />
           <span>Ofrecer Mentoría</span>
@@ -183,14 +208,14 @@ export default function Tutoring() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
-                      placeholder="Nombre del mentor o materia..."
+                      placeholder="Nombre del mentor..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label>Materia</Label>
                   <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -198,8 +223,8 @@ export default function Tutoring() {
                       <SelectValue placeholder="Todas las materias" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas las materias</SelectItem>
-                      {subjects.map(subject => (
+                      <SelectItem value="all">Todas las materias</SelectItem>
+                      {subjects.map((subject) => (
                         <SelectItem key={`filter-${subject}`} value={subject}>{subject}</SelectItem>
                       ))}
                     </SelectContent>
@@ -211,124 +236,86 @@ export default function Tutoring() {
 
           {/* Tutors Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTutors.map((tutor) => (
-              <Card key={tutor.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={tutor.avatar} />
-                      <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{tutor.name}</h3>
-                      <p className="text-sm text-gray-600">{tutor.school}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-1 mb-2">
-                    <ThumbsUp className="h-4 w-4" style={{ color: '#40b4e5' }} />
-                    <span className="text-sm font-medium">Recomendado por {tutor.recommendedBy} usuarios</span>
-                  </div>
-                  
-                  <Badge 
-                    variant={tutor.status === 'certificado' ? 'default' : 'secondary'}
-                    style={tutor.status === 'certificado' ? { backgroundColor: '#047732', color: 'white' } : {}}
-                  >
-                    {tutor.status === 'certificado' ? '🎓 Certificado' : '🤝 Voluntario'}
-                  </Badge>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium">Materias</Label>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {tutor.subjects.slice(0, 3).map((subject) => (
-                        <Badge key={subject} variant="secondary" className="text-xs">
-                          {subject}
-                        </Badge>
-                      ))}
-                      {tutor.subjects.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{tutor.subjects.length - 3} más
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button className="w-full" style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}>
-                        Ver Perfil
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center space-x-3">
-                          <Avatar className="h-16 w-16">
-                            <AvatarImage src={tutor.avatar} />
-                            <AvatarFallback>{tutor.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h2 className="text-xl">{tutor.name}</h2>
-                            <p className="text-gray-600">{tutor.school}</p>
-                          </div>
-                        </DialogTitle>
-                        <DialogDescription className="sr-only">
-                          Perfil completo del mentor {tutor.name}
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <ThumbsUp className="h-4 w-4" style={{ color: '#40b4e5' }} />
-                            <span>Recomendado por {tutor.recommendedBy} usuarios</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Award className="h-4 w-4 text-blue-600" />
-                            <span>{tutor.experience} de experiencia</span>
-                          </div>
+            {loading ? (
+              <div className="col-span-3 text-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500" />
+              </div>
+            ) : (
+              tutors.length > 0 ? (
+                tutors.map((tutor) => (
+                  <Card key={tutor.clave_tutoria} className="hover:shadow-lg transition-shadow">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center space-x-3">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={tutor.fotografia_url} />
+                          <AvatarFallback>{tutor.nombres.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{tutor.nombres} {tutor.apellidos}</h3>
+                          <p className="text-sm text-gray-600">{tutor.area_conocimiento}</p>
                         </div>
-
-                        <div>
-                          <h3 className="font-semibold mb-2">Descripción</h3>
-                          <p className="text-gray-700">{tutor.description}</p>
-                        </div>
-
-                        <div>
-                          <h3 className="font-semibold mb-2">Materias que enseña</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {tutor.subjects.map((subject) => (
-                              <Badge key={subject} variant="outline">
-                                {subject}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
-                        <Button className="w-full" style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}>
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Solicitar Mentoría
-                        </Button>
                       </div>
-                    </DialogContent>
-                  </Dialog>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
-          {filteredTutors.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron mentores</h3>
-                <p className="text-gray-600">
-                  Intenta ajustar tus filtros de búsqueda para encontrar más opciones.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                      <div className="flex items-center space-x-1 mb-2">
+                        <Users className="h-4 w-4" style={{ color: '#40b4e5' }} />
+                        <span className="text-sm font-medium">{tutor.active_students || 0} estudiantes activos</span>
+                      </div>
+
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button className="w-full" style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}>
+                            Ver Perfil
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center space-x-3">
+                              <Avatar className="h-16 w-16">
+                                <AvatarImage src={tutor.fotografia_url} />
+                                <AvatarFallback>{tutor.nombres.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h2 className="text-xl">{tutor.nombres} {tutor.apellidos}</h2>
+                                <p className="text-gray-600">{tutor.area_conocimiento}</p>
+                              </div>
+                            </DialogTitle>
+                            <DialogDescription>
+                              Perfil de mentor
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="space-y-6">
+                            <div>
+                              <h3 className="font-semibold mb-2">Descripción</h3>
+                              <p className="text-gray-700">{tutor.descripcion_enfoque}</p>
+                            </div>
+
+                            <Button
+                              className="w-full"
+                              style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
+                              onClick={() => handleRequestMentorship(tutor.clave_tutoria)}
+                            >
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Solicitar Mentoría
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-12">
+                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron mentores</h3>
+                  <p className="text-gray-600">Intenta ajustar tus filtros.</p>
+                </div>
+              )
+            )}
+          </div>
         </TabsContent>
 
         {/* MY CONNECTIONS TAB */}
@@ -339,34 +326,25 @@ export default function Tutoring() {
                 <Users className="h-5 w-5" style={{ color: '#40b4e5' }} />
                 <span>Mis Conexiones de Mentoría</span>
               </CardTitle>
-              <CardDescription>
-                Gestiona tus conexiones con mentores
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {myConnections.map((connection) => (
-                  <Card key={connection.id} className="border-l-4" style={{ borderLeftColor: connection.status === 'conectado' ? '#40b4e5' : connection.status === 'pendiente' ? '#ffc526' : '#047732' }}>
+                  <Card key={connection.clave_solicitud} className="border-l-4" style={{ borderLeftColor: connection.estado === 'Aceptada' ? '#40b4e5' : connection.estado === 'Enviada' ? '#ffc526' : '#047732' }}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar className="h-10 w-10">
-                            <AvatarImage src={connection.mentorAvatar} />
-                            <AvatarFallback>{connection.mentorName.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={connection.other_photo} />
+                            <AvatarFallback>{connection.other_name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-semibold">{connection.subject}</h3>
-                            <p className="text-sm text-gray-600">con {connection.mentorName}</p>
+                            <h3 className="font-semibold">{connection.area_conocimiento}</h3>
+                            <p className="text-sm text-gray-600">{connection.my_role}: {connection.other_name} {connection.other_lastname}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
-                          {getStatusBadge(connection.status)}
-                          {connection.status === 'conectado' && (
-                            <Button size="sm" variant="outline">
-                              <MessageSquare className="mr-2 h-3 w-3" />
-                              Enviar Mensaje
-                            </Button>
-                          )}
+                          {getStatusBadge(connection.estado)}
                         </div>
                       </div>
                     </CardContent>
@@ -376,17 +354,7 @@ export default function Tutoring() {
 
               {myConnections.length === 0 && (
                 <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No tienes conexiones de mentoría</h3>
-                  <p className="text-gray-600 mb-4">
-                    Busca mentores y solicita tu primera mentoría.
-                  </p>
-                  <Button 
-                    onClick={() => setActiveTab('find')}
-                    style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
-                  >
-                    Buscar Mentores
-                  </Button>
                 </div>
               )}
             </CardContent>
@@ -406,92 +374,61 @@ export default function Tutoring() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Users className="h-8 w-8" style={{ color: '#40b4e5' }} />
-                  </div>
-                  <h3 className="font-semibold mb-2">Ayuda a Compañeros</h3>
-                  <p className="text-sm text-gray-600">
-                    Comparte tu experiencia y conocimientos con otros estudiantes
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Award className="h-8 w-8" style={{ color: '#ffc526' }} />
-                  </div>
-                  <h3 className="font-semibold mb-2">Desarrolla Habilidades</h3>
-                  <p className="text-sm text-gray-600">
-                    Mejora tus habilidades de comunicación y liderazgo
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <BookOpen className="h-8 w-8" style={{ color: '#047732' }} />
-                  </div>
-                  <h3 className="font-semibold mb-2">Refuerza Conocimientos</h3>
-                  <p className="text-sm text-gray-600">
-                    Enseñar es la mejor forma de aprender y consolidar conceptos
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
 
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Solicitar ser Mentor</h3>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="tutorSubjects">Materias que puedes enseñar</Label>
-                    <Select 
-                      value={tutorFormData.subjects} 
-                      onValueChange={(value) => setTutorFormData(prev => ({ ...prev, subjects: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona materias" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subjects.slice(0, 10).map(subject => (
-                          <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="experience">Experiencia (años)</Label>
-                    <Select 
-                      value={tutorFormData.experience} 
-                      onValueChange={(value) => setTutorFormData(prev => ({ ...prev, experience: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Años de experiencia" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0-1">Menos de 1 año</SelectItem>
-                        <SelectItem value="1-2">1-2 años</SelectItem>
-                        <SelectItem value="2-3">2-3 años</SelectItem>
-                        <SelectItem value="3+">Más de 3 años</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tutorSubjects">Materias que puedes enseñar</Label>
+                  <Select
+                    value={tutorFormData.subjects}
+                    onValueChange={(value: string) => setTutorFormData(prev => ({ ...prev, subjects: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona una materia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map(subject => (
+                        <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Experiencia (años)</Label>
+                  <Select
+                    value={tutorFormData.experience}
+                    onValueChange={(value: string) => setTutorFormData(prev => ({ ...prev, experience: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Años de experiencia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-1">Menos de 1 año</SelectItem>
+                      <SelectItem value="1-2">1-2 años</SelectItem>
+                      <SelectItem value="2-3">2-3 años</SelectItem>
+                      <SelectItem value="3+">Más de 3 años</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="tutorDescription">Descripción</Label>
                   <Textarea
                     id="tutorDescription"
-                    placeholder="Cuéntanos sobre tu experiencia, metodología de enseñanza y por qué quieres ser mentor..."
+                    placeholder="Cuéntanos sobre tu experiencia..."
                     rows={4}
+                    value={tutorFormData.description}
+                    onChange={(e: any) => setTutorFormData(prev => ({ ...prev, description: e.target.value }))}
                   />
                 </div>
 
-                <Button 
+                <Button
                   className="w-full md:w-auto"
                   style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
+                  onClick={handleRegisterTutor}
+                  disabled={registering}
                 >
-                  <GraduationCap className="mr-2 h-4 w-4" />
+                  {registering ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}
                   Enviar Solicitud
                 </Button>
               </div>

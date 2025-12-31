@@ -143,4 +143,18 @@ router.put('/profile', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/auth/stats
+ * Obtener estadísticas del usuario (conexiones, grupos, publicaciones)
+ */
+router.get('/stats', requireAuth, async (req, res) => {
+    try {
+        const stats = await authService.getUserStats(req.userEmail);
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('[AUTH STATS] Error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

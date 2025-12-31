@@ -24,6 +24,7 @@ const uploadRoutes = require('./routes/upload.routes');
 const groupsRoutes = require('./routes/groups.routes');
 const connectionsRoutes = require('./routes/connections.routes');
 const messagesRoutes = require('./routes/messages.routes');
+const tutoringRoutes = require('./routes/tutoring.routes');
 const usersRoutes = require('./routes/users.routes');
 const offersRoutes = require('./routes/offers.routes');
 const eventsRoutes = require('./routes/events.routes');
@@ -88,6 +89,9 @@ app.use('/api/messages', messagesRoutes);
 
 // Usuarios (búsqueda, perfiles)
 app.use('/api/users', usersRoutes);
+
+// Tutorías
+app.use('/api/tutoring', tutoringRoutes);
 
 // Eventos
 app.use('/api/events', eventsRoutes);

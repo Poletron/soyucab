@@ -135,9 +135,9 @@ export interface UserProfile {
     nombre: string;
     apellido: string;
     foto?: string;
-    fechaRegistro?: string;
-    ubicacion?: string;
+    fecha_registro?: string;
     biografia?: string;
+    ciudad_residencia?: string;
     pais_residencia?: string;
     tipo?: 'Persona' | 'Organizacion';
     rif?: string;
@@ -257,6 +257,14 @@ export function logout() {
     localStorage.removeItem('userFoto');
 }
 
+/**
+ * Get user statistics (connections, groups, posts)
+ */
+export async function getUserStats(): Promise<{ success: boolean; stats?: { total_conexiones: number; total_grupos: number; total_publicaciones: number }; error?: string }> {
+    const res = await apiFetch('/api/auth/stats');
+    return res.json();
+}
+
 // ============================================
 // Contenido CRUD (Posts, Eventos)
 // ============================================
@@ -306,6 +314,11 @@ export async function createEvent(data: CreateEventData) {
         method: 'POST',
         body: JSON.stringify(data),
     });
+    return res.json();
+}
+
+export async function getUpcomingEvents() {
+    const res = await apiFetch('/api/events');
     return res.json();
 }
 
@@ -631,5 +644,39 @@ export async function leaveGroup(name: string) {
 
 export async function getMyGroups(): Promise<{ success: boolean; data: Group[] }> {
     const res = await apiFetch('/api/groups/my');
+    return res.json();
+}
+
+// ============================================
+// TUTORING
+// ============================================
+
+export async function searchTutors(query: string, subject: string) {
+    const params = new URLSearchParams();
+    if (query) params.append('query', query);
+    if (subject) params.append('subject', subject);
+
+    const res = await apiFetch(`/api/tutoring/search?${params.toString()}`);
+    return res.json();
+}
+
+export async function getMyMentorships() {
+    const res = await apiFetch('/api/tutoring/my-connections');
+    return res.json();
+}
+
+export async function requestMentorship(tutoriaId: number) {
+    const res = await apiFetch('/api/tutoring/request', {
+        method: 'POST',
+        body: JSON.stringify({ tutoriaId }),
+    });
+    return res.json();
+}
+
+export async function registerAsTutor(data: { subjects: string, experience: string, description: string }) {
+    const res = await apiFetch('/api/tutoring/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
     return res.json();
 }
