@@ -17,20 +17,31 @@ router.get('/', requireAuth, async (req, res) => {
     try {
         const sql = `
             SELECT 
+                c.clave_contenido,
                 c.correo_autor,
                 c.fecha_hora_creacion,
                 c.texto_contenido,
                 c.visibilidad,
+                c.archivo_url,
                 CASE 
-                    WHEN e.titulo IS NOT NULL THEN 'EVENTO'
-                    WHEN p.correo_autor IS NOT NULL THEN 'PUBLICACION'
+                    WHEN e.clave_evento IS NOT NULL THEN 'EVENTO'
+                    WHEN p.clave_publicacion IS NOT NULL THEN 'PUBLICACION'
                     ELSE 'OTRO'
                 END as tipo_contenido,
                 e.titulo as evento_titulo,
-                e.fecha_inicio as evento_fecha
+                e.fecha_inicio as evento_fecha,
+                e.fecha_fin as evento_fecha_fin,
+                e.ciudad_ubicacion as evento_ciudad,
+                per.nombres,
+                per.apellidos,
+                m.fotografia_url as autor_foto,
+                (SELECT COUNT(*) FROM REACCIONA_CONTENIDO rc WHERE rc.fk_contenido = c.clave_contenido) as likes_count,
+                (SELECT COUNT(*) FROM COMENTARIO com WHERE com.fk_contenido = c.clave_contenido) as comments_count
             FROM CONTENIDO c
-            LEFT JOIN EVENTO e ON c.correo_autor = e.correo_autor AND c.fecha_hora_creacion = e.fecha_hora_creacion
-            LEFT JOIN PUBLICACION p ON c.correo_autor = p.correo_autor AND c.fecha_hora_creacion = p.fecha_hora_creacion
+            LEFT JOIN EVENTO e ON e.fk_contenido = c.clave_contenido
+            LEFT JOIN PUBLICACION p ON p.fk_contenido = c.clave_contenido
+            LEFT JOIN PERSONA per ON c.correo_autor = per.correo_principal
+            LEFT JOIN MIEMBRO m ON c.correo_autor = m.correo_principal
             ORDER BY c.fecha_hora_creacion DESC
             LIMIT 20
         `;

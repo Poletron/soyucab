@@ -19,6 +19,15 @@ const healthRoutes = require('./routes/health.routes');
 const feedRoutes = require('./routes/feed.routes');
 const reportRoutes = require('./routes/report.routes');
 const authRoutes = require('./routes/auth.routes');
+const contentRoutes = require('./routes/content.routes');
+const uploadRoutes = require('./routes/upload.routes');
+const groupsRoutes = require('./routes/groups.routes');
+const connectionsRoutes = require('./routes/connections.routes');
+const messagesRoutes = require('./routes/messages.routes');
+const usersRoutes = require('./routes/users.routes');
+const offersRoutes = require('./routes/offers.routes');
+const eventsRoutes = require('./routes/events.routes');
+const path = require('path');
 
 // Configuración
 const PORT = process.env.PORT || 3000;
@@ -61,6 +70,33 @@ app.use('/api/report', reportRoutes);
 
 // Autenticación
 app.use('/api/auth', authRoutes);
+
+// CRUD Contenido (Publicaciones, Eventos, Comentarios, Reacciones)
+app.use('/api/content', contentRoutes);
+
+// Upload de Imágenes
+app.use('/api/upload', uploadRoutes);
+
+// Grupos de Interés
+app.use('/api/groups', groupsRoutes);
+
+// Conexiones Sociales
+app.use('/api/connections', connectionsRoutes);
+
+// Mensajería
+app.use('/api/messages', messagesRoutes);
+
+// Usuarios (búsqueda, perfiles)
+app.use('/api/users', usersRoutes);
+
+// Eventos
+app.use('/api/events', eventsRoutes);
+
+// Ofertas Laborales
+app.use('/api/offers', offersRoutes);
+
+// Servir archivos estáticos (imágenes subidas)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Ruta raíz (info básica)
 app.get('/', (req, res) => {

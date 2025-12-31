@@ -13,12 +13,10 @@ import {
   Edit,
   Plus,
   BookOpen,
-  PenTool,
-  MapPin,
-  Building2,
-  Activity,
-  UsersRound,
-  TrendingUp
+  TrendingUp,
+  Award,
+  Link,
+  Briefcase
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './components/ui/button';
@@ -28,28 +26,29 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import MainFeed from './components/MainFeed';
 import UserProfile from './components/UserProfile';
 import GroupPage from './components/GroupPage';
-import EventsReport from './components/EventsReport';
-import CommunityGrowthReport from './components/CommunityGrowthReport';
-import GraduateSkillsReport from './components/GraduateSkillsReport';
-import ContentInteractionReport from './components/ContentInteractionReport';
-import TopViralReport from './components/TopViralReport';
-import LideresReport from './components/LideresReport';
-import EventosReport from './components/EventosReport';
-import ActiveGroupsReport from './components/ActiveGroupsReport';
-import GraduateDiasporaReport from './components/GraduateDiasporaReport';
-import CompanyUniversityLinkReport from './components/CompanyUniversityLinkReport';
-import CommunityHealthReport from './components/CommunityHealthReport';
-import StudentGroupsReport from './components/StudentGroupsReport';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import EditProfile from './components/EditProfile';
 import CreateContent from './components/CreateContentSimple';
-import Tutoring from './components/TutoringSimple';
+import Tutoring from './components/Tutoring';
 import GeneralSettings from './components/GeneralSettings';
 import MessagingSystem from './components/MessagingSystem';
+// Importar los 9 reportes de Entrega 3 (conectados a la BD)
+import TopViralReport from './components/TopViralReport';
+import LideresReport from './components/LideresReport';
+import EventosReport from './components/EventosReport';
+import CrecimientoDemograficoReport from './components/CrecimientoDemograficoReport';
+import ActiveGroupsReport from './components/ActiveGroupsReport';
+import ReferentesReport from './components/ReferentesReport';
+import TutoriasReport from './components/TutoriasReport';
+import NexosReport from './components/NexosReport';
+import OfertasReport from './components/OfertasReport';
 import soyucabLogo from './assets/33c35295992cfb6178c01246eefc5ecbf6bc76db.png';
 
-type View = 'feed' | 'profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events-report' | 'community-report' | 'skills-report' | 'interaction-report' | 'viral-report' | 'lideres-report' | 'eventos-db-report' | 'groups-report' | 'diaspora-report' | 'internships-report' | 'health-report' | 'student-groups-report';
+// Solo los views necesarios para Entrega 4
+type View = 'feed' | 'profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' |
+  'viral-report' | 'lideres-report' | 'eventos-report' | 'crecimiento-report' | 'grupos-report' |
+  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report';
 type AuthView = 'login' | 'register';
 
 function App() {
@@ -70,6 +69,12 @@ function App() {
     setIsAuthenticated(true);
   };
 
+  // Lista de views de reportes para highlight del botón
+  const reportViews: View[] = [
+    'viral-report', 'lideres-report', 'eventos-report', 'crecimiento-report',
+    'grupos-report', 'referentes-report', 'tutorias-report', 'nexos-report', 'ofertas-report'
+  ];
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'profile':
@@ -86,30 +91,25 @@ function App() {
         return <MessagingSystem />;
       case 'settings':
         return <GeneralSettings />;
-      case 'events-report':
-        return <EventsReport />;
-      case 'community-report':
-        return <CommunityGrowthReport />;
-      case 'skills-report':
-        return <GraduateSkillsReport />;
-      case 'interaction-report':
-        return <ContentInteractionReport />;
+      // 9 Reportes de Entrega 3 (conectados a la BD)
       case 'viral-report':
         return <TopViralReport />;
       case 'lideres-report':
         return <LideresReport />;
-      case 'eventos-db-report':
+      case 'eventos-report':
         return <EventosReport />;
-      case 'groups-report':
+      case 'crecimiento-report':
+        return <CrecimientoDemograficoReport />;
+      case 'grupos-report':
         return <ActiveGroupsReport />;
-      case 'diaspora-report':
-        return <GraduateDiasporaReport />;
-      case 'internships-report':
-        return <CompanyUniversityLinkReport />;
-      case 'health-report':
-        return <CommunityHealthReport />;
-      case 'student-groups-report':
-        return <StudentGroupsReport />;
+      case 'referentes-report':
+        return <ReferentesReport />;
+      case 'tutorias-report':
+        return <TutoriasReport />;
+      case 'nexos-report':
+        return <NexosReport />;
+      case 'ofertas-report':
+        return <OfertasReport />;
       default:
         return <MainFeed />;
     }
@@ -192,66 +192,65 @@ function App() {
                   <MessageSquare className="h-4 w-4" />
                   <span>Mensajes</span>
                 </Button>
+
+                {/* Dropdown de Reportes - Solo los 9 de Entrega 3 */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      variant={['events-report', 'community-report', 'skills-report', 'interaction-report', 'groups-report', 'diaspora-report', 'internships-report', 'health-report', 'student-groups-report'].includes(currentView) ? 'default' : 'ghost'}
+                      variant={reportViews.includes(currentView) ? 'default' : 'ghost'}
                       className="flex items-center space-x-2"
-                      style={{ backgroundColor: ['events-report', 'community-report', 'skills-report', 'interaction-report', 'groups-report', 'diaspora-report', 'internships-report', 'health-report', 'student-groups-report'].includes(currentView) ? '#40b4e5' : 'transparent' }}
+                      style={{ backgroundColor: reportViews.includes(currentView) ? '#40b4e5' : 'transparent' }}
                     >
                       <BarChart3 className="h-4 w-4" />
                       <span>Reportes</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuItem onClick={() => setCurrentView('events-report')}>
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>Participación en Eventos</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('community-report')}>
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <span>Crecimiento de Comunidad</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('skills-report')}>
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Aptitudes de Egresados</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('interaction-report')}>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      <span>Análisis de Interacción</span>
-                    </DropdownMenuItem>
+                  <DropdownMenuContent align="start" className="w-64">
+                    {/* 1. Top Contenido Viral */}
                     <DropdownMenuItem onClick={() => setCurrentView('viral-report')}>
                       <TrendingUp className="mr-2 h-4 w-4" />
-                      <span>Top Contenido Viral (BD)</span>
+                      <span>Top Contenido Viral</span>
                     </DropdownMenuItem>
+                    {/* 2. Líderes de Opinión */}
                     <DropdownMenuItem onClick={() => setCurrentView('lideres-report')}>
                       <Users className="mr-2 h-4 w-4" />
-                      <span>Líderes de Opinión (BD)</span>
+                      <span>Líderes de Opinión</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('eventos-db-report')}>
+                    {/* 3. Proyección Interés Eventos */}
+                    <DropdownMenuItem onClick={() => setCurrentView('eventos-report')}>
                       <Calendar className="mr-2 h-4 w-4" />
-                      <span>Interés en Eventos (BD)</span>
+                      <span>Proyección Interés Eventos</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('groups-report')}>
+                    {/* 4. Crecimiento Demográfico */}
+                    <DropdownMenuItem onClick={() => setCurrentView('crecimiento-report')}>
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <span>Crecimiento Demográfico</span>
+                    </DropdownMenuItem>
+                    {/* 5. Grupos Más Activos */}
+                    <DropdownMenuItem onClick={() => setCurrentView('grupos-report')}>
                       <Users className="mr-2 h-4 w-4" />
                       <span>Grupos Más Activos</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('diaspora-report')}>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      <span>Impacto de la Diáspora</span>
+                    {/* 6. Top Referentes Comunidad */}
+                    <DropdownMenuItem onClick={() => setCurrentView('referentes-report')}>
+                      <Award className="mr-2 h-4 w-4" />
+                      <span>Top Referentes Comunidad</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('internships-report')}>
-                      <Building2 className="mr-2 h-4 w-4" />
-                      <span>Vinculación Empresarial</span>
+                    {/* 7. Áreas Conocimiento Demanda */}
+                    <DropdownMenuItem onClick={() => setCurrentView('tutorias-report')}>
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      <span>Áreas Conocimiento Demanda</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('health-report')}>
-                      <Activity className="mr-2 h-4 w-4" />
-                      <span>Salud de la Comunidad</span>
+                    {/* 8. Vigencia Nexos */}
+                    <DropdownMenuItem onClick={() => setCurrentView('nexos-report')}>
+                      <Link className="mr-2 h-4 w-4" />
+                      <span>Vigencia Nexos</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentView('student-groups-report')}>
-                      <UsersRound className="mr-2 h-4 w-4" />
-                      <span>Agrupaciones Estudiantiles</span>
+                    {/* 9. Ofertas Más Postuladas */}
+                    <DropdownMenuItem onClick={() => setCurrentView('ofertas-report')}>
+                      <Briefcase className="mr-2 h-4 w-4" />
+                      <span>Ofertas Más Postuladas</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

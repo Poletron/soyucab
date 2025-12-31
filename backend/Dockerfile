@@ -17,6 +17,9 @@ RUN npm install --omit=dev
 # Copiar código fuente
 COPY src ./src
 
+# Crear directorio para uploads con permisos correctos
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
+
 # Exponer puerto
 EXPOSE 3000
 

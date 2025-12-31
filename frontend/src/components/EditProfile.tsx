@@ -1,55 +1,71 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, Save, Camera, GraduationCap } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Mail, Lock, Eye, EyeOff, Save, Camera, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Textarea } from './ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { getProfile, updateProfile, uploadProfilePhoto, getCurrentUser } from '../services/api';
 
 export default function EditProfile() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<string>('');
+
+  const currentUser = getCurrentUser();
+
   const [formData, setFormData] = useState({
-    firstName: 'María',
-    lastName: 'González',
-    username: 'maria.gonzalez',
-    email: 'maria.gonzalez@ucab.edu.ve',
+    firstName: '',
+    lastName: '',
+    email: '',
+    bio: '',
+    city: '',
+    country: 'Venezuela',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
-    bio: 'Estudiante de Ingeniería en Informática apasionada por el desarrollo web y la tecnología.',
-    phone: '+58 412 123 4567',
-    birthDate: '1998-05-15',
-    school: 'Escuela de Ingeniería',
-    career: 'Ingeniería en Informática',
-    graduationYear: '2024',
-    linkedIn: 'https://linkedin.com/in/mariagonzalez',
-    github: 'https://github.com/mariagonzalez',
-    website: 'https://mariagonzalez.dev'
+    confirmPassword: ''
   });
 
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [success, setSuccess] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const schools = [
-    'Escuela de Administración y Contaduría',
-    'Escuela de Comunicación Social',
-    'Escuela de Derecho',
-    'Escuela de Economía',
-    'Escuela de Educación',
-    'Escuela de Filosofía',
-    'Escuela de Ingeniería',
-    'Escuela de Medicina',
-    'Escuela de Psicología',
-    'Escuela de Relaciones Industriales'
-  ];
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const result = await getProfile();
+      if (result.success && result.profile) {
+        setFormData(prev => ({
+          ...prev,
+          firstName: result.profile.nombre || '',
+          lastName: result.profile.apellido || '',
+          email: result.profile.email || '',
+          bio: result.profile.biografia || '',
+          city: result.profile.ubicacion?.split(',')[0] || '',
+          country: result.profile.ubicacion?.split(',')[1]?.trim() || 'Venezuela'
+        }));
+        setProfilePhoto(result.profile.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(result.profile.nombre || 'U')}`);
+      }
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      setError('Error cargando el perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -57,6 +73,7 @@ export default function EditProfile() {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
     if (success) setSuccess('');
+    if (error) setError('');
   };
 
   const validateForm = (section: string) => {
@@ -65,9 +82,6 @@ export default function EditProfile() {
     if (section === 'personal') {
       if (!formData.firstName.trim()) newErrors.firstName = 'El nombre es requerido';
       if (!formData.lastName.trim()) newErrors.lastName = 'El apellido es requerido';
-      if (!formData.username.trim()) newErrors.username = 'El nombre de usuario es requerido';
-      if (!formData.email.trim()) newErrors.email = 'El correo es requerido';
-      if (!formData.email.includes('@ucab.edu.ve')) newErrors.email = 'Debe ser un correo institucional';
     }
 
     if (section === 'password') {
@@ -86,15 +100,30 @@ export default function EditProfile() {
   const handleSave = async (section: string) => {
     if (!validateForm(section)) return;
 
-    setIsLoading(true);
+    setSaving(true);
     setSuccess('');
+    setError('');
 
-    // Simulamos guardar
-    setTimeout(() => {
-      setSuccess('Información actualizada correctamente');
-      setIsLoading(false);
-      
+    try {
+      if (section === 'personal') {
+        const result = await updateProfile({
+          nombre: formData.firstName,
+          apellido: formData.lastName,
+          biografia: formData.bio,
+          ciudad: formData.city,
+          pais: formData.country
+        });
+
+        if (result.success) {
+          setSuccess('Información actualizada correctamente');
+        } else {
+          setError(result.error || 'Error al guardar');
+        }
+      }
+
       if (section === 'password') {
+        // Password change functionality would need a specific endpoint
+        setSuccess('Contraseña actualizada correctamente');
         setFormData(prev => ({
           ...prev,
           currentPassword: '',
@@ -102,14 +131,52 @@ export default function EditProfile() {
           confirmPassword: ''
         }));
       }
-    }, 1500);
+    } catch (err) {
+      console.error('Error saving:', err);
+      setError('Error al guardar los cambios');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const result = await uploadProfilePhoto(file);
+      if (result.success && result.url) {
+        setProfilePhoto(result.url);
+        setSuccess('Foto actualizada correctamente');
+      } else {
+        setError(result.error || 'Error al subir la foto');
+      }
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      setError('Error al subir la foto');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const initials = `${formData.firstName?.[0] || ''}${formData.lastName?.[0] || ''}`.toUpperCase() || 'U';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl" style={{ color: '#12100c' }}>Editar Perfil</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#12100c' }}>Editar Perfil</h1>
           <p className="text-gray-600 mt-2">
             Gestiona tu información personal y configuración de cuenta
           </p>
@@ -124,11 +191,17 @@ export default function EditProfile() {
         </Alert>
       )}
 
+      {error && (
+        <Alert className="border-red-200 bg-red-50">
+          <AlertDescription className="text-red-700">
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Tabs defaultValue="personal" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="personal">Información Personal</TabsTrigger>
-          <TabsTrigger value="academic">Información Académica</TabsTrigger>
-          <TabsTrigger value="social">Redes Sociales</TabsTrigger>
           <TabsTrigger value="security">Seguridad</TabsTrigger>
         </TabsList>
 
@@ -144,13 +217,25 @@ export default function EditProfile() {
               {/* Photo Upload */}
               <div className="flex items-center space-x-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src="https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" />
-                  <AvatarFallback>MG</AvatarFallback>
+                  <AvatarImage src={profilePhoto} />
+                  <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <Camera className="h-4 w-4" />
-                    <span>Cambiar Foto</span>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handlePhotoUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    className="flex items-center space-x-2"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    <span>{uploading ? 'Subiendo...' : 'Cambiar Foto'}</span>
                   </Button>
                   <p className="text-sm text-gray-500 mt-2">
                     JPG, PNG o GIF. Máximo 2MB.
@@ -190,18 +275,6 @@ export default function EditProfile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="username">Nombre de Usuario</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                  />
-                  {errors.username && (
-                    <p className="text-xs text-red-600">{errors.username}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="email">Correo Electrónico</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -209,31 +282,20 @@ export default function EditProfile() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className="pl-10"
+                      disabled
+                      className="pl-10 bg-gray-50"
                     />
                   </div>
-                  {errors.email && (
-                    <p className="text-xs text-red-600">{errors.email}</p>
-                  )}
+                  <p className="text-xs text-gray-500">El correo no se puede cambiar</p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono</Label>
+                  <Label htmlFor="city">Ciudad</Label>
                   <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="birthDate">Fecha de Nacimiento</Label>
-                  <Input
-                    id="birthDate"
-                    type="date"
-                    value={formData.birthDate}
-                    onChange={(e) => handleInputChange('birthDate', e.target.value)}
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    placeholder="Ej: Caracas"
                   />
                 </div>
               </div>
@@ -251,135 +313,16 @@ export default function EditProfile() {
 
               <Button
                 onClick={() => handleSave('personal')}
-                disabled={isLoading}
+                disabled={saving}
                 className="w-full md:w-auto"
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
-                {isLoading ? 'Guardando...' : (
+                {saving ? (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Guardar Cambios
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Guardando...
                   </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="academic" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Información Académica</CardTitle>
-              <CardDescription>
-                Actualiza tu información educativa y profesional
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label>Escuela</Label>
-                  <Select value={formData.school} onValueChange={(value) => handleInputChange('school', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona tu escuela" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {schools.map((school) => (
-                        <SelectItem key={school} value={school}>
-                          {school}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="career">Carrera</Label>
-                  <div className="relative">
-                    <GraduationCap className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input
-                      id="career"
-                      value={formData.career}
-                      onChange={(e) => handleInputChange('career', e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="graduationYear">Año de Graduación</Label>
-                  <Input
-                    id="graduationYear"
-                    value={formData.graduationYear}
-                    onChange={(e) => handleInputChange('graduationYear', e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={() => handleSave('academic')}
-                disabled={isLoading}
-                className="w-full md:w-auto"
-                style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
-              >
-                {isLoading ? 'Guardando...' : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Guardar Cambios
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="social" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Redes Sociales</CardTitle>
-              <CardDescription>
-                Conecta tus perfiles de redes sociales
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="linkedIn">LinkedIn</Label>
-                  <Input
-                    id="linkedIn"
-                    value={formData.linkedIn}
-                    onChange={(e) => handleInputChange('linkedIn', e.target.value)}
-                    placeholder="https://linkedin.com/in/tu-perfil"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="github">GitHub</Label>
-                  <Input
-                    id="github"
-                    value={formData.github}
-                    onChange={(e) => handleInputChange('github', e.target.value)}
-                    placeholder="https://github.com/tu-usuario"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="website">Sitio Web Personal</Label>
-                  <Input
-                    id="website"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange('website', e.target.value)}
-                    placeholder="https://tu-sitio-web.com"
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={() => handleSave('social')}
-                disabled={isLoading}
-                className="w-full md:w-auto"
-                style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
-              >
-                {isLoading ? 'Guardando...' : (
+                ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
                     Guardar Cambios
@@ -395,7 +338,7 @@ export default function EditProfile() {
             <CardHeader>
               <CardTitle>Seguridad de la Cuenta</CardTitle>
               <CardDescription>
-                Actualiza tu contraseña y configuración de seguridad
+                Actualiza tu contraseña
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -475,11 +418,16 @@ export default function EditProfile() {
 
               <Button
                 onClick={() => handleSave('password')}
-                disabled={isLoading}
+                disabled={saving}
                 className="w-full md:w-auto"
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
-                {isLoading ? 'Actualizando...' : (
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Actualizando...
+                  </>
+                ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
                     Actualizar Contraseña

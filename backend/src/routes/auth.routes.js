@@ -122,4 +122,21 @@ router.get('/verify', requireAuth, (req, res) => {
     });
 });
 
+/**
+ * PUT /api/auth/profile
+ * Actualizar perfil del usuario
+ */
+router.put('/profile', requireAuth, async (req, res) => {
+    try {
+        const result = await authService.updateProfile(req.userEmail, req.body);
+        res.json(result);
+    } catch (error) {
+        console.error('[AUTH UPDATE PROFILE] Error:', error.message);
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

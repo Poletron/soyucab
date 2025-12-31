@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  Settings, 
-  Bell, 
-  Shield, 
-  Eye, 
-  Moon, 
-  Sun, 
+import { useState, useEffect } from 'react';
+import {
+  Settings,
+  Bell,
+  Shield,
+  Eye,
+  Moon,
+  Sun,
   Monitor,
   Globe,
   Lock,
@@ -15,7 +15,8 @@ import {
   Smartphone,
   Download,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Save
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
@@ -28,37 +29,81 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
-export default function GeneralSettings() {
-  const [settings, setSettings] = useState({
-    // Notificaciones
-    emailNotifications: true,
-    pushNotifications: true,
-    mentionNotifications: true,
-    eventReminders: true,
-    messageNotifications: true,
-    groupUpdates: false,
-    
-    // Privacidad
-    profileVisibility: 'public', // public, friends, private
-    showEmail: false,
-    showPhone: false,
-    allowMessages: 'everyone', // everyone, friends, nobody
-    showOnlineStatus: true,
-    
-    // Apariencia
-    theme: 'system', // light, dark, system
-    language: 'es',
-    fontSize: 'medium',
-    compactMode: false,
-    
-    // Seguridad
-    twoFactorAuth: false,
-    loginAlerts: true,
-    sessionTimeout: '30'
-  });
+const SETTINGS_KEY = 'soyucab_user_settings';
 
+interface UserSettings {
+  // Notificaciones
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  mentionNotifications: boolean;
+  eventReminders: boolean;
+  messageNotifications: boolean;
+  groupUpdates: boolean;
+
+  // Privacidad
+  profileVisibility: string;
+  showEmail: boolean;
+  showPhone: boolean;
+  allowMessages: string;
+  showOnlineStatus: boolean;
+
+  // Apariencia
+  theme: string;
+  language: string;
+  fontSize: string;
+  compactMode: boolean;
+
+  // Seguridad
+  twoFactorAuth: boolean;
+  loginAlerts: boolean;
+  sessionTimeout: string;
+}
+
+const defaultSettings: UserSettings = {
+  // Notificaciones
+  emailNotifications: true,
+  pushNotifications: true,
+  mentionNotifications: true,
+  eventReminders: true,
+  messageNotifications: true,
+  groupUpdates: false,
+
+  // Privacidad
+  profileVisibility: 'public',
+  showEmail: false,
+  showPhone: false,
+  allowMessages: 'everyone',
+  showOnlineStatus: true,
+
+  // Apariencia
+  theme: 'system',
+  language: 'es',
+  fontSize: 'medium',
+  compactMode: false,
+
+  // Seguridad
+  twoFactorAuth: false,
+  loginAlerts: true,
+  sessionTimeout: '30'
+};
+
+export default function GeneralSettings() {
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState('');
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem(SETTINGS_KEY);
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setSettings({ ...defaultSettings, ...parsed });
+      } catch (e) {
+        console.error('Error loading settings:', e);
+      }
+    }
+  }, []);
 
   const handleSettingChange = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -69,20 +114,23 @@ export default function GeneralSettings() {
     setIsLoading(true);
     setSuccess('');
 
-    // Simular guardado
-    setTimeout(() => {
+    // Save to localStorage
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       setSuccess('Configuración guardada correctamente');
+    } catch (e) {
+      console.error('Error saving settings:', e);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const exportData = () => {
-    // Simular exportación de datos
-    const dataBlob = new Blob(['Datos de SoyUCAB exportados...'], { type: 'text/plain' });
+    const dataBlob = new Blob([JSON.stringify({ settings, exportDate: new Date().toISOString() }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'soyucab-data.txt';
+    a.download = 'soyucab-settings.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -91,7 +139,7 @@ export default function GeneralSettings() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl" style={{ color: '#12100c' }}>Configuración</h1>
+          <h1 className="text-3xl font-bold" style={{ color: '#12100c' }}>Configuración</h1>
           <p className="text-gray-600 mt-2">
             Personaliza tu experiencia en SoyUCAB
           </p>
@@ -138,7 +186,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.emailNotifications}
-                    onCheckedChange={(checked) => handleSettingChange('emailNotifications', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('emailNotifications', checked)}
                   />
                 </div>
 
@@ -153,7 +201,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.pushNotifications}
-                    onCheckedChange={(checked) => handleSettingChange('pushNotifications', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('pushNotifications', checked)}
                   />
                 </div>
 
@@ -168,7 +216,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.mentionNotifications}
-                    onCheckedChange={(checked) => handleSettingChange('mentionNotifications', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('mentionNotifications', checked)}
                   />
                 </div>
 
@@ -183,7 +231,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.eventReminders}
-                    onCheckedChange={(checked) => handleSettingChange('eventReminders', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('eventReminders', checked)}
                   />
                 </div>
 
@@ -198,7 +246,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.messageNotifications}
-                    onCheckedChange={(checked) => handleSettingChange('messageNotifications', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('messageNotifications', checked)}
                   />
                 </div>
 
@@ -213,7 +261,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.groupUpdates}
-                    onCheckedChange={(checked) => handleSettingChange('groupUpdates', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('groupUpdates', checked)}
                   />
                 </div>
               </div>
@@ -223,6 +271,7 @@ export default function GeneralSettings() {
                 disabled={isLoading}
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
+                <Save className="mr-2 h-4 w-4" />
                 {isLoading ? 'Guardando...' : 'Guardar Preferencias'}
               </Button>
             </CardContent>
@@ -250,7 +299,7 @@ export default function GeneralSettings() {
                   </p>
                   <RadioGroup
                     value={settings.profileVisibility}
-                    onValueChange={(value) => handleSettingChange('profileVisibility', value)}
+                    onValueChange={(value: string) => handleSettingChange('profileVisibility', value)}
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="public" id="public" />
@@ -278,7 +327,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.showEmail}
-                    onCheckedChange={(checked) => handleSettingChange('showEmail', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('showEmail', checked)}
                   />
                 </div>
 
@@ -293,7 +342,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.showPhone}
-                    onCheckedChange={(checked) => handleSettingChange('showPhone', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('showPhone', checked)}
                   />
                 </div>
 
@@ -304,9 +353,9 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-500 mb-3">
                     Quién puede enviarte mensajes privados
                   </p>
-                  <Select 
-                    value={settings.allowMessages} 
-                    onValueChange={(value) => handleSettingChange('allowMessages', value)}
+                  <Select
+                    value={settings.allowMessages}
+                    onValueChange={(value: string) => handleSettingChange('allowMessages', value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona opción" />
@@ -330,7 +379,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.showOnlineStatus}
-                    onCheckedChange={(checked) => handleSettingChange('showOnlineStatus', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('showOnlineStatus', checked)}
                   />
                 </div>
               </div>
@@ -340,6 +389,7 @@ export default function GeneralSettings() {
                 disabled={isLoading}
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
+                <Save className="mr-2 h-4 w-4" />
                 {isLoading ? 'Guardando...' : 'Guardar Configuración'}
               </Button>
             </CardContent>
@@ -367,7 +417,7 @@ export default function GeneralSettings() {
                   </p>
                   <RadioGroup
                     value={settings.theme}
-                    onValueChange={(value) => handleSettingChange('theme', value)}
+                    onValueChange={(value: string) => handleSettingChange('theme', value)}
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="light" id="light" />
@@ -394,9 +444,9 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-500 mb-3">
                     Selecciona el idioma de la interfaz
                   </p>
-                  <Select 
-                    value={settings.language} 
-                    onValueChange={(value) => handleSettingChange('language', value)}
+                  <Select
+                    value={settings.language}
+                    onValueChange={(value: string) => handleSettingChange('language', value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona idioma" />
@@ -415,9 +465,9 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-500 mb-3">
                     Ajusta el tamaño del texto
                   </p>
-                  <Select 
-                    value={settings.fontSize} 
-                    onValueChange={(value) => handleSettingChange('fontSize', value)}
+                  <Select
+                    value={settings.fontSize}
+                    onValueChange={(value: string) => handleSettingChange('fontSize', value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona tamaño" />
@@ -441,7 +491,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.compactMode}
-                    onCheckedChange={(checked) => handleSettingChange('compactMode', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('compactMode', checked)}
                   />
                 </div>
               </div>
@@ -451,6 +501,7 @@ export default function GeneralSettings() {
                 disabled={isLoading}
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
+                <Save className="mr-2 h-4 w-4" />
                 {isLoading ? 'Guardando...' : 'Guardar Apariencia'}
               </Button>
             </CardContent>
@@ -480,7 +531,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.twoFactorAuth}
-                    onCheckedChange={(checked) => handleSettingChange('twoFactorAuth', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('twoFactorAuth', checked)}
                   />
                 </div>
 
@@ -495,7 +546,7 @@ export default function GeneralSettings() {
                   </div>
                   <Switch
                     checked={settings.loginAlerts}
-                    onCheckedChange={(checked) => handleSettingChange('loginAlerts', checked)}
+                    onCheckedChange={(checked: boolean) => handleSettingChange('loginAlerts', checked)}
                   />
                 </div>
 
@@ -506,9 +557,9 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-500 mb-3">
                     Tiempo después del cual se cerrará automáticamente tu sesión
                   </p>
-                  <Select 
-                    value={settings.sessionTimeout} 
-                    onValueChange={(value) => handleSettingChange('sessionTimeout', value)}
+                  <Select
+                    value={settings.sessionTimeout}
+                    onValueChange={(value: string) => handleSettingChange('sessionTimeout', value)}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecciona tiempo" />
@@ -530,38 +581,21 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-500">
                     Dispositivos donde tienes sesión iniciada
                   </p>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center space-x-3">
                         <Monitor className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="font-medium">Chrome en Windows</p>
-                          <p className="text-sm text-gray-500">Caracas, Venezuela • Actual</p>
+                          <p className="font-medium">Navegador Actual</p>
+                          <p className="text-sm text-gray-500">Esta sesión</p>
                         </div>
                       </div>
                       <Button variant="outline" size="sm" disabled>
                         Sesión Actual
                       </Button>
                     </div>
-
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <Smartphone className="h-5 w-5 text-gray-400" />
-                        <div>
-                          <p className="font-medium">iPhone</p>
-                          <p className="text-sm text-gray-500">Hace 2 días</p>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Cerrar Sesión
-                      </Button>
-                    </div>
                   </div>
-
-                  <Button variant="outline" size="sm">
-                    Cerrar todas las sesiones
-                  </Button>
                 </div>
               </div>
 
@@ -570,6 +604,7 @@ export default function GeneralSettings() {
                 disabled={isLoading}
                 style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
               >
+                <Save className="mr-2 h-4 w-4" />
                 {isLoading ? 'Guardando...' : 'Guardar Configuración'}
               </Button>
             </CardContent>
@@ -591,38 +626,14 @@ export default function GeneralSettings() {
             <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2">Exportar Datos</h3>
+                  <h3 className="font-semibold mb-2">Exportar Configuración</h3>
                   <p className="text-sm text-gray-600 mb-4">
-                    Descarga una copia de tus datos personales, posts, mensajes y actividad en SoyUCAB.
+                    Descarga una copia de tu configuración de SoyUCAB.
                   </p>
                   <Button onClick={exportData} variant="outline">
                     <Download className="mr-2 h-4 w-4" />
-                    Descargar Mis Datos
+                    Descargar Configuración
                   </Button>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="font-semibold mb-2">Estadísticas de Uso</h3>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold" style={{ color: '#40b4e5' }}>47</p>
-                      <p className="text-sm text-gray-600">Posts Creados</p>
-                    </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold" style={{ color: '#40b4e5' }}>156</p>
-                      <p className="text-sm text-gray-600">Comentarios</p>
-                    </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold" style={{ color: '#40b4e5' }}>23</p>
-                      <p className="text-sm text-gray-600">Eventos Asistidos</p>
-                    </div>
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold" style={{ color: '#40b4e5' }}>89</p>
-                      <p className="text-sm text-gray-600">Conexiones</p>
-                    </div>
-                  </div>
                 </div>
 
                 <Separator />
@@ -632,37 +643,8 @@ export default function GeneralSettings() {
                   <p className="text-sm text-gray-600 mb-4">
                     Estas acciones son irreversibles. Procede con cuidado.
                   </p>
-                  
-                  <div className="space-y-3">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar Toda Mi Actividad
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center space-x-2">
-                            <AlertTriangle className="h-5 w-5 text-red-600" />
-                            <span>¿Eliminar toda tu actividad?</span>
-                          </DialogTitle>
-                          <DialogDescription>
-                            Esta acción eliminará permanentemente todos tus posts, comentarios, y actividad en SoyUCAB. 
-                            Tu perfil se mantendrá activo pero sin contenido.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex justify-end space-x-3">
-                          <DialogTrigger asChild>
-                            <Button variant="outline">Cancelar</Button>
-                          </DialogTrigger>
-                          <Button className="bg-red-600 hover:bg-red-700">
-                            Eliminar Actividad
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
 
+                  <div className="space-y-3">
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button variant="outline" className="border-red-200 text-red-600 hover:bg-red-50">
@@ -677,7 +659,7 @@ export default function GeneralSettings() {
                             <span>¿Eliminar tu cuenta?</span>
                           </DialogTitle>
                           <DialogDescription>
-                            Esta acción eliminará permanentemente tu cuenta y todos los datos asociados. 
+                            Esta acción eliminará permanentemente tu cuenta y todos los datos asociados.
                             No podrás recuperar tu cuenta después de eliminarla.
                           </DialogDescription>
                         </DialogHeader>

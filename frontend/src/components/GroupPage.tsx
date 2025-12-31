@@ -1,335 +1,326 @@
-import React, { useState } from 'react';
-import { Users, Calendar, MessageSquare, Settings, UserPlus, Bell, Image, Lock, Eye, Globe, Shield } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, Calendar, Settings, UserPlus, Bell, Image, Lock, Globe, Loader2, LogOut, UserCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import {
+  getGroups,
+  getMyGroups,
+  joinGroup,
+  leaveGroup,
+  createPost,
+  getCurrentUser,
+  Group
+} from '../services/api';
+
+interface GroupMember {
+  correo_persona: string;
+  nombres?: string;
+  apellidos?: string;
+  rol_en_grupo: string;
+  fotografia_url?: string;
+}
 
 const GroupPage = () => {
-  const [activeTab, setActiveTab] = useState('posts');
+  const [loading, setLoading] = useState(true);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [myGroups, setMyGroups] = useState<Group[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [newPost, setNewPost] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [posting, setPosting] = useState(false);
 
-  const groupInfo = {
-    name: 'Desarrolladores UCAB',
-    description: 'Comunidad de estudiantes y egresados apasionados por el desarrollo de software, compartiendo conocimientos, proyectos y oportunidades.',
-    members: 342,
-    privacy: 'publico', // 'publico', 'privado', 'secreto'
-    coverImage: 'https://images.unsplash.com/photo-1632834380561-d1e05839a33a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwc3R1ZGVudHMlMjBjYW1wdXMlMjBidWlsZGluZ3xlbnwxfHx8fDE3NTkyNTgyMTd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
-  };
+  const currentUser = getCurrentUser();
 
-  const getPrivacyIcon = (privacy: string) => {
-    switch (privacy) {
-      case 'privado':
-        return <Lock className="h-4 w-4" />;
-      case 'secreto':
-        return <Eye className="h-4 w-4" />;
-      default:
-        return <Globe className="h-4 w-4" />;
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  const loadGroups = async () => {
+    try {
+      setLoading(true);
+      const [allGroupsResult, myGroupsResult] = await Promise.all([
+        getGroups(),
+        getMyGroups()
+      ]);
+
+      if (allGroupsResult.success) {
+        setGroups(allGroupsResult.data || []);
+        if (allGroupsResult.data?.length > 0 && !selectedGroup) {
+          setSelectedGroup(allGroupsResult.data[0]);
+        }
+      }
+
+      if (myGroupsResult.success) {
+        setMyGroups(myGroupsResult.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading groups:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getPrivacyLabel = (privacy: string) => {
-    switch (privacy) {
-      case 'privado':
-        return 'Grupo privado';
-      case 'secreto':
-        return 'Grupo secreto';
-      default:
-        return 'Grupo público';
+  const handleJoinGroup = async (groupName: string) => {
+    try {
+      setJoining(true);
+      const result = await joinGroup(groupName);
+      if (result.success) {
+        loadGroups();
+      }
+    } catch (err) {
+      console.error('Error joining group:', err);
+    } finally {
+      setJoining(false);
     }
   };
 
-  const groupPosts = [
-    {
-      id: 1,
-      author: {
-        name: 'Carlos Mendoza',
-        role: 'Moderador del Grupo',
-        avatar: 'https://images.unsplash.com/photo-1652471943570-f3590a4e52ed?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHN1aXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkyMTQ4MTF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
-      },
-      content: '🚀 ¡Nueva oportunidad de colaboración! \n\nEstamos buscando desarrolladores para participar en un proyecto open source que beneficiará a toda la comunidad universitaria. Es una excelente oportunidad para ganar experiencia y contribuir al ecosistema tech de Venezuela.\n\nTecnologías: React, Node.js, PostgreSQL\n\n¿Quién está interesado?',
-      timestamp: 'Hace 3 horas',
-      likes: 28,
-      comments: 12
-    },
-    {
-      id: 2,
-      author: {
-        name: 'Andrea López',
-        role: 'Miembro',
-        avatar: 'https://images.unsplash.com/photo-1667035533110-7964092f44a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHl5b3VuZyUyMHdvbWFuJTIwc3R1ZGVudCUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0fGVufDF8fHx8MTc1OTMyNDg4MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
-      },
-      content: 'Acabo de terminar mi primer proyecto en Django y quería compartir la experiencia con el grupo. La curva de aprendizaje fue empinada pero muy gratificante. \n\n¿Alguien más ha trabajado con Django? Me encantaría intercambiar tips y mejores prácticas.',
-      timestamp: 'Hace 6 horas',
-      likes: 15,
-      comments: 8
-    },
-    {
-      id: 3,
-      author: {
-        name: 'Miguel Hernández',
-        role: 'Miembro',
-        avatar: 'https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHl5b3VuZyUyMG1hbiUyMHN0dWRlbnQlMjBwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral'
-      },
-      content: '📚 Recursos de estudio recomendados:\n\n• "Clean Code" por Robert Martin\n• Curso de TypeScript en freeCodeCamp\n• Documentación oficial de React 18\n• Canal de YouTube "Coding with Mosh"\n\n¿Qué otros recursos han sido útiles para ustedes?',
-      timestamp: 'Hace 1 día',
-      likes: 42,
-      comments: 18
+  const handleLeaveGroup = async (groupName: string) => {
+    try {
+      setJoining(true);
+      const result = await leaveGroup(groupName);
+      if (result.success) {
+        loadGroups();
+      }
+    } catch (err) {
+      console.error('Error leaving group:', err);
+    } finally {
+      setJoining(false);
     }
-  ];
+  };
 
-  const groupMembers = [
-    { 
-      name: 'Carlos Mendoza', 
-      role: 'Estudiante 9no Sem.', 
-      avatar: 'https://images.unsplash.com/photo-1652471943570-f3590a4e52ed?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHN1aXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkyMTQ4MTF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', 
-      badge: 'admin'
-    },
-    { 
-      name: 'Andrea López', 
-      role: 'Estudiante 7mo Sem.', 
-      avatar: 'https://images.unsplash.com/photo-1667035533110-7964092f44a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHl5b3VuZyUyMHdvbWFuJTIwc3R1ZGVudCUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0fGVufDF8fHx8MTc1OTMyNDg4MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', 
-      badge: 'moderador'
-    },
-    { 
-      name: 'Miguel Hernández', 
-      role: 'Egresado 2023', 
-      avatar: 'https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHl5b3VuZyUyMG1hbiUyMHN0dWRlbnQlMjBwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', 
-      badge: null
-    },
-    { 
-      name: 'Sofía Reyes', 
-      role: 'Estudiante 5to Sem.', 
-      avatar: 'https://images.unsplash.com/photo-1667035533110-7964092f44a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHl5b3VuZyUyMHdvbWFuJTIwc3R1ZGVudCUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0fGVufDF8fHx8MTc1OTMyNDg4MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral', 
-      badge: null
-    },
-    { name: 'Roberto Silva', role: 'Egresado 2022', avatar: '', badge: null },
-    { name: 'Paola Torres', role: 'Estudiante 6to Sem.', avatar: '', badge: null }
-  ];
-
-  const groupEvents = [
-    {
-      name: 'Workshop: Intro a Docker',
-      date: '2024-11-20',
-      time: '6:00 PM',
-      attendees: 45,
-      status: 'Próximo'
-    },
-    {
-      name: 'Code Review Session',
-      date: '2024-11-25',
-      time: '4:00 PM',
-      attendees: 28,
-      status: 'Próximo'
-    },
-    {
-      name: 'Hackathon Interno',
-      date: '2024-12-05',
-      time: '9:00 AM',
-      attendees: 67,
-      status: 'Planeado'
+  const handlePost = async () => {
+    if (!newPost.trim() || !selectedGroup) return;
+    try {
+      setPosting(true);
+      // Posts in groups would need a group association - for now just create a regular post
+      await createPost({ texto: newPost, visibilidad: 'Público' });
+      setNewPost('');
+    } catch (err) {
+      console.error('Error posting:', err);
+    } finally {
+      setPosting(false);
     }
-  ];
+  };
+
+  const getPrivacyIcon = (visibility: string) => {
+    return visibility === 'Privado' ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />;
+  };
+
+  const getPrivacyLabel = (visibility: string) => {
+    return visibility === 'Privado' ? 'Grupo privado' : 'Grupo público';
+  };
+
+  const isMyGroup = (groupName: string) => {
+    return myGroups.some(g => g.nombre_grupo === groupName);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Group Header */}
-      <Card className="overflow-hidden">
-        <div 
-          className="h-48 bg-cover bg-center relative"
-          style={{ 
-            backgroundImage: `linear-gradient(135deg, rgba(64, 180, 229, 0.8) 0%, rgba(41, 128, 185, 0.8) 100%), url('https://images.unsplash.com/photo-1753715613373-90b1ea010731?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9ncmFtbWluZyUyMGNvZGUlMjB0ZWNobm9sb2d5JTIwbW9kZXJuJTIwd29ya3NwYWNlfGVufDF8fHx8MTc1OTMyODU2MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          <div className="absolute inset-0 bg-black bg-opacity-40" />
-        </div>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start">
-            <div className="flex-1 mb-4 md:mb-0">
-              <div className="flex items-center space-x-2 mb-2">
-                <h1 className="text-3xl">{groupInfo.name}</h1>
-                <span className="text-gray-500">{getPrivacyIcon(groupInfo.privacy)}</span>
-              </div>
-              <p className="text-gray-600 mb-3 max-w-2xl">{groupInfo.description}</p>
-              <div className="flex items-center space-x-6 text-sm text-gray-500">
-                <div className="flex items-center space-x-1">
-                  <Users className="h-4 w-4" />
-                  <span>{groupInfo.members} miembros</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  {getPrivacyIcon(groupInfo.privacy)}
-                  <span>{getPrivacyLabel(groupInfo.privacy)}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex space-x-3">
-              <Button 
-                style={{ backgroundColor: '#ffc526' }}
-                className="text-white hover:opacity-90 flex items-center space-x-2"
-              >
-                <UserPlus className="h-4 w-4" />
-                <span>Unirse al Grupo</span>
-              </Button>
-              <Button variant="outline" size="icon">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Group Content */}
-      <Tabs defaultValue="posts" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="posts">Publicaciones</TabsTrigger>
-          <TabsTrigger value="members">Miembros</TabsTrigger>
-          <TabsTrigger value="events">Eventos</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="posts" className="space-y-6">
-          {/* Create Post in Group */}
+      {/* Group List / Selection */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Groups Sidebar */}
+        <div className="lg:col-span-1 space-y-4">
           <Card>
-            <CardContent className="p-4">
-              <div className="flex space-x-3">
-                <Avatar>
-                  <AvatarImage src="https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" />
-                  <AvatarFallback>MG</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <Textarea
-                    placeholder="Comparte algo con el grupo..."
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    className="resize-none border-0 shadow-none text-lg placeholder:text-gray-400 min-h-[60px]"
-                  />
-                  <div className="flex justify-between items-center mt-3">
-                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-                      <Image className="h-4 w-4 mr-1" />
-                      Imagen
-                    </Button>
-                    <Button 
-                      style={{ backgroundColor: '#ffc526' }}
-                      className="text-white hover:opacity-90"
-                      disabled={!newPost.trim()}
-                    >
-                      Publicar en el Grupo
-                    </Button>
+            <CardHeader>
+              <h3 className="font-semibold">Mis Grupos</h3>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {myGroups.length === 0 ? (
+                <p className="text-sm text-gray-500">No perteneces a ningún grupo</p>
+              ) : (
+                myGroups.map((group) => (
+                  <div
+                    key={group.nombre_grupo}
+                    onClick={() => setSelectedGroup(group)}
+                    className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${selectedGroup?.nombre_grupo === group.nombre_grupo ? 'bg-blue-50 border border-blue-200' : ''
+                      }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#40b4e5' }}>
+                        <Users className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{group.nombre_grupo}</p>
+                        <p className="text-xs text-gray-500">{group.total_miembros || 0} miembros</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                ))
+              )}
             </CardContent>
           </Card>
 
-          {/* Group Posts */}
-          {groupPosts.map((post) => (
-            <Card key={post.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-3 mb-4">
-                  <Avatar>
-                    <AvatarImage src={post.author.avatar} />
-                    <AvatarFallback>{post.author.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <p className="font-medium">{post.author.name}</p>
-                      {post.author.role === 'Moderador del Grupo' && (
-                        <Badge variant="secondary" className="text-xs">Moderador</Badge>
-                      )}
+          <Card>
+            <CardHeader>
+              <h3 className="font-semibold">Descubrir Grupos</h3>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {groups.filter(g => !isMyGroup(g.nombre_grupo)).slice(0, 5).map((group) => (
+                <div
+                  key={group.nombre_grupo}
+                  className="p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
+                        <Users className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{group.nombre_grupo}</p>
+                        <p className="text-xs text-gray-500">{group.total_miembros || 0} miembros</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-500">{post.author.role}</p>
-                    <p className="text-xs text-gray-400">{post.timestamp}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleJoinGroup(group.nombre_grupo)}
+                      disabled={joining}
+                    >
+                      {joining ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
+                    </Button>
                   </div>
                 </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
-                <div className="mb-4">
-                  <p className="whitespace-pre-line">{post.content}</p>
-                </div>
+        {/* Selected Group Content */}
+        <div className="lg:col-span-2">
+          {selectedGroup ? (
+            <>
+              {/* Group Header */}
+              <Card className="overflow-hidden">
+                <div
+                  className="h-32 bg-gradient-to-r from-blue-500 to-blue-700 relative"
+                  style={{
+                    backgroundImage: `linear-gradient(135deg, rgba(64, 180, 229, 0.8) 0%, rgba(41, 128, 185, 0.8) 100%)`,
+                  }}
+                />
+                <CardContent className="p-6">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start">
+                    <div className="flex-1 mb-4 md:mb-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <h1 className="text-2xl font-bold">{selectedGroup.nombre_grupo}</h1>
+                        {getPrivacyIcon(selectedGroup.visibilidad)}
+                      </div>
+                      <p className="text-gray-600 mb-3 max-w-xl">{selectedGroup.descripcion_grupo || 'Sin descripción'}</p>
+                      <div className="flex items-center space-x-6 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Users className="h-4 w-4" />
+                          <span>{selectedGroup.total_miembros || 0} miembros</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {getPrivacyIcon(selectedGroup.visibilidad)}
+                          <span>{getPrivacyLabel(selectedGroup.visibilidad)}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center space-x-4 pt-3 border-t border-gray-100">
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-red-600">
-                    ❤️ {post.likes}
-                  </Button>
-                  <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
-                    💬 {post.comments}
-                  </Button>
-                </div>
+                    <div className="flex space-x-3">
+                      {isMyGroup(selectedGroup.nombre_grupo) ? (
+                        <Button
+                          variant="outline"
+                          className="flex items-center space-x-2"
+                          onClick={() => handleLeaveGroup(selectedGroup.nombre_grupo)}
+                          disabled={joining}
+                        >
+                          {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                          <span>Salir del Grupo</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          style={{ backgroundColor: '#40b4e5' }}
+                          className="text-white hover:opacity-90 flex items-center space-x-2"
+                          onClick={() => handleJoinGroup(selectedGroup.nombre_grupo)}
+                          disabled={joining}
+                        >
+                          {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                          <span>Unirse al Grupo</span>
+                        </Button>
+                      )}
+                      <Button variant="outline" size="icon">
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Group Content */}
+              <div className="mt-6 space-y-4">
+                {/* Create Post */}
+                {isMyGroup(selectedGroup.nombre_grupo) && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex space-x-3">
+                        <Avatar>
+                          <AvatarImage src={currentUser?.foto || `https://ui-avatars.com/api/?name=${currentUser?.name || 'U'}`} />
+                          <AvatarFallback>{currentUser?.name?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <Textarea
+                            placeholder="Comparte algo con el grupo..."
+                            value={newPost}
+                            onChange={(e) => setNewPost(e.target.value)}
+                            className="resize-none border-0 shadow-none text-lg placeholder:text-gray-400 min-h-[60px]"
+                          />
+                          <div className="flex justify-between items-center mt-3">
+                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                              <Image className="h-4 w-4 mr-1" />
+                              Imagen
+                            </Button>
+                            <Button
+                              style={{ backgroundColor: '#40b4e5' }}
+                              className="text-white hover:opacity-90"
+                              disabled={!newPost.trim() || posting}
+                              onClick={handlePost}
+                            >
+                              {posting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                              Publicar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Group Info */}
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Información del Grupo</h3>
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-gray-500">Creador:</span> {selectedGroup.correo_creador}</p>
+                      <p><span className="text-gray-500">Creado:</span> {new Date(selectedGroup.fecha_creacion).toLocaleDateString('es-VE')}</p>
+                      <p><span className="text-gray-500">Visibilidad:</span> {selectedGroup.visibilidad}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Selecciona un grupo para ver su contenido</p>
               </CardContent>
             </Card>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="members" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <h3>Miembros del Grupo ({groupInfo.members})</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {groupMembers.map((member, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 rounded-lg border border-gray-100">
-                    <Avatar>
-                      <AvatarImage src={member.avatar} />
-                      <AvatarFallback>{member.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="font-medium truncate">{member.name}</p>
-                        {member.badge && (
-                          <Badge variant="secondary" className="text-xs">{member.badge}</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">{member.role}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="events" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <h3>Eventos del Grupo</h3>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {groupEvents.map((event, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-start space-x-4">
-                      <div className="p-3 rounded-lg" style={{ backgroundColor: '#40b4e5', opacity: 0.1 }}>
-                        <Calendar className="h-5 w-5" style={{ color: '#40b4e5' }} />
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{event.name}</h4>
-                        <p className="text-sm text-gray-600">{event.date} • {event.time}</p>
-                        <p className="text-sm text-gray-500">{event.attendees} asistentes</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Badge 
-                        variant={event.status === 'Próximo' ? 'default' : 'secondary'}
-                        style={{ backgroundColor: event.status === 'Próximo' ? '#ffc526' : undefined }}
-                      >
-                        {event.status}
-                      </Badge>
-                      <Button variant="outline" size="sm">Ver Detalles</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

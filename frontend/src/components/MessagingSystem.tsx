@@ -1,148 +1,194 @@
-import React, { useState } from 'react';
-import { 
-  Send, 
-  Search, 
-  Phone, 
-  Video, 
-  MoreVertical, 
-  Paperclip, 
-  Smile, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Send,
+  Search,
+  Phone,
+  Video,
+  MoreVertical,
+  Paperclip,
+  Smile,
   ArrowLeft,
-  Users,
   UserPlus,
   Circle,
   CheckCheck,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
-import { Separator } from './ui/separator';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  startConversation,
+  searchUsers,
+  getCurrentUser,
+  Conversation,
+  Message
+} from '../services/api';
 
-// Mock data for conversations
-const mockConversations = [
-  {
-    id: '1',
-    user: {
-      name: 'Dr. María Rodríguez',
-      avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      status: 'online',
-      role: 'Directora - Ing. Informática'
-    },
-    lastMessage: {
-      content: 'Perfecto, nos vemos mañana en la reunión.',
-      timestamp: '10:30 AM',
-      isRead: true,
-      sender: 'other'
-    },
-    unreadCount: 0
-  },
-  {
-    id: '2',
-    user: {
-      name: 'Carlos Mendoza',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MXx8fHwxNzU5MzI0ODc0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      status: 'offline',
-      role: 'Estudiante - Administración'
-    },
-    lastMessage: {
-      content: '¿Podrías ayudarme con el proyecto de marketing?',
-      timestamp: 'Ayer',
-      isRead: false,
-      sender: 'other'
-    },
-    unreadCount: 2
-  },
-  {
-    id: '3',
-    user: {
-      name: 'Ana Gutierrez',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      status: 'online',
-      role: 'Egresada - Psicología'
-    },
-    lastMessage: {
-      content: 'Excelente presentación hoy 👏',
-      timestamp: '2:15 PM',
-      isRead: true,
-      sender: 'me'
-    },
-    unreadCount: 0
-  },
-  {
-    id: '4',
-    user: {
-      name: 'Prof. Luis Torres',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MXx8fHwxNzU5MzI0ODc0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      status: 'away',
-      role: 'Profesor - Ingeniería'
-    },
-    lastMessage: {
-      content: 'Las calificaciones ya están disponibles',
-      timestamp: '11:45 AM',
-      isRead: true,
-      sender: 'other'
-    },
-    unreadCount: 0
-  }
-];
+interface ConversationDisplay {
+  id: number;
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+    status: string;
+    role: string;
+  };
+  lastMessage: {
+    content: string;
+    timestamp: string;
+    isRead: boolean;
+    sender: string;
+  };
+  unreadCount: number;
+}
 
-// Mock data for messages
-const mockMessages = [
-  {
-    id: '1',
-    content: 'Hola María, ¿cómo estás? Quería consultarte sobre la propuesta del nuevo programa de mentorías.',
-    timestamp: '10:25 AM',
-    sender: 'me',
-    status: 'read'
-  },
-  {
-    id: '2',
-    content: 'Hola! Todo bien, gracias por preguntar. Me parece una excelente iniciativa. ¿Tienes tiempo para una reunión mañana?',
-    timestamp: '10:27 AM',
-    sender: 'other',
-    status: 'sent'
-  },
-  {
-    id: '3',
-    content: 'Por supuesto, mañana me viene perfecto. ¿Te parece a las 2:00 PM en tu oficina?',
-    timestamp: '10:29 AM',
-    sender: 'me',
-    status: 'read'
-  },
-  {
-    id: '4',
-    content: 'Perfecto, nos vemos mañana en la reunión.',
-    timestamp: '10:30 AM',
-    sender: 'other',
-    status: 'sent'
-  }
-];
-
-interface MessagingSystemProps {}
-
-export default function MessagingSystem({}: MessagingSystemProps) {
-  const [selectedConversation, setSelectedConversation] = useState(mockConversations[0]);
+export default function MessagingSystem() {
+  const [conversations, setConversations] = useState<ConversationDisplay[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<ConversationDisplay | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showConversations, setShowConversations] = useState(true);
   const [showNewChat, setShowNewChat] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [newChatSearch, setNewChatSearch] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newMessage.trim()) {
-      // Here you would normally send the message to your backend
-      console.log('Sending message:', newMessage);
-      setNewMessage('');
+  const currentUser = getCurrentUser();
+
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      const result = await getConversations();
+      if (result.success && result.data) {
+        const mapped: ConversationDisplay[] = result.data.map((conv: Conversation) => ({
+          id: conv.clave_conversacion,
+          user: {
+            name: conv.otros_participantes?.[0] || conv.titulo_chat || 'Chat',
+            email: conv.otros_participantes?.[0] || '',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(conv.otros_participantes?.[0] || 'C')}`,
+            status: 'offline',
+            role: conv.tipo_conversacion || 'Privada'
+          },
+          lastMessage: {
+            content: conv.ultimo_mensaje || 'Sin mensajes',
+            timestamp: conv.fecha_ultimo_mensaje ? formatTime(conv.fecha_ultimo_mensaje) : '',
+            isRead: Number(conv.mensajes_sin_leer) === 0,
+            sender: 'other'
+          },
+          unreadCount: Number(conv.mensajes_sin_leer) || 0
+        }));
+        setConversations(mapped);
+        if (mapped.length > 0 && !selectedConversation) {
+          setSelectedConversation(mapped[0]);
+          loadMessages(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filteredConversations = mockConversations.filter(conversation =>
-    conversation.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conversation.user.role.toLowerCase().includes(searchQuery.toLowerCase())
+  const loadMessages = async (conversationId: number) => {
+    try {
+      setLoadingMessages(true);
+      const result = await getMessages(conversationId);
+      if (result.success && result.data) {
+        setMessages(result.data);
+      }
+    } catch (err) {
+      console.error('Error loading messages:', err);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Ayer';
+    } else {
+      return date.toLocaleDateString('es-VE');
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !selectedConversation || sending) return;
+
+    try {
+      setSending(true);
+      const result = await sendMessage(selectedConversation.id, newMessage.trim());
+      if (result.success) {
+        setNewMessage('');
+        // Reload messages
+        loadMessages(selectedConversation.id);
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleStartNewChat = async (email: string) => {
+    try {
+      const result = await startConversation(email);
+      if (result.success) {
+        setShowNewChat(false);
+        setNewChatSearch('');
+        loadConversations();
+      }
+    } catch (err) {
+      console.error('Error starting conversation:', err);
+    }
+  };
+
+  const handleSearchUsers = async (query: string) => {
+    setNewChatSearch(query);
+    if (query.length >= 2) {
+      try {
+        const result = await searchUsers(query);
+        if (result.success) {
+          setSearchResults(result.data || []);
+        }
+      } catch (err) {
+        console.error('Error searching users:', err);
+      }
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  const filteredConversations = conversations.filter(conversation =>
+    conversation.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderConversationsList = () => (
@@ -160,7 +206,7 @@ export default function MessagingSystem({}: MessagingSystemProps) {
             <UserPlus className="h-4 w-4" />
           </Button>
         </div>
-        
+
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -176,53 +222,56 @@ export default function MessagingSystem({}: MessagingSystemProps) {
       {/* Conversations List */}
       <ScrollArea className="h-[calc(100vh-200px)]">
         <div className="p-2">
-          {filteredConversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              onClick={() => {
-                setSelectedConversation(conversation);
-                if (window.innerWidth < 768) {
-                  setShowConversations(false);
-                }
-              }}
-              className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                selectedConversation.id === conversation.id ? 'bg-blue-50 border border-blue-200' : ''
-              }`}
-            >
-              <div className="relative">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={conversation.user.avatar} />
-                  <AvatarFallback>{conversation.user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-                {conversation.user.status === 'online' && (
-                  <Circle className="absolute -bottom-1 -right-1 h-4 w-4 text-green-500 fill-current" />
-                )}
-                {conversation.user.status === 'away' && (
-                  <Circle className="absolute -bottom-1 -right-1 h-4 w-4 text-yellow-500 fill-current" />
-                )}
-              </div>
-              
-              <div className="ml-3 flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="font-medium text-gray-900 truncate">{conversation.user.name}</p>
-                  <span className="text-xs text-gray-500">{conversation.lastMessage.timestamp}</span>
-                </div>
-                <p className="text-sm text-gray-600 truncate">{conversation.user.role}</p>
-                <div className="flex items-center justify-between mt-1">
-                  <p className="text-sm text-gray-500 truncate flex-1">{conversation.lastMessage.content}</p>
-                  {conversation.unreadCount > 0 && (
-                    <Badge 
-                      variant="secondary" 
-                      className="ml-2 bg-blue-500 text-white"
-                      style={{ backgroundColor: '#40b4e5' }}
-                    >
-                      {conversation.unreadCount}
-                    </Badge>
-                  )}
-                </div>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>
-          ))}
+          ) : filteredConversations.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              No hay conversaciones
+            </div>
+          ) : (
+            filteredConversations.map((conversation) => (
+              <div
+                key={conversation.id}
+                onClick={() => {
+                  setSelectedConversation(conversation);
+                  loadMessages(conversation.id);
+                  if (window.innerWidth < 768) {
+                    setShowConversations(false);
+                  }
+                }}
+                className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversation?.id === conversation.id ? 'bg-blue-50 border border-blue-200' : ''
+                  }`}
+              >
+                <div className="relative">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={conversation.user.avatar} />
+                    <AvatarFallback>{conversation.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                </div>
+
+                <div className="ml-3 flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-gray-900 truncate">{conversation.user.name}</p>
+                    <span className="text-xs text-gray-500">{conversation.lastMessage.timestamp}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm text-gray-500 truncate flex-1">{conversation.lastMessage.content}</p>
+                    {conversation.unreadCount > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 bg-blue-500 text-white"
+                        style={{ backgroundColor: '#40b4e5' }}
+                      >
+                        {conversation.unreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </ScrollArea>
     </div>
@@ -231,84 +280,94 @@ export default function MessagingSystem({}: MessagingSystemProps) {
   const renderChatArea = () => (
     <div className="flex-1 flex flex-col bg-white">
       {/* Chat Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowConversations(true)}
-              className="md:hidden mr-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={selectedConversation.user.avatar} />
-              <AvatarFallback>{selectedConversation.user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-            </Avatar>
-            <div className="ml-3">
-              <h3 className="font-semibold text-gray-900">{selectedConversation.user.name}</h3>
-              <p className="text-sm text-gray-500">{selectedConversation.user.role}</p>
+      {selectedConversation && (
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowConversations(true)}
+                className="md:hidden mr-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={selectedConversation.user.avatar} />
+                <AvatarFallback>{selectedConversation.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback>
+              </Avatar>
+              <div className="ml-3">
+                <h3 className="font-semibold text-gray-900">{selectedConversation.user.name}</h3>
+                <p className="text-sm text-gray-500">{selectedConversation.user.role}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm">
+                <Phone className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="sm">
+                <Video className="h-4 w-4" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem>Ver perfil</DropdownMenuItem>
+                  <DropdownMenuItem>Silenciar conversación</DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600">Eliminar conversación</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm">
-              <Phone className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Video className="h-4 w-4" />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>Ver perfil</DropdownMenuItem>
-                <DropdownMenuItem>Silenciar conversación</DropdownMenuItem>
-                <DropdownMenuItem className="text-red-600">Eliminar conversación</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
-      </div>
+      )}
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {mockMessages.map((message, index) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                message.sender === 'me'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-900'
-              }`}
-              style={message.sender === 'me' ? { backgroundColor: '#40b4e5' } : {}}
-              >
-                <p className="text-sm">{message.content}</p>
-                <div className={`flex items-center justify-end mt-1 space-x-1 ${
-                  message.sender === 'me' ? 'text-blue-100' : 'text-gray-500'
-                }`}>
-                  <span className="text-xs">{message.timestamp}</span>
-                  {message.sender === 'me' && (
-                    <>
-                      {message.status === 'read' ? (
-                        <CheckCheck className="h-3 w-3" />
-                      ) : (
-                        <Check className="h-3 w-3" />
+        {loadingMessages ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((message) => {
+              const isMe = message.correo_autor_mensaje === currentUser?.email;
+              return (
+                <div
+                  key={message.clave_mensaje}
+                  className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-900'
+                    }`}
+                    style={isMe ? { backgroundColor: '#40b4e5' } : {}}
+                  >
+                    <p className="text-sm">{message.texto_mensaje}</p>
+                    <div className={`flex items-center justify-end mt-1 space-x-1 ${isMe ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
+                      <span className="text-xs">{formatTime(message.fecha_hora_envio)}</span>
+                      {isMe && (
+                        <>
+                          {message.estado_mensaje === 'Leído' ? (
+                            <CheckCheck className="h-3 w-3" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ScrollArea>
 
       {/* Message Input */}
@@ -323,18 +382,19 @@ export default function MessagingSystem({}: MessagingSystemProps) {
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Escribe tu mensaje..."
               className="pr-10"
+              disabled={sending}
             />
             <Button type="button" variant="ghost" size="sm" className="absolute right-1 top-1/2 transform -translate-y-1/2">
               <Smile className="h-4 w-4" />
             </Button>
           </div>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             style={{ backgroundColor: '#40b4e5' }}
             className="text-white hover:bg-blue-600"
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sending}
           >
-            <Send className="h-4 w-4" />
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
       </div>
@@ -344,52 +404,45 @@ export default function MessagingSystem({}: MessagingSystemProps) {
   const renderNewChatModal = () => {
     if (!showNewChat) return null;
 
-    const suggestedUsers = [
-      {
-        name: 'Roberto Silva',
-        role: 'Estudiante - Ingeniería',
-        avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MXx8fHwxNzU5MzI0ODc0fDA&ixlib=rb-4.1.0&q=80&w=1080'
-      },
-      {
-        name: 'Dra. Carmen López',
-        role: 'Profesora - Medicina',
-        avatar: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080'
-      },
-      {
-        name: 'Miguel Herrera',
-        role: 'Egresado - Economía',
-        avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MXx8fHwxNzU5MzI0ODc0fDA&ixlib=rb-4.1.0&q=80&w=1080'
-      }
-    ];
-
     return (
       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Nueva Conversación</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowNewChat(false)}>
+            <Button variant="ghost" size="sm" onClick={() => { setShowNewChat(false); setNewChatSearch(''); setSearchResults([]); }}>
               ×
             </Button>
           </div>
-          
+
           <div className="mb-4">
-            <Input placeholder="Buscar usuarios..." />
+            <Input
+              placeholder="Buscar usuarios..."
+              value={newChatSearch}
+              onChange={(e) => handleSearchUsers(e.target.value)}
+            />
           </div>
-          
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">Usuarios sugeridos</p>
-            {suggestedUsers.map((user, index) => (
-              <div key={index} className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-                <div className="ml-3 flex-1">
-                  <p className="font-medium text-sm">{user.name}</p>
-                  <p className="text-xs text-gray-500">{user.role}</p>
+
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {searchResults.length === 0 && newChatSearch.length >= 2 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No se encontraron usuarios</p>
+            ) : (
+              searchResults.map((user, index) => (
+                <div
+                  key={index}
+                  className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleStartNewChat(user.correo_principal)}
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.fotografia_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombres + ' ' + user.apellidos)}`} />
+                    <AvatarFallback>{(user.nombres?.[0] || '') + (user.apellidos?.[0] || '')}</AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3 flex-1">
+                    <p className="font-medium text-sm">{user.nombres} {user.apellidos}</p>
+                    <p className="text-xs text-gray-500">{user.correo_principal}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -399,17 +452,21 @@ export default function MessagingSystem({}: MessagingSystemProps) {
   return (
     <div className="h-[calc(100vh-120px)] bg-gray-50 rounded-lg overflow-hidden relative">
       <div className="flex h-full">
-        {/* Conversations sidebar - visible on desktop or when showConversations is true on mobile */}
+        {/* Conversations sidebar */}
         <div className={`${showConversations ? 'block' : 'hidden'} md:block`}>
           {renderConversationsList()}
         </div>
-        
-        {/* Chat area - visible when conversation is selected on mobile, always visible on desktop */}
+
+        {/* Chat area */}
         <div className={`${showConversations ? 'hidden' : 'flex'} md:flex flex-1`}>
-          {renderChatArea()}
+          {selectedConversation ? renderChatArea() : (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+              Selecciona una conversación
+            </div>
+          )}
         </div>
       </div>
-      
+
       {renderNewChatModal()}
     </div>
   );

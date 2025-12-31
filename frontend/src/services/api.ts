@@ -58,7 +58,7 @@ export async function getFeedStats() {
 // Reportes
 // ============================================
 
-export type ReportType = 'viralidad' | 'lideres' | 'eventos';
+export type ReportType = 'viralidad' | 'lideres' | 'eventos' | 'crecimiento' | 'grupos' | 'referentes' | 'tutorias' | 'nexos' | 'ofertas';
 
 export async function getReportTypes() {
     const res = await apiFetch('/api/report/types');
@@ -210,11 +210,12 @@ export function isAuthenticated(): boolean {
 /**
  * Obtener datos del usuario guardados
  */
-export function getCurrentUser(): { email: string; name: string } | null {
+export function getCurrentUser(): { email: string; name: string; foto?: string } | null {
     const email = localStorage.getItem('userEmail');
     const name = localStorage.getItem('userName');
+    const foto = localStorage.getItem('userFoto');
     if (email) {
-        return { email, name: name || 'Usuario' };
+        return { email, name: name || 'Usuario', foto: foto || undefined };
     }
     return null;
 }
@@ -223,11 +224,425 @@ export function getCurrentUser(): { email: string; name: string } | null {
 // Utilidades
 // ============================================
 
-export function setCurrentUser(email: string) {
+export function setCurrentUser(email: string, name?: string, foto?: string) {
     localStorage.setItem('userEmail', email);
+    if (name) localStorage.setItem('userName', name);
+    if (foto) localStorage.setItem('userFoto', foto);
 }
 
 export function logout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userName');
+    localStorage.removeItem('userFoto');
+}
+
+// ============================================
+// Contenido CRUD (Posts, Eventos)
+// ============================================
+
+export interface CreatePostData {
+    texto: string;
+    visibilidad?: 'Público' | 'Solo Conexiones' | 'Privado';
+    tipo?: 'publicacion' | 'evento';
+    evento?: {
+        titulo: string;
+        fecha_inicio: string;
+        fecha_fin: string;
+        ciudad?: string;
+        pais?: string;
+    };
+}
+
+export async function createPost(data: CreatePostData) {
+    const res = await apiFetch('/api/content', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+export async function deletePost(id: number) {
+    const res = await apiFetch(`/api/content/${id}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
+// Crear evento
+export interface CreateEventData {
+    titulo: string;
+    descripcion?: string;
+    fecha_inicio: string;
+    hora_inicio?: string;
+    fecha_fin?: string;
+    hora_fin?: string;
+    ubicacion?: string;
+    visibilidad?: string;
+}
+
+export async function createEvent(data: CreateEventData) {
+    const res = await apiFetch('/api/events', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+export async function reactToPost(id: number, reaccion: string = 'Me Gusta') {
+    const res = await apiFetch(`/api/content/${id}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ reaccion }),
+    });
+    return res.json();
+}
+
+export async function removeReaction(id: number) {
+    const res = await apiFetch(`/api/content/${id}/react`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
+export async function commentOnPost(id: number, texto: string) {
+    const res = await apiFetch(`/api/content/${id}/comment`, {
+        method: 'POST',
+        body: JSON.stringify({ texto }),
+    });
+    return res.json();
+}
+
+export async function getComments(id: number) {
+    const res = await apiFetch(`/api/content/${id}/comments`);
+    return res.json();
+}
+
+// ============================================
+// Grupos de Interés
+// ============================================
+
+export async function getGroups() {
+    const res = await apiFetch('/api/groups');
+    return res.json();
+}
+
+export async function getMyGroups() {
+    const res = await apiFetch('/api/groups/my');
+    return res.json();
+}
+
+export async function createGroup(nombre: string, descripcion?: string, visibilidad: string = 'Público') {
+    const res = await apiFetch('/api/groups', {
+        method: 'POST',
+        body: JSON.stringify({ nombre, descripcion, visibilidad }),
+    });
+    return res.json();
+}
+
+export async function joinGroup(nombre: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}/join`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function leaveGroup(nombre: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}/leave`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
+// ============================================
+// Conexiones Sociales
+// ============================================
+
+export async function getConnections() {
+    const res = await apiFetch('/api/connections');
+    return res.json();
+}
+
+export async function getPendingRequests() {
+    const res = await apiFetch('/api/connections/pending');
+    return res.json();
+}
+
+export async function sendConnectionRequest(correo_destino: string) {
+    const res = await apiFetch('/api/connections/request', {
+        method: 'POST',
+        body: JSON.stringify({ correo_destino }),
+    });
+    return res.json();
+}
+
+export async function acceptConnectionRequest(id: number) {
+    const res = await apiFetch(`/api/connections/accept/${id}`, {
+        method: 'PUT',
+    });
+    return res.json();
+}
+
+export async function rejectConnectionRequest(id: number) {
+    const res = await apiFetch(`/api/connections/reject/${id}`, {
+        method: 'PUT',
+    });
+    return res.json();
+}
+
+export async function getConnectionStatus(correo: string) {
+    const res = await apiFetch(`/api/connections/status/${encodeURIComponent(correo)}`);
+    return res.json();
+}
+
+// ============================================
+// Uploads
+// ============================================
+
+export async function uploadImage(file: File): Promise<{ success: boolean; url?: string; error?: string }> {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+            'x-user-email': getCurrentUserEmail(),
+        },
+        body: formData,
+    });
+
+    return response.json();
+}
+
+export async function uploadProfilePhoto(file: File): Promise<{ success: boolean; url?: string; error?: string }> {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`${API_BASE_URL}/api/upload/profile`, {
+        method: 'POST',
+        headers: {
+            'x-user-email': getCurrentUserEmail(),
+        },
+        body: formData,
+    });
+
+    return response.json();
+}
+
+// ============================================
+// Perfil (Update)
+// ============================================
+
+export interface ProfileUpdateData {
+    nombre?: string;
+    apellido?: string;
+    biografia?: string;
+    pais?: string;
+    ciudad?: string;
+}
+
+export async function updateProfile(data: ProfileUpdateData) {
+    const res = await apiFetch('/api/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+// ============================================
+// Mensajería
+// ============================================
+
+export interface Conversation {
+    clave_conversacion: number;
+    titulo_chat?: string;
+    tipo_conversacion: string;
+    fecha_creacion_chat: string;
+    ultimo_mensaje?: string;
+    fecha_ultimo_mensaje?: string;
+    mensajes_sin_leer: number;
+    otros_participantes: string[];
+}
+
+export interface Message {
+    clave_mensaje: number;
+    fecha_hora_envio: string;
+    correo_autor_mensaje: string;
+    texto_mensaje: string;
+    estado_mensaje: string;
+    nombres?: string;
+    apellidos?: string;
+    fotografia_url?: string;
+}
+
+export async function getConversations(): Promise<{ success: boolean; data: Conversation[] }> {
+    const res = await apiFetch('/api/messages/conversations');
+    return res.json();
+}
+
+export async function getMessages(conversationId: number): Promise<{ success: boolean; data: Message[] }> {
+    const res = await apiFetch(`/api/messages/${conversationId}`);
+    return res.json();
+}
+
+export async function sendMessage(conversacionId: number, texto: string) {
+    const res = await apiFetch('/api/messages/send', {
+        method: 'POST',
+        body: JSON.stringify({ conversacion_id: conversacionId, texto }),
+    });
+    return res.json();
+}
+
+export async function startConversation(correoDestino: string, mensajeInicial?: string) {
+    const res = await apiFetch('/api/messages/conversation/start', {
+        method: 'POST',
+        body: JSON.stringify({ correo_destino: correoDestino, mensaje_inicial: mensajeInicial }),
+    });
+    return res.json();
+}
+
+export async function getConversationInfo(conversationId: number) {
+    const res = await apiFetch(`/api/messages/conversation/${conversationId}/info`);
+    return res.json();
+}
+
+// ============================================
+// Búsqueda de Usuarios
+// ============================================
+
+export interface UserSearchResult {
+    correo_principal: string;
+    nombres: string;
+    apellidos: string;
+    biografia?: string;
+    fotografia_url?: string;
+    estado_conexion: 'conectado' | 'pendiente_enviada' | 'pendiente_recibida' | 'no_conectado';
+    total_conexiones: number;
+}
+
+export async function searchUsers(query: string): Promise<{ success: boolean; data: UserSearchResult[] }> {
+    const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+    return res.json();
+}
+
+export async function getUserProfile(email: string) {
+    const res = await apiFetch(`/api/users/${encodeURIComponent(email)}`);
+    return res.json();
+}
+
+export async function getConnectionSuggestions(): Promise<{ success: boolean; data: UserSearchResult[] }> {
+    const res = await apiFetch('/api/users/suggestions/connect');
+    return res.json();
+}
+
+// ============================================
+// Ofertas Laborales
+// ============================================
+
+export interface JobOffer {
+    clave_oferta: number;
+    correo_organizacion: string;
+    fecha_publicacion: string;
+    fecha_vencimiento?: string;
+    titulo_oferta: string;
+    descripcion_cargo: string;
+    requisitos?: string;
+    modalidad: 'Presencial' | 'Remoto' | 'Híbrido';
+    nombre_organizacion: string;
+    tipo_entidad: string;
+    foto_organizacion?: string;
+    total_postulaciones: number;
+}
+
+export async function getOffers(): Promise<{ success: boolean; data: JobOffer[] }> {
+    const res = await apiFetch('/api/offers');
+    return res.json();
+}
+
+export async function getOfferDetail(id: number) {
+    const res = await apiFetch(`/api/offers/${id}`);
+    return res.json();
+}
+
+export async function createOffer(data: {
+    titulo: string;
+    descripcion: string;
+    requisitos?: string;
+    modalidad: string;
+}) {
+    const res = await apiFetch('/api/offers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+export async function applyToOffer(offerId: number) {
+    const res = await apiFetch(`/api/offers/${offerId}/apply`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function getMyApplications() {
+    const res = await apiFetch('/api/offers/my/applications');
+    return res.json();
+}
+
+export async function getMyPublishedOffers() {
+    const res = await apiFetch('/api/offers/my/published');
+    return res.json();
+}
+
+// ============================================
+// Grupos de Interés
+// ============================================
+
+export interface Group {
+    nombre_grupo: string;
+    descripcion_grupo?: string;
+    visibilidad: 'Publico' | 'Privado' | 'Secreto';
+    correo_creador: string;
+    fecha_creacion: string;
+    total_miembros?: number;
+    es_miembro?: boolean;
+}
+
+export async function getGroups(): Promise<{ success: boolean; data: Group[] }> {
+    const res = await apiFetch('/api/groups');
+    return res.json();
+}
+
+export async function getGroupDetails(name: string): Promise<{ success: boolean; data: Group }> {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(name)}`);
+    return res.json();
+}
+
+export async function createGroup(data: {
+    nombre: string;
+    descripcion: string;
+    visibilidad: string;
+}) {
+    const res = await apiFetch('/api/groups', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+export async function joinGroup(name: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(name)}/join`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function leaveGroup(name: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(name)}/leave`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function getMyGroups(): Promise<{ success: boolean; data: Group[] }> {
+    const res = await apiFetch('/api/groups/my');
+    return res.json();
 }

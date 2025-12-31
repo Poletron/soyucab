@@ -118,9 +118,30 @@ async function getUserProfile(email) {
     return result.rows[0];
 }
 
+/**
+ * Actualizar perfil del usuario
+ */
+async function updateProfile(email, profileData) {
+    const { nombre, apellido, biografia, pais, ciudad } = profileData;
+
+    await db.query(
+        `UPDATE PERSONA 
+         SET nombres = COALESCE($2, nombres),
+             apellidos = COALESCE($3, apellidos),
+             biografia = COALESCE($4, biografia),
+             pais_residencia = COALESCE($5, pais_residencia),
+             ciudad_residencia = COALESCE($6, ciudad_residencia)
+         WHERE correo_principal = $1`,
+        [email, nombre, apellido, biografia, pais, ciudad]
+    );
+
+    return { success: true, message: 'Perfil actualizado' };
+}
+
 module.exports = {
     login,
     register,
     getUserProfile,
+    updateProfile,
     hashPassword
 };

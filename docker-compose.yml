@@ -89,23 +89,22 @@ services:
       - soyucab-network
 
   # ============================================
-  # SERVICIO FRONTEND ORIGINAL (COMENTADO PARA ENTREGA 3)
-  # Descomentar si se necesita la red social completa
+  # SERVICIO FRONTEND - Red Social SoyUCAB (Entrega 4)
   # ============================================
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: soyucab_frontend
-  #   restart: always
-  #   environment:
-  #     VITE_API_URL: http://localhost:3000
-  #   ports:
-  #     - "5173:5173"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - soyucab-network
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: soyucab_frontend
+    restart: always
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - soyucab-network
 
   # ============================================
   # FRONTEND ENTREGA 3 - Dashboard de Reportes

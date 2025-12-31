@@ -1,146 +1,100 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Filter, Download, Users, MessageSquare, TrendingUp, Calendar } from 'lucide-react';
+import { Download, Users, TrendingUp, Loader2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { getReportPreview, downloadReportPDF } from '../services/api';
+
+interface GrupoData {
+  nombre_grupo: string;
+  descripcion_grupo: string;
+  total_miembros: number;
+}
 
 const ActiveGroupsReport = () => {
-  // Datos de grupos más activos
-  const groupsData = [
-    {
-      id: 1,
-      name: 'Desarrolladores UCAB',
-      members: 324,
-      newPosts: 47,
-      category: 'Tecnología',
-      growth: '+12%',
-      avatar: '💻',
-      description: 'Comunidad de programadores y desarrolladores'
-    },
-    {
-      id: 2,
-      name: 'Emprendedores UCAbistas',
-      members: 298,
-      newPosts: 42,
-      category: 'Negocios',
-      growth: '+8%',
-      avatar: '🚀',
-      description: 'Red de emprendedores y startups'
-    },
-    {
-      id: 3,
-      name: 'Investigación Científica',
-      members: 267,
-      newPosts: 38,
-      category: 'Académico',
-      growth: '+15%',
-      avatar: '🔬',
-      description: 'Grupo de investigadores y académicos'
-    },
+  const [data, setData] = useState<GrupoData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
-    {
-      id: 5,
-      name: 'Creativos Digitales',
-      members: 189,
-      newPosts: 33,
-      category: 'Arte y Diseño',
-      growth: '+22%',
-      avatar: '🎨',
-      description: 'Diseñadores, artistas y creativos'
-    },
-    {
-      id: 6,
-      name: 'Líderes Estudiantiles',
-      members: 156,
-      newPosts: 31,
-      category: 'Liderazgo',
-      growth: '+18%',
-      avatar: '👥',
-      description: 'Representantes y líderes estudiantiles'
-    },
-    {
-      id: 7,
-      name: 'Deportes UCAB',
-      members: 203,
-      newPosts: 29,
-      category: 'Deportes',
-      growth: '+7%',
-      avatar: '⚽',
-      description: 'Comunidad deportiva universitaria'
-    },
-    {
-      id: 8,
-      name: 'Voluntariado Social',
-      members: 178,
-      newPosts: 26,
-      category: 'Social',
-      growth: '+10%',
-      avatar: '🤝',
-      description: 'Proyectos de responsabilidad social'
-    },
-    {
-      id: 9,
-      name: 'Alumni Derecho',
-      members: 312,
-      newPosts: 24,
-      category: 'Profesional',
-      growth: '+3%',
-      avatar: '⚖️',
-      description: 'Egresados de la Escuela de Derecho'
-    },
-    {
-      id: 10,
-      name: 'Intercambio Académico',
-      members: 145,
-      newPosts: 22,
-      category: 'Internacional',
-      growth: '+25%',
-      avatar: '🌍',
-      description: 'Estudiantes de intercambio'
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getReportPreview('grupos');
+      if (response.success) {
+        setData(response.data);
+      } else {
+        setError(response.error || 'Error al cargar datos');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error de conexión');
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  // Métricas generales
-  const totalMembers = groupsData.reduce((sum, group) => sum + group.members, 0);
-  const totalPosts = groupsData.reduce((sum, group) => sum + group.newPosts, 0);
-  const avgMembersPerGroup = Math.round(totalMembers / groupsData.length);
-  const mostActiveGroup = groupsData[0];
-
-  const getCategoryColor = (category: string) => {
-    const colors: { [key: string]: string } = {
-      'Tecnología': '#40b4e5',
-      'Negocios': '#047732',
-      'Académico': '#ffc526',
-      'Profesional': '#8b5cf6',
-      'Arte y Diseño': '#ec4899',
-      'Liderazgo': '#f97316',
-      'Deportes': '#84cc16',
-      'Social': '#06b6d4',
-      'Internacional': '#ef4444'
-    };
-    return colors[category] || '#6b7280';
   };
+
+  const handleDownload = async () => {
+    try {
+      setDownloading(true);
+      await downloadReportPDF('grupos');
+    } catch (err) {
+      alert('Error al descargar PDF');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Métricas calculadas
+  const totalGrupos = data.length;
+  const totalMiembros = data.reduce((sum, r) => sum + (Number(r.total_miembros) || 0), 0);
+  const promedioMiembros = totalGrupos > 0 ? (totalMiembros / totalGrupos).toFixed(1) : '0';
+  const grupoTop = data[0]?.nombre_grupo || 'N/A';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#40b4e5' }} />
+        <span className="ml-2">Cargando datos...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center text-red-500">
+            <p>Error: {error}</p>
+            <Button onClick={loadData} className="mt-4">Reintentar</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center space-y-4 md:space-y-0">
         <div>
-          <h1 className="text-3xl">Ranking de Actividad en Grupos</h1>
-          <p className="text-gray-600">Últimos 30 días - Comunidades más vibrantes</p>
+          <h1 className="text-3xl font-bold">Grupos Más Activos</h1>
+          <p className="text-gray-600">Top 10 grupos de interés por cantidad de miembros</p>
         </div>
         <div className="flex space-x-3">
-          <Button variant="outline" className="flex items-center space-x-2">
-            <Filter className="h-4 w-4" />
-            <span>Filtros</span>
-          </Button>
-          <Button 
+          <Button
+            onClick={handleDownload}
+            disabled={downloading}
             className="flex items-center space-x-2"
             style={{ backgroundColor: '#ffc526', color: '#12100c' }}
           >
-            <Download className="h-4 w-4" />
-            <span>Exportar</span>
+            {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span>{downloading ? 'Generando...' : 'Exportar PDF'}</span>
           </Button>
         </div>
       </div>
@@ -151,9 +105,9 @@ const ActiveGroupsReport = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Grupos Activos</p>
-                <p className="text-2xl" style={{ color: '#40b4e5' }}>10</p>
-                <p className="text-sm text-gray-500">Top performers</p>
+                <p className="text-sm text-gray-600">Total Grupos</p>
+                <p className="text-2xl font-bold" style={{ color: '#40b4e5' }}>{totalGrupos}</p>
+                <p className="text-sm text-gray-500">grupos activos</p>
               </div>
               <Users className="h-8 w-8" style={{ color: '#40b4e5' }} />
             </div>
@@ -165,8 +119,8 @@ const ActiveGroupsReport = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total Miembros</p>
-                <p className="text-2xl" style={{ color: '#047732' }}>{totalMembers.toLocaleString()}</p>
-                <p className="text-sm text-gray-500">usuarios activos</p>
+                <p className="text-2xl font-bold" style={{ color: '#047732' }}>{totalMiembros}</p>
+                <p className="text-sm text-gray-500">participantes</p>
               </div>
               <TrendingUp className="h-8 w-8" style={{ color: '#047732' }} />
             </div>
@@ -177,170 +131,80 @@ const ActiveGroupsReport = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Nuevas Publicaciones</p>
-                <p className="text-2xl" style={{ color: '#ffc526' }}>{totalPosts}</p>
-                <p className="text-sm text-gray-500">últimos 30 días</p>
+                <p className="text-sm text-gray-600">Promedio</p>
+                <p className="text-2xl font-bold" style={{ color: '#ffc526' }}>{promedioMiembros}</p>
+                <p className="text-sm text-gray-500">miembros/grupo</p>
               </div>
-              <MessageSquare className="h-8 w-8" style={{ color: '#ffc526' }} />
+              <Users className="h-8 w-8" style={{ color: '#ffc526' }} />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Grupo Más Activo</p>
-                <p className="text-lg truncate">{mostActiveGroup.name}</p>
-                <p className="text-sm text-gray-500">{mostActiveGroup.newPosts} posts nuevos</p>
+              <div className="flex-1 min-w-0 mr-2">
+                <p className="text-sm text-gray-600">Grupo #1</p>
+                <p className="text-sm font-semibold truncate" title={grupoTop}>{grupoTop}</p>
+                <p className="text-sm text-gray-500">más activo</p>
               </div>
-              <Calendar className="h-8 w-8" style={{ color: '#40b4e5' }} />
+              <span className="text-2xl flex-shrink-0">🏆</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Ranking */}
+      {/* Main Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Ranking de Grupos por Actividad</CardTitle>
-          <p className="text-gray-600">Ordenado por número de publicaciones nuevas</p>
+          <CardTitle>Ranking de Grupos por Miembros</CardTitle>
+          <p className="text-gray-600">Ordenado por cantidad de miembros (V_GRUPOS_MAS_ACTIVOS)</p>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {groupsData.map((group, index) => (
-              <div 
-                key={group.id} 
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center space-x-4">
-                  {/* Ranking Number */}
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg"
-                    style={{ backgroundColor: index < 3 ? '#40b4e5' : '#6b7280' }}
-                  >
-                    {index + 1}
-                  </div>
-
-                  {/* Group Avatar */}
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
-                    style={{ backgroundColor: '#f3f4f6' }}
-                  >
-                    {group.avatar}
-                  </div>
-
-                  {/* Group Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-lg">{group.name}</h3>
-                      <Badge 
-                        style={{ 
-                          backgroundColor: getCategoryColor(group.category), 
-                          color: 'white' 
+          {data.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">No hay datos disponibles</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Rank</TableHead>
+                  <TableHead>Nombre del Grupo</TableHead>
+                  <TableHead>Descripción</TableHead>
+                  <TableHead className="text-center">Miembros</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold"
+                        style={{ backgroundColor: index < 3 ? '#40b4e5' : '#6b7280' }}
+                      >
+                        {index + 1}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{item.nombre_grupo || '-'}</TableCell>
+                    <TableCell className="max-w-[300px] truncate text-gray-600">
+                      {item.descripcion_grupo || '-'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        style={{
+                          backgroundColor: '#047732',
+                          color: 'white'
                         }}
                       >
-                        {group.category}
+                        {item.total_miembros || 0}
                       </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600">{group.description}</p>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center space-x-6 text-right">
-                  <div>
-                    <p className="text-sm text-gray-600">Miembros</p>
-                    <p className="text-xl" style={{ color: '#40b4e5' }}>{group.members}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Posts Nuevos</p>
-                    <p className="text-xl" style={{ color: '#ffc526' }}>{group.newPosts}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Crecimiento</p>
-                    <p 
-                      className="text-lg"
-                      style={{ color: '#047732' }}
-                    >
-                      {group.growth}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
-
-      {/* Category Analysis */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle style={{ color: '#40b4e5' }}>Categorías Más Activas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Tecnología</span>
-                <Badge style={{ backgroundColor: '#40b4e5', color: 'white' }}>47 posts</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Negocios</span>
-                <Badge style={{ backgroundColor: '#047732', color: 'white' }}>42 posts</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Académico</span>
-                <Badge style={{ backgroundColor: '#ffc526', color: 'white' }}>38 posts</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle style={{ color: '#047732' }}>Mayor Crecimiento</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Intercambio Académico</span>
-                <span className="text-sm" style={{ color: '#047732' }}>+25%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Creativos Digitales</span>
-                <span className="text-sm" style={{ color: '#047732' }}>+22%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Líderes Estudiantiles</span>
-                <span className="text-sm" style={{ color: '#047732' }}>+18%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle style={{ color: '#ffc526' }}>Más Miembros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Alumni Derecho</span>
-                <span className="text-sm" style={{ color: '#ffc526' }}>312 miembros</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Desarrolladores UCAB</span>
-                <span className="text-sm" style={{ color: '#ffc526' }}>324 miembros</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Alumni Derecho</span>
-                <span className="text-sm" style={{ color: '#ffc526' }}>312 miembros</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };
