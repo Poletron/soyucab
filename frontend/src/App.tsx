@@ -51,7 +51,10 @@ type View = 'feed' | 'profile' | 'edit-profile' | 'create' | 'tutoring' | 'group
   'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report';
 type AuthView = 'login' | 'register';
 
+import { useRole } from './hooks/useRole';
+
 function App() {
+  const { isModerator } = useRole();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('login');
   const [currentView, setCurrentView] = useState<View>('feed');
@@ -194,66 +197,60 @@ function App() {
                 </Button>
 
                 {/* Dropdown de Reportes - Solo los 9 de Entrega 3 */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={reportViews.includes(currentView) ? 'default' : 'ghost'}
-                      className="flex items-center space-x-2"
-                      style={{ backgroundColor: reportViews.includes(currentView) ? '#40b4e5' : 'transparent' }}
-                    >
-                      <BarChart3 className="h-4 w-4" />
-                      <span>Reportes</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-64">
-                    {/* 1. Top Contenido Viral */}
-                    <DropdownMenuItem onClick={() => setCurrentView('viral-report')}>
-                      <TrendingUp className="mr-2 h-4 w-4" />
-                      <span>Top Contenido Viral</span>
-                    </DropdownMenuItem>
-                    {/* 2. Líderes de Opinión */}
-                    <DropdownMenuItem onClick={() => setCurrentView('lideres-report')}>
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Líderes de Opinión</span>
-                    </DropdownMenuItem>
-                    {/* 3. Proyección Interés Eventos */}
-                    <DropdownMenuItem onClick={() => setCurrentView('eventos-report')}>
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>Proyección Interés Eventos</span>
-                    </DropdownMenuItem>
-                    {/* 4. Crecimiento Demográfico */}
-                    <DropdownMenuItem onClick={() => setCurrentView('crecimiento-report')}>
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <span>Crecimiento Demográfico</span>
-                    </DropdownMenuItem>
-                    {/* 5. Grupos Más Activos */}
-                    <DropdownMenuItem onClick={() => setCurrentView('grupos-report')}>
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Grupos Más Activos</span>
-                    </DropdownMenuItem>
-                    {/* 6. Top Referentes Comunidad */}
-                    <DropdownMenuItem onClick={() => setCurrentView('referentes-report')}>
-                      <Award className="mr-2 h-4 w-4" />
-                      <span>Top Referentes Comunidad</span>
-                    </DropdownMenuItem>
-                    {/* 7. Áreas Conocimiento Demanda */}
-                    <DropdownMenuItem onClick={() => setCurrentView('tutorias-report')}>
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      <span>Áreas Conocimiento Demanda</span>
-                    </DropdownMenuItem>
-                    {/* 8. Vigencia Nexos */}
-                    <DropdownMenuItem onClick={() => setCurrentView('nexos-report')}>
-                      <Link className="mr-2 h-4 w-4" />
-                      <span>Vigencia Nexos</span>
-                    </DropdownMenuItem>
-                    {/* 9. Ofertas Más Postuladas */}
-                    <DropdownMenuItem onClick={() => setCurrentView('ofertas-report')}>
-                      <Briefcase className="mr-2 h-4 w-4" />
-                      <span>Ofertas Más Postuladas</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {isModerator && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant={reportViews.includes(currentView) ? 'default' : 'ghost'}
+                        className="flex items-center space-x-2"
+                        style={{ backgroundColor: reportViews.includes(currentView) ? '#40b4e5' : 'transparent' }}
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        <span>Reportes</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      {/* ... Items ... */}
+                      <DropdownMenuItem onClick={() => setCurrentView('viral-report')}>
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        <span>Top Contenido Viral</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('lideres-report')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Líderes de Opinión</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('eventos-report')}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Proyección Interés Eventos</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('crecimiento-report')}>
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        <span>Crecimiento Demográfico</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('grupos-report')}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Grupos Más Activos</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('referentes-report')}>
+                        <Award className="mr-2 h-4 w-4" />
+                        <span>Top Referentes Comunidad</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('tutorias-report')}>
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        <span>Áreas Conocimiento Demanda</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('nexos-report')}>
+                        <Link className="mr-2 h-4 w-4" />
+                        <span>Vigencia Nexos</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setCurrentView('ofertas-report')}>
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        <span>Ofertas Más Postuladas</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </nav>
             </div>
 
@@ -289,8 +286,7 @@ function App() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src="https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMGJ1c2luZXNzJTIwcG9ydHJhaXQlMjBoZWFkc2hvdHxlbnwxfHx8fDE3NTkzMjQ4NzR8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral" />
-                      <AvatarFallback>MG</AvatarFallback>
+                      <AvatarFallback>U</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>

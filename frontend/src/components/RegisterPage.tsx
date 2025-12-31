@@ -134,10 +134,13 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
       // Solo registro de personas por ahora (organizaciones requieren tabla diferente)
       if (accountType === 'persona') {
         const result = await apiRegister({
+          type: 'persona',
           email: formData.email,
           password: formData.password,
           nombre: formData.firstName,
           apellido: formData.lastName,
+          pais: formData.country,
+          ciudad: formData.city,
           ubicacion: `${formData.city}, ${formData.country}`
         });
 
@@ -147,8 +150,24 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
           setErrors({ general: result.error || 'Error al registrar' });
         }
       } else {
-        // Para organizaciones, simulamos por ahora
-        setErrors({ general: 'El registro de organizaciones estará disponible próximamente' });
+        // Registro de Organización
+        const result = await apiRegister({
+          type: 'organizacion',
+          email: formData.email,
+          password: formData.password,
+          organizationName: formData.organizationName,
+          rif: formData.rif,
+          entityType: formData.entityType,
+          pais: formData.country || 'Venezuela',
+          ciudad: formData.city || 'Caracas'
+        });
+
+        if (result.success) {
+          onRegister();
+        } else {
+          console.error('Registration failed:', result.error);
+          setErrors({ general: result.error || 'Error al registrar organización' });
+        }
       }
     } catch (err) {
       console.error('Register error:', err);
@@ -253,6 +272,11 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {errors.general && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>{errors.general}</AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* PERSONA FIELDS */}
                 {accountType === 'persona' && (

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
 import { getFeed, createPost, reactToPost, commentOnPost, sendConnectionRequest, getCurrentUser } from '../services/api';
+import { useRole } from '../hooks/useRole';
 
 interface Post {
   clave_contenido?: number;
@@ -23,6 +24,7 @@ interface Post {
 }
 
 const MainFeed = () => {
+  const { isOrg, isVisitor, isModerator } = useRole();
   const [postContent, setPostContent] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,12 +95,14 @@ const MainFeed = () => {
     return date.toLocaleDateString('es-VE');
   };
 
+  // TODO: Fetch from API - GET /api/connections/suggested
   const suggestedConnections = [
     { name: 'Luis Hernández', role: 'Estudiante 6to Semestre', mutualConnections: 12, email: 'luis@ucab.edu.ve' },
     { name: 'Dra. Patricia Morales', role: 'Directora Escuela Informática', mutualConnections: 8, email: 'patricia@ucab.edu.ve' },
     { name: 'Roberto Silva', role: 'Egresado - Ing. Industrial', mutualConnections: 5, email: 'roberto@ucab.edu.ve' }
   ];
 
+  // TODO: Fetch from API - GET /api/events/upcoming
   const upcomingEvents = [
     { name: 'Conferencia de IA', date: 'Nov 20, 2024', attendees: 156 },
     { name: 'Feria de Empleo UCAB', date: 'Dic 5, 2024', attendees: 234 },
@@ -121,14 +125,15 @@ const MainFeed = () => {
                 <p className="text-sm text-gray-500">Ver perfil</p>
               </div>
             </div>
+            {/* TODO: Fetch from API - user stats endpoint */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Conexiones</span>
-                <span className="font-medium">124</span>
+                <span className="font-medium">--</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Grupos</span>
-                <span className="font-medium">8</span>
+                <span className="font-medium">--</span>
               </div>
             </div>
           </CardContent>
@@ -160,48 +165,65 @@ const MainFeed = () => {
       {/* Main Feed */}
       <div className="lg:col-span-2 space-y-6">
         {/* Create Post */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex space-x-3">
-              <Avatar>
-                <AvatarImage src={currentUser?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}`} />
-                <AvatarFallback>{currentUser?.name?.[0] || 'U'}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <Textarea
-                  placeholder="¿Qué estás pensando?"
-                  value={postContent}
-                  onChange={(e) => setPostContent(e.target.value)}
-                  className="resize-none border-0 shadow-none text-lg placeholder:text-gray-400 min-h-[60px]"
-                />
-                <div className="flex justify-between items-center mt-3">
-                  <div className="flex space-x-2">
-                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-                      <Camera className="h-4 w-4 mr-1" />
-                      Foto
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-                      <FileText className="h-4 w-4 mr-1" />
-                      Artículo
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Evento
+        {!isVisitor && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex space-x-3">
+                <Avatar>
+                  <AvatarImage src={currentUser?.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'U')}`} />
+                  <AvatarFallback>{currentUser?.name?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <Textarea
+                    placeholder={isOrg ? "Publica una actualización corporativa o vacante..." : "¿Qué estás pensando?"}
+                    value={postContent}
+                    onChange={(e) => setPostContent(e.target.value)}
+                    className="resize-none border-0 shadow-none text-lg placeholder:text-gray-400 min-h-[60px]"
+                  />
+                  <div className="flex justify-between items-center mt-3">
+                    <div className="flex space-x-2">
+                      {isOrg ? (
+                        <>
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                            <FileText className="h-4 w-4 mr-1" />
+                            Oferta
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Evento
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                            <Camera className="h-4 w-4 mr-1" />
+                            Foto
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                            <FileText className="h-4 w-4 mr-1" />
+                            Artículo
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Evento
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      style={{ backgroundColor: '#ffc526' }}
+                      className="text-white hover:opacity-90"
+                      disabled={!postContent.trim() || posting}
+                      onClick={handleCreatePost}
+                    >
+                      {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publicar'}
                     </Button>
                   </div>
-                  <Button
-                    style={{ backgroundColor: '#ffc526' }}
-                    className="text-white hover:opacity-90"
-                    disabled={!postContent.trim() || posting}
-                    onClick={handleCreatePost}
-                  >
-                    {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publicar'}
-                  </Button>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Refresh Button */}
         <div className="flex justify-center">
@@ -281,37 +303,53 @@ const MainFeed = () => {
       {/* Right Sidebar */}
       <div className="lg:col-span-1 space-y-4">
         {/* Suggested Connections */}
-        <Card>
-          <CardHeader className="pb-3">
-            <h3>Personas que quizás conozcas</h3>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-3">
-              {suggestedConnections.map((person, index) => (
-                <div key={index} className="flex items-start space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`} />
-                    <AvatarFallback>{person.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{person.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{person.role}</p>
-                    <p className="text-xs text-gray-400">{person.mutualConnections} conexiones en común</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-2 text-xs h-6"
-                      style={{ borderColor: '#40b4e5', color: '#40b4e5' }}
-                      onClick={() => sendConnectionRequest(person.email)}
-                    >
-                      Conectar
-                    </Button>
+        {!isOrg && (
+          <Card>
+            <CardHeader className="pb-3">
+              <h3>Personas que quizás conozcas</h3>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-3">
+                {suggestedConnections.map((person, index) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(person.name)}`} />
+                      <AvatarFallback>{person.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{person.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{person.role}</p>
+                      <p className="text-xs text-gray-400">{person.mutualConnections} conexiones en común</p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 text-xs h-6"
+                        style={{ borderColor: '#40b4e5', color: '#40b4e5' }}
+                        onClick={() => sendConnectionRequest(person.email)}
+                      >
+                        Conectar
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Moderator Panel */}
+        {isModerator && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader className="pb-3">
+              <h3 className="text-blue-800 font-semibold">Panel de Moderación</h3>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Ver Reportes
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Upcoming Events */}
         <Card>

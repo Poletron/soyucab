@@ -31,6 +31,14 @@ export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProp
       const result = await apiLogin(email, password);
 
       if (result.success) {
+        // Guardar roles si vienen del backend
+        if (result.roles) {
+          localStorage.setItem('userRoles', JSON.stringify(result.roles));
+        }
+        // Guardar tipo de usuario para UI (inferido o explicito)
+        const isOrg = result.roles?.includes('Entidad');
+        localStorage.setItem('userType', isOrg ? 'organizacion' : 'persona');
+
         onLogin();
       } else {
         setError(result.error || 'Error al iniciar sesión');

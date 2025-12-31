@@ -49,28 +49,32 @@ router.post('/register', async (req, res) => {
         const { email, password, nombre, apellido, fechaNacimiento, ubicacion } = req.body;
 
         // Validaciones
-        if (!email || !nombre || !apellido) {
+        if (!email) {
             return res.status(400).json({
                 success: false,
-                error: 'Email, nombre y apellido son requeridos'
+                error: 'El correo es requerido'
             });
         }
 
-        // Validar formato de correo UCAB
-        if (!email.endsWith('@ucab.edu.ve')) {
-            return res.status(400).json({
-                success: false,
-                error: 'Debe usar un correo institucional @ucab.edu.ve'
-            });
+        // Determinar tipo
+        const type = req.body.type || 'persona';
+
+        if (type === 'persona') {
+            if (!req.body.nombre || !req.body.apellido) {
+                return res.status(400).json({ success: false, error: 'Nombre y apellido son requeridos para personas' });
+            }
+            if (!email.endsWith('@ucab.edu.ve')) {
+                return res.status(400).json({ success: false, error: 'Debe usar un correo institucional @ucab.edu.ve' });
+            }
+        } else if (type === 'organizacion') {
+            if (!req.body.organizationName || !req.body.rif || !req.body.entityType) {
+                return res.status(400).json({ success: false, error: 'Nombre, RIF y Tipo son requeridos para organizaciones' });
+            }
         }
 
         const result = await authService.register({
-            email,
-            password,
-            nombre,
-            apellido,
-            fechaNacimiento,
-            ubicacion
+            ...req.body,
+            type
         });
 
         res.status(201).json({

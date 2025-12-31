@@ -30,6 +30,7 @@ import {
   Conversation,
   Message
 } from '../services/api';
+import { useRole } from '../hooks/useRole';
 
 interface ConversationDisplay {
   id: number;
@@ -63,6 +64,7 @@ export default function MessagingSystem() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [newChatSearch, setNewChatSearch] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isVisitor } = useRole();
 
   const currentUser = getCurrentUser();
 
@@ -342,8 +344,8 @@ export default function MessagingSystem() {
                   className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-900'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 text-gray-900'
                     }`}
                     style={isMe ? { backgroundColor: '#40b4e5' } : {}}
                   >

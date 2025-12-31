@@ -22,6 +22,9 @@ interface ProfileData {
   fotografia_url?: string;
   total_conexiones?: number;
   total_publicaciones?: number;
+  tipo?: 'Persona' | 'Organizacion';
+  rif?: string;
+  entityType?: string;
 }
 
 const UserProfile = () => {
@@ -48,9 +51,13 @@ const UserProfile = () => {
           apellidos: result.profile.apellido,
           biografia: result.profile.biografia,
           ciudad_residencia: result.profile.ubicacion?.split(',')[0],
-          pais_residencia: result.profile.ubicacion?.split(',')[1] || 'Venezuela',
+          pais_residencia: result.profile.ubicacion?.split(',')[1] || result.profile.pais_residencia || 'Venezuela',
           fecha_registro: result.profile.fechaRegistro,
           fotografia_url: result.profile.foto,
+          // Org specific
+          tipo: result.profile.tipo,
+          rif: result.profile.rif,
+          entityType: result.profile.tipo_entidad,
         });
       }
     } catch (err) {
@@ -221,12 +228,27 @@ const UserProfile = () => {
       {/* About Section */}
       <Card>
         <CardHeader>
-          <h2 className="text-2xl font-semibold">Acerca de</h2>
+          <h2 className="text-2xl font-semibold">{profile?.tipo === 'Organizacion' ? 'Descripción' : 'Acerca de'}</h2>
         </CardHeader>
         <CardContent>
           <p className="text-gray-700 leading-relaxed">
-            {profile?.biografia || 'Este usuario aún no ha agregado una biografía.'}
+            {profile?.biografia || 'Sin descripción disponible.'}
           </p>
+          {profile?.tipo === 'Organizacion' && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-sm font-medium text-gray-500">Información Corporativa</p>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div>
+                  <span className="text-xs text-gray-400 block">RIF</span>
+                  <span className="text-sm font-medium">{profile.rif || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-xs text-gray-400 block">Tipo Entidad</span>
+                  <span className="text-sm font-medium">{profile.entityType || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

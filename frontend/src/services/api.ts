@@ -101,7 +101,13 @@ export async function downloadReportPDF(reportType: ReportType, filename?: strin
         const reportNames: Record<ReportType, string> = {
             viralidad: 'contenido_viral',
             lideres: 'lideres_opinion',
-            eventos: 'interes_eventos'
+            eventos: 'interes_eventos',
+            crecimiento: 'crecimiento_red',
+            grupos: 'grupos_interes',
+            referentes: 'referentes',
+            tutorias: 'tutorias',
+            nexos: 'nexos',
+            ofertas: 'ofertas_laborales'
         };
         const downloadFilename = filename || `reporte_${reportNames[reportType]}_${date}.pdf`;
 
@@ -132,6 +138,10 @@ export interface UserProfile {
     fechaRegistro?: string;
     ubicacion?: string;
     biografia?: string;
+    pais_residencia?: string;
+    tipo?: 'Persona' | 'Organizacion';
+    rif?: string;
+    tipo_entidad?: string;
 }
 
 export interface LoginResponse {
@@ -139,14 +149,25 @@ export interface LoginResponse {
     message?: string;
     error?: string;
     user?: UserProfile;
+    roles?: string[];
 }
 
 export interface RegisterData {
     email: string;
     password?: string;
-    nombre: string;
-    apellido: string;
+    nombre?: string;
+    apellido?: string;
     fechaNacimiento?: string;
+    // Location splits
+    pais?: string;
+    ciudad?: string;
+    // Organization fields
+    type?: 'persona' | 'organizacion';
+    organizationName?: string;
+    rif?: string;
+    entityType?: string;
+    description?: string;
+    // Legacy support (to be removed if unused)
     ubicacion?: string;
 }
 
@@ -316,41 +337,7 @@ export async function getComments(id: number) {
     return res.json();
 }
 
-// ============================================
-// Grupos de Interés
-// ============================================
 
-export async function getGroups() {
-    const res = await apiFetch('/api/groups');
-    return res.json();
-}
-
-export async function getMyGroups() {
-    const res = await apiFetch('/api/groups/my');
-    return res.json();
-}
-
-export async function createGroup(nombre: string, descripcion?: string, visibilidad: string = 'Público') {
-    const res = await apiFetch('/api/groups', {
-        method: 'POST',
-        body: JSON.stringify({ nombre, descripcion, visibilidad }),
-    });
-    return res.json();
-}
-
-export async function joinGroup(nombre: string) {
-    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}/join`, {
-        method: 'POST',
-    });
-    return res.json();
-}
-
-export async function leaveGroup(nombre: string) {
-    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}/leave`, {
-        method: 'DELETE',
-    });
-    return res.json();
-}
 
 // ============================================
 // Conexiones Sociales
