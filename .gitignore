@@ -9,3 +9,5 @@ postgres_data/
 Thumbs.db
 
 node_modules
+
+.agent

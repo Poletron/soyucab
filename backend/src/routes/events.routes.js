@@ -31,13 +31,17 @@ router.post('/', requireAuth, async (req, res) => {
         const claveContenido = result.rows[0].clave_contenido;
 
         // Insertar en tabla evento
+        // NOTA: fk_contenido se inserta en clave_evento? NO. 
+        // DDL: ck_evento SERIAL PK, fk_contenido INT UNIQUE.
+        // Pero content.routes usa RETURNING clave_contenido.
+
         await db.queryAsUser(correo_autor, `
             INSERT INTO evento (
-                clave_evento,
-                titulo_evento,
-                fecha_hora_inicio,
-                fecha_hora_fin,
-                ubicacion_evento
+                fk_contenido,
+                titulo,
+                fecha_inicio,
+                fecha_fin,
+                ciudad_ubicacion
             )
             VALUES ($1, $2, $3, $4, $5)
         `, [claveContenido, titulo, fechaInicio, fechaFin, ubicacion || null]);
@@ -45,7 +49,7 @@ router.post('/', requireAuth, async (req, res) => {
         res.json({
             success: true,
             data: {
-                clave_evento: claveContenido,
+                clave_evento: claveContenido, // Esto es el ID del contenido, pero el evento tendrá su propio ID serial.
                 titulo: titulo,
                 fecha_inicio: fechaInicio
             }
@@ -62,10 +66,10 @@ router.get('/', async (req, res) => {
         const result = await db.query(`
             SELECT 
                 e.clave_evento,
-                e.titulo_evento,
-                e.fecha_hora_inicio,
-                e.fecha_hora_fin,
-                e.ubicacion_evento,
+                e.titulo,
+                e.fecha_inicio,
+                e.fecha_fin,
+                e.ciudad_ubicacion as ubicacion,
                 c.correo_autor,
                 c.texto_contenido as descripcion,
                 c.visibilidad,
@@ -73,10 +77,9 @@ router.get('/', async (req, res) => {
                 p.nombres,
                 p.apellidos
             FROM evento e
-            JOIN contenido c ON e.clave_evento = c.clave_contenido
-            LEFT JOIN persona p ON c.correo_autor = p.correo_electronico
-            WHERE c.eliminado = FALSE
-            ORDER BY e.fecha_hora_inicio DESC
+            JOIN contenido c ON e.fk_contenido = c.clave_contenido
+            LEFT JOIN persona p ON c.correo_autor = p.correo_principal
+            ORDER BY e.fecha_inicio DESC
             LIMIT 50
         `);
 
@@ -95,10 +98,10 @@ router.get('/:id', async (req, res) => {
         const result = await db.query(`
             SELECT 
                 e.clave_evento,
-                e.titulo_evento,
-                e.fecha_hora_inicio,
-                e.fecha_hora_fin,
-                e.ubicacion_evento,
+                e.titulo,
+                e.fecha_inicio,
+                e.fecha_fin,
+                e.ciudad_ubicacion as ubicacion,
                 c.correo_autor,
                 c.texto_contenido as descripcion,
                 c.visibilidad,
@@ -106,9 +109,9 @@ router.get('/:id', async (req, res) => {
                 p.nombres,
                 p.apellidos
             FROM evento e
-            JOIN contenido c ON e.clave_evento = c.clave_contenido
-            LEFT JOIN persona p ON c.correo_autor = p.correo_electronico
-            WHERE e.clave_evento = $1 AND c.eliminado = FALSE
+            JOIN contenido c ON e.fk_contenido = c.clave_contenido
+            LEFT JOIN persona p ON c.correo_autor = p.correo_principal
+            WHERE e.clave_evento = $1
         `, [id]);
 
         if (result.rows.length === 0) {

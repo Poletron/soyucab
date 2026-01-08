@@ -54,6 +54,19 @@ router.post('/generate', requireAuth, async (req, res) => {
  * GET /api/report/preview/:type
  * Obtiene los datos del reporte en JSON (para preview)
  */
+// Endpoint específico para datos crudos del mapa (JSON)
+router.get('/diaspora', requireAuth, async (req, res) => {
+    try {
+        const userEmail = req.userEmail;
+        const data = await reportService.getDiasporaReportData(userEmail);
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('Error fetching diaspora data:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Endpoint general para PDFs
 router.get('/preview/:type', requireAuth, async (req, res) => {
     try {
         const { type } = req.params;

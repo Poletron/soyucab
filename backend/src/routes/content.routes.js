@@ -13,14 +13,14 @@ const { requireAuth } = require('../middleware/auth.middleware');
  * Crear nueva publicación
  */
 router.post('/', requireAuth, async (req, res) => {
-    const { texto, visibilidad = 'Público', tipo = 'publicacion', evento } = req.body;
+    const { texto, visibilidad = 'Público', tipo = 'publicacion', evento, archivo_url } = req.body;
 
     if (!texto || texto.trim().length === 0) {
         return res.status(400).json({ success: false, error: 'El texto es requerido' });
     }
 
     try {
-        const result = await contentService.createContent(req.userEmail, texto, visibilidad, tipo, evento);
+        const result = await contentService.createContent(req.userEmail, texto, visibilidad, tipo, evento, archivo_url);
         res.status(201).json({
             success: true,
             message: tipo === 'evento' ? 'Evento creado' : 'Publicación creada',

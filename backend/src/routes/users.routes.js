@@ -95,5 +95,24 @@ router.get('/:email', requireAuth, async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
+/**
+ * GET /api/users/:email/posts
+ * Get posts by a specific user
+ */
+router.get('/:email/posts', requireAuth, async (req, res) => {
+    const { email } = req.params;
+
+    try {
+        const posts = await usersService.getUserPosts(email, req.userEmail);
+        res.json({
+            success: true,
+            count: posts.length,
+            data: posts
+        });
+    } catch (err) {
+        console.error('[USERS] Error getting user posts:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 module.exports = router;

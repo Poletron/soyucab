@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send, X, Image as ImageIcon, UserPlus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage } from '../services/api';
 import { useRole } from '../hooks/useRole';
 
 interface Comment {
@@ -34,7 +34,12 @@ interface Post {
   user_has_reacted?: boolean;
 }
 
-const MainFeed = () => {
+interface MainFeedProps {
+  onViewProfile?: (email: string) => void;
+  onNavigate?: (view: string) => void;
+}
+
+const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
   const { isOrg, isVisitor, isModerator } = useRole();
   const [postContent, setPostContent] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -42,6 +47,11 @@ const MainFeed = () => {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userStats, setUserStats] = useState<{ total_conexiones: number; total_grupos: number; total_publicaciones: number } | null>(null);
+
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Comments state
   const [activePostId, setActivePostId] = useState<number | null>(null);
@@ -82,18 +92,56 @@ const MainFeed = () => {
     loadStats();
   }, []);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setSelectedFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+    }
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleCreatePost = async () => {
-    if (!postContent.trim()) return;
+    if (!postContent.trim() && !selectedFile) return;
 
     setPosting(true);
     try {
-      const result = await createPost({ texto: postContent, visibilidad: 'Público' });
+      let imageUrl = undefined;
+
+      if (selectedFile) {
+        const uploadResult = await uploadImage(selectedFile);
+        if (uploadResult.success && uploadResult.url) {
+          imageUrl = uploadResult.url;
+        } else {
+          throw new Error('Error al subir imagen');
+        }
+      }
+
+      const result = await createPost({
+        texto: postContent,
+        visibilidad: 'Público',
+        archivo_url: imageUrl
+      });
+
       if (result.success) {
         setPostContent('');
+        clearFile();
         loadPosts(); // Refresh feed
       }
     } catch (err) {
       console.error('Error creating post:', err);
+      setError('Error al crear la publicación');
     } finally {
       setPosting(false);
     }
@@ -186,6 +234,7 @@ const MainFeed = () => {
     apellidos?: string;
     fotografia_url?: string;
     conexiones_comunes?: number;
+    status?: 'sent' | 'none';
   }
   const [suggestedConnections, setSuggestedConnections] = useState<Suggestion[]>([]);
 
@@ -283,17 +332,21 @@ const MainFeed = () => {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="space-y-2">
-              <Button variant="ghost" className="w-full justify-start p-2 h-auto">
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onNavigate && onNavigate('groups')}
+              >
                 <Users className="h-4 w-4 mr-2" />
                 Mis Grupos
               </Button>
-              <Button variant="ghost" className="w-full justify-start p-2 h-auto">
-                <Calendar className="h-4 w-4 mr-2" />
-                Eventos
-              </Button>
-              <Button variant="ghost" className="w-full justify-start p-2 h-auto">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Estadísticas
+              <Button
+                variant="ghost"
+                className="w-full justify-start p-2 h-auto"
+                onClick={() => onNavigate && onNavigate('profile')}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Mi Perfil
               </Button>
             </div>
           </CardContent>
@@ -318,6 +371,28 @@ const MainFeed = () => {
                     onChange={(e) => setPostContent(e.target.value)}
                     className="resize-none border-0 shadow-none text-lg placeholder:text-gray-400 min-h-[60px]"
                   />
+                  {/* Hidden File Input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
+
+                  {/* Preview Image */}
+                  {previewUrl && (
+                    <div className="relative mb-3 inline-block">
+                      <img src={previewUrl} alt="Preview" className="h-20 w-auto rounded-md object-cover border" />
+                      <button
+                        onClick={clearFile}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center mt-3">
                     <div className="flex space-x-2">
                       {isOrg ? (
@@ -333,7 +408,12 @@ const MainFeed = () => {
                         </>
                       ) : (
                         <>
-                          <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-600 hover:text-gray-800"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
                             <Camera className="h-4 w-4 mr-1" />
                             Foto
                           </Button>
@@ -351,7 +431,7 @@ const MainFeed = () => {
                     <Button
                       style={{ backgroundColor: '#ffc526' }}
                       className="text-white hover:opacity-90"
-                      disabled={!postContent.trim() || posting}
+                      disabled={(!postContent.trim() && !selectedFile) || posting}
                       onClick={handleCreatePost}
                     >
                       {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Publicar'}
@@ -392,12 +472,20 @@ const MainFeed = () => {
             <CardContent className="p-4">
               {/* Post Header */}
               <div className="flex items-start space-x-3 mb-4">
-                <Avatar>
+                <Avatar
+                  className="cursor-pointer hover:ring-2 hover:ring-blue-200 transition-all"
+                  onClick={() => onViewProfile && onViewProfile(post.correo_autor)}
+                >
                   <AvatarImage src={post.fotografia_url || `https://ui-avatars.com/api/?name=${encodeURIComponent((post.nombres || '') + ' ' + (post.apellidos || ''))}`} />
                   <AvatarFallback>{(post.nombres?.[0] || post.correo_autor?.[0])?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="font-medium">{post.nombres || post.correo_autor}</p>
+                  <p
+                    className="font-medium cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                    onClick={() => onViewProfile && onViewProfile(post.correo_autor)}
+                  >
+                    {post.nombres || post.correo_autor}
+                  </p>
                   <p className="text-sm text-gray-500">{post.tipo_contenido === 'EVENTO' ? '📅 Evento' : 'Publicación'}</p>
                   <p className="text-xs text-gray-400">{formatDate(post.fecha_hora_creacion)}</p>
                 </div>
@@ -409,6 +497,18 @@ const MainFeed = () => {
                   <p className="font-semibold text-lg mb-2">{post.evento_titulo}</p>
                 )}
                 <p className="whitespace-pre-line">{post.texto_contenido}</p>
+                {post.archivo_url && (
+                  <div className="mt-3 rounded-lg overflow-hidden border border-gray-100">
+                    <img
+                      src={post.archivo_url}
+                      alt="Contenido"
+                      className="w-full max-h-[500px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Post Actions */}
@@ -542,10 +642,24 @@ const MainFeed = () => {
                           size="sm"
                           variant="outline"
                           className="mt-2 text-xs h-6"
-                          style={{ borderColor: '#40b4e5', color: '#40b4e5' }}
-                          onClick={() => sendConnectionRequest(person.correo_principal)}
+                          style={{
+                            borderColor: person.status === 'sent' ? '#e2e8f0' : '#40b4e5',
+                            color: person.status === 'sent' ? '#94a3b8' : '#40b4e5',
+                            backgroundColor: person.status === 'sent' ? '#f1f5f9' : 'transparent'
+                          }}
+                          disabled={person.status === 'sent'}
+                          onClick={async () => {
+                            try {
+                              await sendConnectionRequest(person.correo_principal);
+                              setSuggestedConnections(prev =>
+                                prev.map(p => p.correo_principal === person.correo_principal ? { ...p, status: 'sent' } : p)
+                              );
+                            } catch (err) {
+                              console.error('Error connecting:', err);
+                            }
+                          }}
                         >
-                          Conectar
+                          {person.status === 'sent' ? 'Pendiente' : 'Conectar'}
                         </Button>
                       </div>
                     </div>

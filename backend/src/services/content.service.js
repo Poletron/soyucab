@@ -4,11 +4,12 @@
  */
 
 const db = require('../config/db');
+const notificationsService = require('./notifications.service');
 
 /**
  * Create new content (post or event)
  */
-async function createContent(userEmail, texto, visibilidad, tipo, evento = null) {
+async function createContent(userEmail, texto, visibilidad, tipo, evento = null, archivo_url = null) {
     const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
@@ -16,10 +17,10 @@ async function createContent(userEmail, texto, visibilidad, tipo, evento = null)
 
         // Insert content
         const insertContenido = await client.query(
-            `INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad)
-             VALUES ($1, NOW(), $2, $3)
+            `INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad, archivo_url)
+             VALUES ($1, NOW(), $2, $3, $4)
              RETURNING clave_contenido, fecha_hora_creacion`,
-            [userEmail, texto, visibilidad]
+            [userEmail, texto, visibilidad, archivo_url]
         );
         const { clave_contenido, fecha_hora_creacion } = insertContenido.rows[0];
 
@@ -69,6 +70,21 @@ async function addReaction(userEmail, contentId, reaccion = 'Me Gusta') {
          ON CONFLICT DO NOTHING`,
         [userEmail, contentId, reaccion]
     );
+
+    // Notify author
+    try {
+        const authorEmail = await getContentAuthor(contentId);
+        if (authorEmail && authorEmail !== userEmail) {
+            await notificationsService.createNotification(
+                authorEmail,
+                'Reacción',
+                `Alguien reaccionó a tu publicación: ${reaccion}`,
+                `/post/${contentId}`
+            );
+        }
+    } catch (err) {
+        console.error('Error sending notification:', err);
+    }
 }
 
 /**
@@ -91,6 +107,22 @@ async function addComment(userEmail, contentId, texto) {
          RETURNING clave_comentario, fecha_hora_comentario`,
         [contentId, userEmail, texto]
     );
+
+    // Notify author of the content
+    try {
+        const authorEmail = await getContentAuthor(contentId);
+        if (authorEmail && authorEmail !== userEmail) {
+            await notificationsService.createNotification(
+                authorEmail,
+                'Comentario',
+                'Alguien comentó en tu publicación',
+                `/post/${contentId}`
+            );
+        }
+    } catch (err) {
+        console.error('Error sending comment notification:', err);
+    }
+
     return result.rows[0];
 }
 

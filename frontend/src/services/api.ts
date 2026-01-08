@@ -45,7 +45,7 @@ export async function getHealthStatus() {
 // ============================================
 
 export async function getFeed() {
-    const res = await apiFetch('/api/feed');
+    const res = await apiFetch(`/api/feed?_=${Date.now()}`);
     return res.json();
 }
 
@@ -280,6 +280,7 @@ export interface CreatePostData {
         ciudad?: string;
         pais?: string;
     };
+    archivo_url?: string;
 }
 
 export async function createPost(data: CreatePostData) {
@@ -637,7 +638,7 @@ export async function joinGroup(name: string) {
 
 export async function leaveGroup(name: string) {
     const res = await apiFetch(`/api/groups/${encodeURIComponent(name)}/leave`, {
-        method: 'POST',
+        method: 'DELETE',
     });
     return res.json();
 }
@@ -678,5 +679,33 @@ export async function registerAsTutor(data: { subjects: string, experience: stri
         method: 'POST',
         body: JSON.stringify(data),
     });
+    return res.json();
+}
+
+// ============================================
+// Notificaciones
+// ============================================
+
+export interface Notification {
+    clave_notificacion: number;
+    tipo_notificacion: string;
+    mensaje: string;
+    url_accion?: string;
+    leida: boolean;
+    fecha_creacion: string;
+}
+
+export async function getNotifications(): Promise<{ success: boolean; data: Notification[]; unreadCount: number }> {
+    const res = await apiFetch('/api/notifications');
+    return res.json();
+}
+
+export async function markNotificationRead(id: number) {
+    const res = await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+    return res.json();
+}
+
+export async function markAllNotificationsRead() {
+    const res = await apiFetch(`/api/notifications/read-all`, { method: 'PUT' });
     return res.json();
 }

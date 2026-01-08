@@ -66,16 +66,39 @@ async function getGroupVisibility(nombre) {
     return result.rows.length > 0 ? result.rows[0].visibilidad : null;
 }
 
+const notificationsService = require('./notifications.service');
+
 /**
  * Join a group
  */
 async function joinGroup(userEmail, nombreGrupo) {
-    await db.query(
+    const result = await db.query(
         `INSERT INTO PERTENECE_A_GRUPO (correo_persona, nombre_grupo, fecha_union, rol_en_grupo)
          VALUES ($1, $2, NOW(), 'Miembro')
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT DO NOTHING
+         RETURNING *`,
         [userEmail, nombreGrupo]
     );
+
+    // Notify group creator if join was successful
+    if (result.rowCount > 0) {
+        try {
+            const creatorResult = await db.query(
+                'SELECT correo_creador FROM GRUPO_INTERES WHERE nombre_grupo = $1',
+                [nombreGrupo]
+            );
+            if (creatorResult.rows.length > 0 && creatorResult.rows[0].correo_creador !== userEmail) {
+                await notificationsService.createNotification(
+                    creatorResult.rows[0].correo_creador,
+                    'Grupo',
+                    `Alguien se unió a tu grupo "${nombreGrupo}"`,
+                    `/groups/${encodeURIComponent(nombreGrupo)}`
+                );
+            }
+        } catch (err) {
+            console.error('Error sending group join notification:', err);
+        }
+    }
 }
 
 /**

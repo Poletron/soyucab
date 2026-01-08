@@ -4,6 +4,7 @@
  */
 
 const db = require('../config/db');
+const notificationsService = require('./notifications.service');
 
 /**
  * Get accepted connections for a user
@@ -78,6 +79,14 @@ async function sendConnectionRequest(fromEmail, toEmail) {
         INSERT INTO SOLICITA_CONEXION (correo_solicitante, correo_solicitado, fecha_solicitud, estado_solicitud)
         VALUES ($1, $2, NOW(), 'Pendiente')
     `, [fromEmail, toEmail]);
+
+    // Create notification for target user
+    await notificationsService.createNotification(
+        toEmail,
+        'Conexión',
+        'Has recibido una solicitud de conexión',
+        `/profile/${encodeURIComponent(fromEmail)}`
+    );
 }
 
 /**
@@ -90,6 +99,17 @@ async function acceptRequest(requestId, userEmail) {
         WHERE clave_solicitud = $1 AND correo_solicitado = $2 AND estado_solicitud = 'Pendiente'
         RETURNING *
     `, [requestId, userEmail]);
+
+    if (result.rowCount > 0) {
+        const request = result.rows[0];
+        // Notify the requester that their request was accepted
+        await notificationsService.createNotification(
+            request.correo_solicitante,
+            'Conexión',
+            'Tu solicitud de conexión ha sido aceptada',
+            `/profile/${encodeURIComponent(userEmail)}`
+        );
+    }
 
     return result.rowCount > 0;
 }

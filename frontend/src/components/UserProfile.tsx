@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users } from 'lucide-react';
+import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import {
   getProfile,
   sendConnectionRequest,
+  acceptConnectionRequest,
   startConversation,
-  getCurrentUser
+  getCurrentUser,
+  getUserProfile
 } from '../services/api';
 
 interface ProfileData {
   correo_principal?: string;
-  nombres?: string;
-  apellidos?: string;
+  nombre?: string;
+  apellido?: string;
   biografia?: string;
   ciudad_residencia?: string;
   pais_residencia?: string;
@@ -25,44 +26,73 @@ interface ProfileData {
   tipo?: 'Persona' | 'Organizacion';
   rif?: string;
   entityType?: string;
+  estado_conexion?: 'conectado' | 'pendiente_enviada' | 'pendiente_recibida' | 'no_conectado';
+  solicitud_id?: number;
 }
 
-const UserProfile = () => {
-  const navigate = useNavigate();
+interface UserProfileProps {
+  onNavigate?: (view: string) => void;
+  targetEmail?: string; // Email of the user to view (if not current user)
+}
+
+const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
+  // Removed useNavigate since we are using state-based routing in App.tsx
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [messaging, setMessaging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentUser = getCurrentUser();
 
+  // Determine if viewing own profile
+  const isViewingOwnProfile = !targetEmail || targetEmail === currentUser?.email;
+
   useEffect(() => {
     loadProfile();
-  }, []);
+  }, [targetEmail]); // Reload when target changes
 
   const loadProfile = async () => {
     try {
       setLoading(true);
-      const result = await getProfile();
+      setError(null);
+
+      let result;
+      if (targetEmail && targetEmail !== currentUser?.email) {
+        // Loading another user's profile
+        result = await getUserProfile(targetEmail);
+      } else {
+        // Loading current user's profile
+        result = await getProfile();
+      }
+
       console.log('Profile result:', result);
-      if (result.success && result.profile) {
+
+      if (result.success && (result.profile || result.data)) {
+        const profileData = result.profile || result.data;
         setProfile({
-          correo_principal: result.profile.email,
-          nombres: result.profile.nombre,
-          apellidos: result.profile.apellido,
-          biografia: result.profile.biografia,
-          ciudad_residencia: result.profile.ciudad_residencia,
-          pais_residencia: result.profile.pais_residencia || 'Venezuela',
-          fecha_registro: result.profile.fecha_registro,
-          fotografia_url: result.profile.foto,
-          // Org specific
-          tipo: result.profile.tipo,
-          rif: result.profile.rif,
-          entityType: result.profile.tipo_entidad,
+          correo_principal: profileData.email || profileData.correo_principal,
+          nombre: profileData.nombre || profileData.nombres,
+          apellido: profileData.apellido || profileData.apellidos,
+          biografia: profileData.biografia,
+          ciudad_residencia: profileData.ciudad_residencia,
+          pais_residencia: profileData.pais_residencia || 'Venezuela',
+          fecha_registro: profileData.fecha_registro,
+          fotografia_url: profileData.foto || profileData.fotografia_url,
+          total_conexiones: profileData.total_conexiones,
+          total_publicaciones: profileData.total_publicaciones,
+          tipo: profileData.tipo,
+          rif: profileData.rif,
+          entityType: profileData.tipo_entidad,
+          estado_conexion: profileData.estado_conexion,
+          solicitud_id: profileData.solicitud_id,
         });
+      } else {
+        setError('No se pudo cargar el perfil');
       }
     } catch (err) {
       console.error('Error loading profile:', err);
+      setError('Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -70,11 +100,29 @@ const UserProfile = () => {
 
   const handleConnect = async () => {
     if (!profile?.correo_principal) return;
+
     try {
       setConnecting(true);
-      await sendConnectionRequest(profile.correo_principal);
+
+      if (profile.estado_conexion === 'pendiente_recibida' && profile.solicitud_id) {
+        // Accept request
+        const result = await acceptConnectionRequest(profile.solicitud_id);
+        if (result.success) {
+          setProfile(prev => prev ? { ...prev, estado_conexion: 'conectado' } : null);
+        } else {
+          console.error('Accept failed:', result.error);
+        }
+      } else {
+        // Send request
+        const result = await sendConnectionRequest(profile.correo_principal);
+        if (result.success) {
+          setProfile(prev => prev ? { ...prev, estado_conexion: 'pendiente_enviada' } : null);
+        } else {
+          console.error('Send request failed:', result.error);
+        }
+      }
     } catch (err) {
-      console.error('Error sending connection request:', err);
+      console.error('Error handling connection:', err);
     } finally {
       setConnecting(false);
     }
@@ -85,7 +133,7 @@ const UserProfile = () => {
     try {
       setMessaging(true);
       await startConversation(profile.correo_principal);
-      navigate('/messages');
+      if (onNavigate) onNavigate('messaging');
     } catch (err) {
       console.error('Error starting conversation:', err);
     } finally {
@@ -99,8 +147,8 @@ const UserProfile = () => {
     return date.toLocaleDateString('es-VE', { month: 'long', year: 'numeric' });
   };
 
-  const isOwnProfile = profile?.correo_principal === currentUser?.email;
-  const fullName = profile ? `${profile.nombres || ''} ${profile.apellidos || ''}`.trim() : 'Usuario';
+  const isOwnProfile = isViewingOwnProfile;
+  const fullName = profile ? `${profile.nombre || ''} ${profile.apellido || ''}`.trim() : 'Usuario';
   const initials = fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   if (loading) {
@@ -169,7 +217,7 @@ const UserProfile = () => {
                 <Button
                   variant="outline"
                   className="flex items-center space-x-2 px-6"
-                  onClick={() => navigate('/edit-profile')}
+                  onClick={() => onNavigate && onNavigate('edit-profile')}
                 >
                   <Edit className="h-4 w-4" />
                   <span>Editar Perfil</span>
@@ -177,13 +225,22 @@ const UserProfile = () => {
               ) : (
                 <>
                   <Button
-                    style={{ backgroundColor: '#40b4e5' }}
-                    className="text-white hover:opacity-90 px-6"
+                    style={{
+                      backgroundColor: profile?.estado_conexion === 'conectado' ? '#10b981' :
+                        profile?.estado_conexion?.startsWith('pendiente') ? '#94a3b8' : '#40b4e5'
+                    }}
+                    className="text-white hover:opacity-90 px-6 disabled:opacity-70"
                     onClick={handleConnect}
-                    disabled={connecting}
+                    disabled={connecting || (profile?.estado_conexion !== 'no_conectado' && profile?.estado_conexion !== 'pendiente_recibida')}
                   >
-                    {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
-                    Conectar
+                    {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> :
+                      profile?.estado_conexion === 'conectado' ? <Check className="h-4 w-4 mr-2" /> :
+                        profile?.estado_conexion === 'pendiente_enviada' ? <Clock className="h-4 w-4 mr-2" /> :
+                          <UserPlus className="h-4 w-4 mr-2" />}
+
+                    {profile?.estado_conexion === 'conectado' ? 'Conectado' :
+                      profile?.estado_conexion === 'pendiente_enviada' ? 'Pendiente' :
+                        profile?.estado_conexion === 'pendiente_recibida' ? 'Aceptar Solicitud' : 'Conectar'}
                   </Button>
                   <Button
                     variant="outline"

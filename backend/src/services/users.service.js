@@ -179,9 +179,53 @@ async function getConnectionSuggestions(userEmail) {
     return result.rows;
 }
 
+/**
+ * Get posts by a specific user
+ * @param {string} targetEmail - Email of the user whose posts to fetch
+ * @param {string} requesterEmail - Current user's email
+ * @returns {Promise<Array>} - Array of posts
+ */
+async function getUserPosts(targetEmail, requesterEmail) {
+    const sql = `
+        SELECT 
+            c.clave_contenido,
+            c.correo_autor,
+            c.texto_contenido,
+            c.fecha_hora_creacion,
+            c.visibilidad,
+            c.archivo_url,
+            p.nombres,
+            p.apellidos,
+            m.fotografia_url,
+            (SELECT COUNT(*) FROM REACCIONA_A r WHERE r.clave_contenido = c.clave_contenido) as likes_count,
+            (SELECT COUNT(*) FROM COMENTARIO cm WHERE cm.clave_contenido = c.clave_contenido) as comments_count,
+            EXISTS(SELECT 1 FROM REACCIONA_A r WHERE r.clave_contenido = c.clave_contenido AND r.correo_miembro = $2) as user_has_reacted
+        FROM CONTENIDO c
+        LEFT JOIN PERSONA p ON c.correo_autor = p.correo_principal
+        LEFT JOIN MIEMBRO m ON c.correo_autor = m.correo_principal
+        WHERE c.correo_autor = $1
+        AND (
+            c.visibilidad = 'Público'
+            OR c.correo_autor = $2
+            OR (c.visibilidad = 'Solo Conexiones' AND EXISTS(
+                SELECT 1 FROM SOLICITA_CONEXION sc
+                WHERE sc.estado_solicitud = 'Aceptada'
+                AND ((sc.correo_solicitante = $1 AND sc.correo_solicitado = $2)
+                  OR (sc.correo_solicitante = $2 AND sc.correo_solicitado = $1))
+            ))
+        )
+        ORDER BY c.fecha_hora_creacion DESC
+        LIMIT 20
+    `;
+
+    const result = await db.queryAsUser(sql, [targetEmail, requesterEmail], requesterEmail);
+    return result.rows;
+}
+
 module.exports = {
     searchUsers,
     getUserProfile,
     getConnectionStatus,
-    getConnectionSuggestions
+    getConnectionSuggestions,
+    getUserPosts
 };

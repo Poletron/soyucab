@@ -96,6 +96,21 @@ async function getOfertasReportData(userEmail) {
     return result.rows;
 }
 
+async function getDiasporaReportData(userEmail) {
+    // Agrupa usuarios por país de residencia
+    const sql = `
+        SELECT 
+            pais_residencia, 
+            COUNT(*)::int as total 
+        FROM PERSONA 
+        WHERE pais_residencia IS NOT NULL
+        GROUP BY pais_residencia
+        ORDER BY total DESC
+    `;
+    const result = await db.queryAsUser(sql, [], userEmail);
+    return result.rows;
+}
+
 // ============================================
 // INTEGRACIÓN CON JSREPORT
 // ============================================
@@ -172,6 +187,9 @@ async function generateReport(reportType, userEmail) {
         case 'ofertas':
             data = await getOfertasReportData(userEmail);
             break;
+        case 'diaspora':
+            data = await getDiasporaReportData(userEmail);
+            break;
         default:
             throw new Error(`Tipo de reporte no válido: ${reportType}`);
     }
@@ -206,5 +224,6 @@ module.exports = {
     getReferentesReportData,
     getTutoriasReportData,
     getNexosReportData,
-    getOfertasReportData
+    getOfertasReportData,
+    getDiasporaReportData
 };

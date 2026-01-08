@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Send,
   Search,
@@ -9,7 +9,6 @@ import {
   Smile,
   ArrowLeft,
   UserPlus,
-  Circle,
   CheckCheck,
   Check,
   Loader2
@@ -51,8 +50,9 @@ interface ConversationDisplay {
 }
 
 export default function MessagingSystem() {
+  // State
   const [conversations, setConversations] = useState<ConversationDisplay[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<ConversationDisplay | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,24 +63,42 @@ export default function MessagingSystem() {
   const [sending, setSending] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [newChatSearch, setNewChatSearch] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { isVisitor } = useRole();
 
+  // Refs
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const selectedConversationIdRef = useRef<number | null>(null);
+  const isInitialLoadRef = useRef(true);
+
+  const { isVisitor } = useRole();
   const currentUser = getCurrentUser();
 
-  // Load conversations on mount
+  // Keep ref in sync with state
   useEffect(() => {
-    loadConversations();
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  // Derived state for selected conversation
+  const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
+
+  // Format time helper
+  const formatTime = useCallback((dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'Ayer';
+    } else {
+      return date.toLocaleDateString('es-VE');
+    }
   }, []);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const loadConversations = async () => {
+  // Load conversations (does NOT auto-select or trigger message loading)
+  const loadConversations = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const result = await getConversations();
       if (result.success && result.data) {
         const mapped: ConversationDisplay[] = result.data.map((conv: Conversation) => ({
@@ -101,57 +119,113 @@ export default function MessagingSystem() {
           unreadCount: Number(conv.mensajes_sin_leer) || 0
         }));
         setConversations(mapped);
-        if (mapped.length > 0 && !selectedConversation) {
-          setSelectedConversation(mapped[0]);
-          loadMessages(mapped[0].id);
+
+        // Only auto-select on FIRST load if nothing selected
+        if (isInitialLoadRef.current && mapped.length > 0 && !selectedConversationIdRef.current) {
+          isInitialLoadRef.current = false;
+          setSelectedConversationId(mapped[0].id);
         }
       }
     } catch (err) {
       console.error('Error loading conversations:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, [formatTime]);
 
-  const loadMessages = async (conversationId: number) => {
+  // Load messages for a specific conversation
+  const loadMessages = useCallback(async (conversationId: number) => {
     try {
       setLoadingMessages(true);
       const result = await getMessages(conversationId);
       if (result.success && result.data) {
-        setMessages(result.data);
+        // Only update if this is still the selected conversation
+        if (selectedConversationIdRef.current === conversationId) {
+          setMessages(result.data);
+        }
       }
     } catch (err) {
       console.error('Error loading messages:', err);
     } finally {
       setLoadingMessages(false);
     }
-  };
+  }, []);
 
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  // Silent poll for messages (no loading state)
+  const pollMessages = useCallback(async () => {
+    const currentId = selectedConversationIdRef.current;
+    if (!currentId) return;
 
-    if (diffDays === 0) {
-      return date.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-    } else if (diffDays === 1) {
-      return 'Ayer';
-    } else {
-      return date.toLocaleDateString('es-VE');
+    try {
+      const result = await getMessages(currentId);
+      if (result.success && result.data && selectedConversationIdRef.current === currentId) {
+        setMessages(prev => {
+          // Only update if there's actually new data
+          if (prev.length !== result.data.length) {
+            return result.data;
+          }
+          const lastPrev = prev[prev.length - 1]?.clave_mensaje;
+          const lastNew = result.data[result.data.length - 1]?.clave_mensaje;
+          if (lastPrev !== lastNew) {
+            return result.data;
+          }
+          return prev;
+        });
+      }
+    } catch (err) {
+      console.error('Error polling messages:', err);
     }
-  };
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Load messages when selected conversation changes
+  useEffect(() => {
+    if (selectedConversationId) {
+      loadMessages(selectedConversationId);
+    } else {
+      setMessages([]);
+    }
+  }, [selectedConversationId, loadMessages]);
+
+  // Polling interval
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadConversations(true);
+      pollMessages();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [loadConversations, pollMessages]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length]);
+
+  // Handlers
+  const handleSelectConversation = useCallback((conversationId: number) => {
+    setSelectedConversationId(conversationId);
+    if (window.innerWidth < 768) {
+      setShowConversations(false);
+    }
+  }, []);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || sending) return;
+    if (!newMessage.trim() || !selectedConversationId || sending) return;
 
     try {
       setSending(true);
-      const result = await sendMessage(selectedConversation.id, newMessage.trim());
+      const result = await sendMessage(selectedConversationId, newMessage.trim());
       if (result.success) {
         setNewMessage('');
-        // Reload messages
-        loadMessages(selectedConversation.id);
+        loadMessages(selectedConversationId);
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -166,7 +240,12 @@ export default function MessagingSystem() {
       if (result.success) {
         setShowNewChat(false);
         setNewChatSearch('');
-        loadConversations();
+        setSearchResults([]);
+        await loadConversations();
+        // Select the new conversation if we got an ID back
+        if (result.data?.clave_conversacion) {
+          setSelectedConversationId(result.data.clave_conversacion);
+        }
       }
     } catch (err) {
       console.error('Error starting conversation:', err);
@@ -189,10 +268,12 @@ export default function MessagingSystem() {
     }
   };
 
+  // Filtered conversations
   const filteredConversations = conversations.filter(conversation =>
     conversation.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Render helpers
   const renderConversationsList = () => (
     <div className="w-full md:w-96 border-r border-gray-200 bg-white">
       {/* Header */}
@@ -236,22 +317,14 @@ export default function MessagingSystem() {
             filteredConversations.map((conversation) => (
               <div
                 key={conversation.id}
-                onClick={() => {
-                  setSelectedConversation(conversation);
-                  loadMessages(conversation.id);
-                  if (window.innerWidth < 768) {
-                    setShowConversations(false);
-                  }
-                }}
-                className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversation?.id === conversation.id ? 'bg-blue-50 border border-blue-200' : ''
+                onClick={() => handleSelectConversation(conversation.id)}
+                className={`flex items-center p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversationId === conversation.id ? 'bg-blue-50 border border-blue-200' : ''
                   }`}
               >
-                <div className="relative">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={conversation.user.avatar} />
-                    <AvatarFallback>{conversation.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                </div>
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={conversation.user.avatar} />
+                  <AvatarFallback>{conversation.user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback>
+                </Avatar>
 
                 <div className="ml-3 flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -263,7 +336,7 @@ export default function MessagingSystem() {
                     {conversation.unreadCount > 0 && (
                       <Badge
                         variant="secondary"
-                        className="ml-2 bg-blue-500 text-white"
+                        className="ml-2 text-white"
                         style={{ backgroundColor: '#40b4e5' }}
                       >
                         {conversation.unreadCount}
@@ -344,7 +417,7 @@ export default function MessagingSystem() {
                   className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe
-                    ? 'bg-blue-500 text-white'
+                    ? 'text-white'
                     : 'bg-gray-100 text-gray-900'
                     }`}
                     style={isMe ? { backgroundColor: '#40b4e5' } : {}}
@@ -430,7 +503,7 @@ export default function MessagingSystem() {
             ) : (
               searchResults.map((user, index) => (
                 <div
-                  key={index}
+                  key={user.correo_principal || index}
                   className="flex items-center p-2 rounded hover:bg-gray-50 cursor-pointer"
                   onClick={() => handleStartNewChat(user.correo_principal)}
                 >

@@ -113,6 +113,8 @@ async function markMessagesAsRead(conversationId, userEmail) {
     );
 }
 
+const notificationsService = require('./notifications.service');
+
 /**
  * Send a message to a conversation
  * @param {number} conversationId - Conversation ID
@@ -128,6 +130,27 @@ async function sendMessage(conversationId, userEmail, text) {
         [conversationId, userEmail, text.trim()],
         userEmail
     );
+
+    // Notify other participants in the conversation
+    try {
+        const otherParticipants = await db.query(
+            `SELECT correo_participante FROM PARTICIPA_EN 
+             WHERE fk_conversacion = $1 AND correo_participante != $2`,
+            [conversationId, userEmail]
+        );
+
+        for (const row of otherParticipants.rows) {
+            await notificationsService.createNotification(
+                row.correo_participante,
+                'Mensaje',
+                'Tienes un nuevo mensaje',
+                `/messages/${conversationId}`
+            );
+        }
+    } catch (err) {
+        console.error('Error sending message notification:', err);
+    }
+
     return result.rows[0];
 }
 

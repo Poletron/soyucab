@@ -147,7 +147,11 @@ async function getUserProfile(email) {
             p.pais_residencia,
             p.ciudad_residencia,
             p.biografia,
-            'Persona' as tipo
+            'Persona' as tipo,
+            (SELECT COUNT(*) FROM SOLICITA_CONEXION sc 
+             WHERE (sc.correo_solicitante = m.correo_principal OR sc.correo_solicitado = m.correo_principal) 
+             AND sc.estado_solicitud = 'Aceptada') as total_conexiones,
+            (SELECT COUNT(*) FROM CONTENIDO c WHERE c.correo_autor = m.correo_principal) as total_publicaciones
          FROM MIEMBRO m
          JOIN PERSONA p ON m.correo_principal = p.correo_principal
          WHERE m.correo_principal = $1`,
@@ -171,7 +175,11 @@ async function getUserProfile(email) {
             eo.descripcion as biografia,
             eo.pais_ubicacion as pais_residencia,
             eo.ciudad_ubicacion as ciudad_residencia,
-            'Organizacion' as tipo
+            'Organizacion' as tipo,
+            (SELECT COUNT(*) FROM SOLICITA_CONEXION sc 
+             WHERE (sc.correo_solicitante = m.correo_principal OR sc.correo_solicitado = m.correo_principal) 
+             AND sc.estado_solicitud = 'Aceptada') as total_conexiones,
+            (SELECT COUNT(*) FROM CONTENIDO c WHERE c.correo_autor = m.correo_principal) as total_publicaciones
          FROM MIEMBRO m
          JOIN ENTIDAD_ORGANIZACIONAL eo ON m.correo_principal = eo.correo_principal
          WHERE m.correo_principal = $1`,

@@ -28,6 +28,7 @@ const tutoringRoutes = require('./routes/tutoring.routes');
 const usersRoutes = require('./routes/users.routes');
 const offersRoutes = require('./routes/offers.routes');
 const eventsRoutes = require('./routes/events.routes');
+const notificationsRoutes = require('./routes/notifications.routes');
 const path = require('path');
 
 // Configuración
@@ -98,6 +99,9 @@ app.use('/api/events', eventsRoutes);
 
 // Ofertas Laborales
 app.use('/api/offers', offersRoutes);
+
+// Notificaciones
+app.use('/api/notifications', notificationsRoutes);
 
 // Servir archivos estáticos (imágenes subidas)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
