@@ -99,4 +99,26 @@ router.delete('/:nombre/leave', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/groups/:nombre/posts
+ * Obtener publicaciones de un grupo específico
+ */
+const contentService = require('../services/content.service');
+
+router.get('/:nombre/posts', requireAuth, async (req, res) => {
+    const { nombre } = req.params;
+
+    try {
+        const posts = await contentService.getGroupPosts(nombre);
+        res.json({
+            success: true,
+            count: posts.length,
+            data: posts
+        });
+    } catch (err) {
+        console.error('[GROUPS POSTS] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

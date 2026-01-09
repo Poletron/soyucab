@@ -125,4 +125,50 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/events/:id/close
+ * Cerrar un evento y crear reseña automática (llama al SP)
+ * Solo el organizador del evento puede cerrarlo
+ */
+router.post('/:id/close', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userEmail = req.userEmail;
+
+        // Verificar que el usuario sea el organizador del evento
+        const eventCheck = await db.query(`
+            SELECT c.correo_autor, e.titulo
+            FROM evento e
+            JOIN contenido c ON e.fk_contenido = c.clave_contenido
+            WHERE e.clave_evento = $1 OR e.fk_contenido = $1
+        `, [id]);
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Evento no encontrado' });
+        }
+
+        if (eventCheck.rows[0].correo_autor !== userEmail) {
+            return res.status(403).json({ success: false, error: 'Solo el organizador puede cerrar el evento' });
+        }
+
+        // Obtener el fk_contenido del evento
+        const fkContenido = await db.query(`
+            SELECT fk_contenido FROM evento WHERE clave_evento = $1 OR fk_contenido = $1
+        `, [id]);
+
+        const claveContenido = fkContenido.rows[0].fk_contenido;
+
+        // Llamar al stored procedure
+        await db.queryAsUser(`CALL SP_CERRAR_EVENTO_Y_CREAR_RESEÑA($1)`, [claveContenido], userEmail);
+
+        res.json({
+            success: true,
+            message: `Evento "${eventCheck.rows[0].titulo}" cerrado. Se ha creado un borrador de reseña en tu perfil.`
+        });
+    } catch (err) {
+        console.error('Error closing event:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

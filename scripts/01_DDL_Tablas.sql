@@ -81,7 +81,31 @@ CREATE TABLE MENSAJE (
 );
 
 -- =============================================================================
--- 3. CONTENIDO E INTERACCIONES
+-- 3. GRUPOS DE INTERÉS
+-- =============================================================================
+
+CREATE TABLE GRUPO_INTERES (
+    nombre_grupo VARCHAR(150) PRIMARY KEY,
+    descripcion_grupo TEXT,
+    visibilidad VARCHAR(20) NOT NULL,
+    correo_creador VARCHAR(255) NOT NULL,
+    fecha_creacion TIMESTAMP NOT NULL,
+    CONSTRAINT CK_VISIBILIDAD_SEGURA CHECK (visibilidad IN ('Público', 'Privado')),
+    CONSTRAINT fk_grupo_creador FOREIGN KEY (correo_creador) REFERENCES MIEMBRO(correo_principal)
+);
+
+CREATE TABLE PERTENECE_A_GRUPO (
+    clave_pertenencia SERIAL PRIMARY KEY,
+    correo_persona VARCHAR(255) NOT NULL,
+    nombre_grupo VARCHAR(150) NOT NULL,
+    fecha_union TIMESTAMP NOT NULL,
+    rol_en_grupo VARCHAR(30) NOT NULL CHECK (rol_en_grupo IN ('Miembro', 'Moderador', 'Administrador')),
+    CONSTRAINT fk_pert_persona FOREIGN KEY (correo_persona) REFERENCES PERSONA(correo_principal),
+    CONSTRAINT fk_pert_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo)
+);
+
+-- =============================================================================
+-- 4. CONTENIDO E INTERACCIONES
 -- =============================================================================
 
 CREATE TABLE CONTENIDO (
@@ -91,8 +115,14 @@ CREATE TABLE CONTENIDO (
     texto_contenido TEXT,
     visibilidad VARCHAR(30) NOT NULL CHECK (visibilidad IN ('Público', 'Solo Conexiones', 'Privado')),
     archivo_url VARCHAR(255),
-    CONSTRAINT fk_contenido_autor FOREIGN KEY (correo_autor) REFERENCES MIEMBRO(correo_principal)
+    -- FK opcional para posts de grupo (NULL = feed global)
+    nombre_grupo VARCHAR(150) DEFAULT NULL,
+    CONSTRAINT fk_contenido_autor FOREIGN KEY (correo_autor) REFERENCES MIEMBRO(correo_principal),
+    CONSTRAINT fk_contenido_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo)
 );
+
+-- Índice para optimizar consultas de feed de grupo
+CREATE INDEX idx_contenido_nombre_grupo ON CONTENIDO(nombre_grupo);
 
 CREATE TABLE PUBLICACION (
     clave_publicacion SERIAL PRIMARY KEY,
@@ -160,7 +190,7 @@ CREATE TABLE REACCIONA_COMENTARIO (
 
 
 -- =============================================================================
--- 4. CONEXIONES SOCIALES
+-- 5. CONEXIONES SOCIALES
 -- =============================================================================
 
 CREATE TABLE SOLICITA_CONEXION (
@@ -195,28 +225,8 @@ CREATE TABLE TIENE_NEXO (
 );
 
 -- =============================================================================
--- 5. GRUPOS, TUTORÍAS Y CONFIGURACIÓN
+-- 6. TUTORÍAS Y CONFIGURACIÓN
 -- =============================================================================
-
-CREATE TABLE GRUPO_INTERES (
-    nombre_grupo VARCHAR(150) PRIMARY KEY,
-    descripcion_grupo TEXT,
-    visibilidad VARCHAR(20) NOT NULL,
-    correo_creador VARCHAR(255) NOT NULL,
-    fecha_creacion TIMESTAMP NOT NULL,
-    CONSTRAINT CK_VISIBILIDAD_SEGURA CHECK (visibilidad IN ('Público', 'Privado')),
-    CONSTRAINT fk_grupo_creador FOREIGN KEY (correo_creador) REFERENCES MIEMBRO(correo_principal)
-);
-
-CREATE TABLE PERTENECE_A_GRUPO (
-    clave_pertenencia SERIAL PRIMARY KEY,
-    correo_persona VARCHAR(255) NOT NULL,
-    nombre_grupo VARCHAR(150) NOT NULL,
-    fecha_union TIMESTAMP NOT NULL,
-    rol_en_grupo VARCHAR(30) NOT NULL CHECK (rol_en_grupo IN ('Miembro', 'Moderador', 'Administrador')),
-    CONSTRAINT fk_pert_persona FOREIGN KEY (correo_persona) REFERENCES PERSONA(correo_principal),
-    CONSTRAINT fk_pert_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo)
-);
 
 CREATE TABLE TUTORIA (
     clave_tutoria SERIAL PRIMARY KEY,
@@ -248,7 +258,7 @@ CREATE TABLE CONFIGURACION (
 );
 
 -- =============================================================================
--- 6. OPORTUNIDADES (OFERTAS LABORALES)
+-- 7. OPORTUNIDADES (OFERTAS LABORALES)
 -- =============================================================================
 
 CREATE TABLE OFERTA_LABORAL (
@@ -277,7 +287,7 @@ CREATE TABLE SE_POSTULA (
 );
 
 -- =============================================================================
--- 7. ROLES Y PERMISOS
+-- 8. ROLES Y PERMISOS
 -- =============================================================================
 
 CREATE TABLE ROL (
@@ -292,4 +302,20 @@ CREATE TABLE MIEMBRO_POSEE_ROL (
     fecha_asignacion TIMESTAMP NOT NULL,
     CONSTRAINT fk_posee_miembro FOREIGN KEY (correo_miembro) REFERENCES MIEMBRO(correo_principal),
     CONSTRAINT fk_posee_rol FOREIGN KEY (nombre_rol) REFERENCES ROL(nombre_rol)
+);
+
+-- =============================================================================
+-- 9. SISTEMA DE NOTIFICACIONES (Requisito implícito RF 7.2)
+-- =============================================================================
+
+CREATE TABLE NOTIFICACION (
+    clave_notificacion SERIAL PRIMARY KEY,
+    correo_usuario VARCHAR(255) NOT NULL,
+    tipo_notificacion VARCHAR(50) NOT NULL CHECK (tipo_notificacion IN ('Sistema', 'Conexión', 'Reacción', 'Comentario', 'Mensaje', 'Grupo', 'Evento')),
+    mensaje TEXT NOT NULL,
+    url_accion VARCHAR(255),
+    leida BOOLEAN DEFAULT FALSE,
+    fecha_creacion TIMESTAMP DEFAULT NOW(),
+    
+    CONSTRAINT fk_notif_usuario FOREIGN KEY (correo_usuario) REFERENCES MIEMBRO(correo_principal)
 );

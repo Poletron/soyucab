@@ -9,18 +9,18 @@ const notificationsService = require('./notifications.service');
 /**
  * Create new content (post or event)
  */
-async function createContent(userEmail, texto, visibilidad, tipo, evento = null, archivo_url = null) {
+async function createContent(userEmail, texto, visibilidad, tipo, evento = null, archivo_url = null, nombre_grupo = null) {
     const client = await db.pool.connect();
     try {
         await client.query('BEGIN');
         await client.query(`SELECT set_config('app.user_email', $1, true)`, [userEmail]);
 
-        // Insert content
+        // Insert content (with optional group association)
         const insertContenido = await client.query(
-            `INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad, archivo_url)
-             VALUES ($1, NOW(), $2, $3, $4)
+            `INSERT INTO CONTENIDO (correo_autor, fecha_hora_creacion, texto_contenido, visibilidad, archivo_url, nombre_grupo)
+             VALUES ($1, NOW(), $2, $3, $4, $5)
              RETURNING clave_contenido, fecha_hora_creacion`,
-            [userEmail, texto, visibilidad, archivo_url]
+            [userEmail, texto, visibilidad, archivo_url, nombre_grupo]
         );
         const { clave_contenido, fecha_hora_creacion } = insertContenido.rows[0];
 
@@ -131,12 +131,40 @@ async function addComment(userEmail, contentId, texto) {
  */
 async function getComments(contentId) {
     const result = await db.query(
-        `SELECT c.*, p.nombres, p.apellidos
+        `SELECT c.*, 
+                COALESCE(p.nombres, eo.nombre_oficial) as nombres,
+                p.apellidos,
+                m.fotografia_url
          FROM COMENTARIO c
+         JOIN MIEMBRO m ON c.correo_autor_comentario = m.correo_principal
          LEFT JOIN PERSONA p ON c.correo_autor_comentario = p.correo_principal
+         LEFT JOIN ENTIDAD_ORGANIZACIONAL eo ON c.correo_autor_comentario = eo.correo_principal
          WHERE c.fk_contenido = $1
          ORDER BY c.fecha_hora_comentario ASC`,
         [contentId]
+    );
+    return result.rows;
+}
+
+/**
+ * Get posts for a specific group
+ */
+async function getGroupPosts(nombreGrupo) {
+    const result = await db.query(
+        `SELECT c.*, 
+                COALESCE(p.nombres, eo.nombre_oficial) as nombres,
+                p.apellidos,
+                m.fotografia_url,
+                (SELECT COUNT(*) FROM REACCIONA_CONTENIDO r WHERE r.fk_contenido = c.clave_contenido) as total_reacciones,
+                (SELECT COUNT(*) FROM COMENTARIO com WHERE com.fk_contenido = c.clave_contenido) as total_comentarios
+         FROM CONTENIDO c
+         JOIN MIEMBRO m ON c.correo_autor = m.correo_principal
+         LEFT JOIN PERSONA p ON c.correo_autor = p.correo_principal
+         LEFT JOIN ENTIDAD_ORGANIZACIONAL eo ON c.correo_autor = eo.correo_principal
+         WHERE c.nombre_grupo = $1
+         ORDER BY c.fecha_hora_creacion DESC
+         LIMIT 50`,
+        [nombreGrupo]
     );
     return result.rows;
 }
@@ -148,5 +176,6 @@ module.exports = {
     addReaction,
     removeReaction,
     addComment,
-    getComments
+    getComments,
+    getGroupPosts
 };

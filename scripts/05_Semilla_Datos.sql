@@ -34,7 +34,9 @@ INSERT INTO ROL (nombre_rol, descripcion) VALUES
 ('Egresado', 'Ex-alumno de la universidad'),
 ('Profesor', 'Docente universitario'),
 ('Moderador', 'Moderador de contenido'),
-('Admin', 'Administrador del sistema');
+('Admin', 'Administrador del sistema'),
+('Auditor', 'Acceso a reportes y analíticas'),
+('Entidad', 'Perfil de entidad organizacional');
 
 -- =============================================================================
 -- 2. USUARIOS PRINCIPALES (MIEMBRO + PERSONA + CONFIGURACION)
@@ -113,7 +115,7 @@ END $$;
 -- =============================================================================
 
 INSERT INTO MIEMBRO (correo_principal, contrasena_hash, fecha_registro, fotografia_url) VALUES
-('rrhh@polar.com', 'hash_polar', NOW() - INTERVAL '3 years', 'https://ui-avatars.com/api/?name=Polar'),
+('rrhh@polar.com', 'hash_' || MD5('123456'), NOW() - INTERVAL '3 years', 'https://ui-avatars.com/api/?name=Polar'),
 ('talento@banesco.com', 'hash_banesco', NOW() - INTERVAL '3 years', 'https://ui-avatars.com/api/?name=Banesco'),
 ('rrhh@movistar.com.ve', 'hash_movistar', NOW() - INTERVAL '2 years', 'https://ui-avatars.com/api/?name=Movistar'),
 ('innovacion@ucab.edu.ve', 'hash_ciap', NOW() - INTERVAL '4 years', 'https://ui-avatars.com/api/?name=CIAP'),
@@ -160,7 +162,15 @@ INSERT INTO MIEMBRO_POSEE_ROL (correo_miembro, nombre_rol, fecha_asignacion) VAL
 ('prof.rodriguez@ucab.edu.ve', 'Profesor', NOW() - INTERVAL '4 years'),
 ('egresado.tech@gmail.com', 'Egresado', NOW() - INTERVAL '10 years'),
 ('alumni.empresaria@gmail.com', 'Egresado', NOW() - INTERVAL '12 years'),
-('nuevo.ingreso@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 month');
+('nuevo.ingreso@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 month'),
+('moderador@ucab.edu.ve', 'Moderador', NOW() - INTERVAL '6 months'),
+('auditor@ucab.edu.ve', 'Auditor', NOW() - INTERVAL '6 months'),
+-- Roles para entidades organizacionales
+('rrhh@polar.com', 'Entidad', NOW() - INTERVAL '3 years'),
+('talento@banesco.com', 'Entidad', NOW() - INTERVAL '3 years'),
+('rrhh@movistar.com.ve', 'Entidad', NOW() - INTERVAL '2 years'),
+('innovacion@ucab.edu.ve', 'Entidad', NOW() - INTERVAL '4 years'),
+('giia@ucab.edu.ve', 'Entidad', NOW() - INTERVAL '5 years');
 
 -- =============================================================================
 -- 5. TIENE_NEXO (Relaciones persona-organización)

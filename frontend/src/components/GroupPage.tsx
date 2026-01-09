@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Settings, UserPlus, Bell, Image, Lock, Globe, Loader2, LogOut, UserCheck } from 'lucide-react';
+import { Users, Calendar, Settings, UserPlus, Image, Lock, Globe, Loader2, LogOut, UserCheck, Heart, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -13,6 +13,7 @@ import {
   leaveGroup,
   createPost,
   getCurrentUser,
+  getGroupPosts,
   Group
 } from '../services/api';
 
@@ -24,11 +25,25 @@ interface GroupMember {
   fotografia_url?: string;
 }
 
+interface GroupPost {
+  clave_contenido: number;
+  correo_autor: string;
+  fecha_hora_creacion: string;
+  texto_contenido: string;
+  nombres?: string;
+  apellidos?: string;
+  fotografia_url?: string;
+  total_reacciones?: number;
+  total_comentarios?: number;
+}
+
 const GroupPage = () => {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groupPosts, setGroupPosts] = useState<GroupPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [newPost, setNewPost] = useState('');
   const [joining, setJoining] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -49,18 +64,42 @@ const GroupPage = () => {
 
       if (allGroupsResult.success) {
         setGroups(allGroupsResult.data || []);
-        if (allGroupsResult.data?.length > 0 && !selectedGroup) {
-          setSelectedGroup(allGroupsResult.data[0]);
-        }
       }
 
       if (myGroupsResult.success) {
         setMyGroups(myGroupsResult.data || []);
+        // Solo seleccionar automáticamente si el usuario tiene grupos
+        if (myGroupsResult.data?.length > 0 && !selectedGroup) {
+          setSelectedGroup(myGroupsResult.data[0]);
+        }
       }
     } catch (err) {
       console.error('Error loading groups:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Cargar posts cuando cambia el grupo seleccionado
+  useEffect(() => {
+    if (selectedGroup) {
+      loadGroupPosts(selectedGroup.nombre_grupo);
+    } else {
+      setGroupPosts([]);
+    }
+  }, [selectedGroup?.nombre_grupo]);
+
+  const loadGroupPosts = async (nombreGrupo: string) => {
+    try {
+      setPostsLoading(true);
+      const result = await getGroupPosts(nombreGrupo);
+      if (result.success) {
+        setGroupPosts(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading group posts:', err);
+    } finally {
+      setPostsLoading(false);
     }
   };
 
@@ -96,9 +135,15 @@ const GroupPage = () => {
     if (!newPost.trim() || !selectedGroup) return;
     try {
       setPosting(true);
-      // Posts in groups would need a group association - for now just create a regular post
-      await createPost({ texto: newPost, visibilidad: 'Público' });
+      // Post asociado al grupo
+      await createPost({
+        texto: newPost,
+        visibilidad: 'Público',
+        nombre_grupo: selectedGroup.nombre_grupo
+      });
       setNewPost('');
+      // Recargar posts del grupo
+      loadGroupPosts(selectedGroup.nombre_grupo);
     } catch (err) {
       console.error('Error posting:', err);
     } finally {
@@ -170,7 +215,8 @@ const GroupPage = () => {
               {groups.filter(g => !isMyGroup(g.nombre_grupo)).slice(0, 5).map((group) => (
                 <div
                   key={group.nombre_grupo}
-                  className="p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                  className="p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedGroup(group)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -185,7 +231,7 @@ const GroupPage = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleJoinGroup(group.nombre_grupo)}
+                      onClick={(e) => { e.stopPropagation(); handleJoinGroup(group.nombre_grupo); }}
                       disabled={joining}
                     >
                       {joining ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
@@ -251,9 +297,6 @@ const GroupPage = () => {
                           <span>Unirse al Grupo</span>
                         </Button>
                       )}
-                      <Button variant="outline" size="icon">
-                        <Bell className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -294,6 +337,48 @@ const GroupPage = () => {
                           </div>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Group Feed - Posts */}
+                {isMyGroup(selectedGroup.nombre_grupo) && (
+                  <Card>
+                    <CardHeader>
+                      <h3 className="font-semibold">Publicaciones del Grupo</h3>
+                    </CardHeader>
+                    <CardContent>
+                      {postsLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        </div>
+                      ) : groupPosts.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">No hay publicaciones en este grupo aún. ¡Sé el primero!</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {groupPosts.map((post) => (
+                            <div key={post.clave_contenido} className="border-b pb-4 last:border-0">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={post.fotografia_url || `https://ui-avatars.com/api/?name=${post.nombres || 'U'}`} />
+                                  <AvatarFallback>{post.nombres?.[0] || 'U'}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-sm">{post.nombres} {post.apellidos}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(post.fecha_hora_creacion).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-gray-700 ml-11">{post.texto_contenido}</p>
+                              <div className="flex items-center space-x-4 mt-2 ml-11 text-sm text-gray-500">
+                                <span className="flex items-center"><Heart className="h-4 w-4 mr-1" /> {post.total_reacciones || 0}</span>
+                                <span className="flex items-center"><MessageCircle className="h-4 w-4 mr-1" /> {post.total_comentarios || 0}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}

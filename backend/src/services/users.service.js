@@ -197,13 +197,14 @@ async function getUserPosts(targetEmail, requesterEmail) {
             p.nombres,
             p.apellidos,
             m.fotografia_url,
-            (SELECT COUNT(*) FROM REACCIONA_A r WHERE r.clave_contenido = c.clave_contenido) as likes_count,
-            (SELECT COUNT(*) FROM COMENTARIO cm WHERE cm.clave_contenido = c.clave_contenido) as comments_count,
-            EXISTS(SELECT 1 FROM REACCIONA_A r WHERE r.clave_contenido = c.clave_contenido AND r.correo_miembro = $2) as user_has_reacted
+            (SELECT COUNT(*) FROM REACCIONA_CONTENIDO r WHERE r.fk_contenido = c.clave_contenido) as total_reacciones,
+            (SELECT COUNT(*) FROM COMENTARIO cm WHERE cm.fk_contenido = c.clave_contenido) as total_comentarios,
+            EXISTS(SELECT 1 FROM REACCIONA_CONTENIDO r WHERE r.fk_contenido = c.clave_contenido AND r.correo_miembro = $2) as user_has_reacted
         FROM CONTENIDO c
         LEFT JOIN PERSONA p ON c.correo_autor = p.correo_principal
         LEFT JOIN MIEMBRO m ON c.correo_autor = m.correo_principal
         WHERE c.correo_autor = $1
+        AND c.nombre_grupo IS NULL  -- Solo posts del feed global, no de grupos
         AND (
             c.visibilidad = 'Público'
             OR c.correo_autor = $2

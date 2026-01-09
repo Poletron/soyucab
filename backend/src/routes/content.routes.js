@@ -10,20 +10,20 @@ const { requireAuth } = require('../middleware/auth.middleware');
 
 /**
  * POST /api/content
- * Crear nueva publicación
+ * Crear nueva publicación (global o de grupo)
  */
 router.post('/', requireAuth, async (req, res) => {
-    const { texto, visibilidad = 'Público', tipo = 'publicacion', evento, archivo_url } = req.body;
+    const { texto, visibilidad = 'Público', tipo = 'publicacion', evento, archivo_url, nombre_grupo } = req.body;
 
     if (!texto || texto.trim().length === 0) {
         return res.status(400).json({ success: false, error: 'El texto es requerido' });
     }
 
     try {
-        const result = await contentService.createContent(req.userEmail, texto, visibilidad, tipo, evento, archivo_url);
+        const result = await contentService.createContent(req.userEmail, texto, visibilidad, tipo, evento, archivo_url, nombre_grupo || null);
         res.status(201).json({
             success: true,
-            message: tipo === 'evento' ? 'Evento creado' : 'Publicación creada',
+            message: tipo === 'evento' ? 'Evento creado' : (nombre_grupo ? `Publicación creada en grupo "${nombre_grupo}"` : 'Publicación creada'),
             data: result
         });
     } catch (err) {

@@ -37,6 +37,7 @@ import CreateContent from './components/CreateContentSimple';
 import Tutoring from './components/Tutoring';
 import GeneralSettings from './components/GeneralSettings';
 import MessagingSystem from './components/MessagingSystem';
+import JobBoard from './components/JobBoard';
 // Importar los 9 reportes de Entrega 3 (conectados a la BD)
 import TopViralReport from './components/TopViralReport';
 import LideresReport from './components/LideresReport';
@@ -48,18 +49,19 @@ import TutoriasReport from './components/TutoriasReport';
 import NexosReport from './components/NexosReport';
 import OfertasReport from './components/OfertasReport';
 import DiasporaReport from './components/DiasporaReport';
+import EventsPage from './components/EventsPage';
 import soyucabLogo from './assets/33c35295992cfb6178c01246eefc5ecbf6bc76db.png';
 
 // Solo los views necesarios para Entrega 4
-type View = 'feed' | 'profile' | 'user-profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' |
+type View = 'feed' | 'profile' | 'user-profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events' |
   'viral-report' | 'lideres-report' | 'eventos-report' | 'crecimiento-report' | 'grupos-report' |
-  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report';
+  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report' | 'jobs';
 type AuthView = 'login' | 'register';
 
 import { useRole } from './hooks/useRole';
 
 function App() {
-  const { isModerator } = useRole();
+  const { isModerator, isAuditor, isOrg } = useRole();
   // Inicializar estado de autenticación desde localStorage
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return !!localStorage.getItem('userEmail');
@@ -127,6 +129,8 @@ function App() {
 
   const handleLogin = () => {
     setIsAuthenticated(true);
+    // Disparar evento para actualizar roles inmediatamente en toda la app
+    window.dispatchEvent(new Event('auth-change'));
   };
 
   const handleLogout = () => {
@@ -137,7 +141,10 @@ function App() {
     localStorage.removeItem('userRoles');
     localStorage.removeItem('userType');
     setIsAuthenticated(false);
+    setIsAuthenticated(false);
     setCurrentView('feed');
+    // Disparar evento para limpiar roles inmediatamente
+    window.dispatchEvent(new Event('auth-change'));
   };
 
   const handleRegister = () => {
@@ -171,6 +178,10 @@ function App() {
         return <MessagingSystem />;
       case 'settings':
         return <GeneralSettings />;
+      case 'events':
+        return <EventsPage onNavigate={(view) => setCurrentView(view as View)} />;
+      case 'jobs':
+        return <JobBoard />;
       // 9 Reportes de Entrega 3 (conectados a la BD)
       case 'viral-report':
         return <TopViralReport />;
@@ -254,35 +265,50 @@ function App() {
                   <span>Crear</span>
                 </Button>
                 <Button
-                  variant={currentView === 'tutoring' ? 'default' : 'ghost'}
-                  onClick={() => setCurrentView('tutoring')}
+                  variant={currentView === 'jobs' ? 'default' : 'ghost'}
+                  onClick={() => setCurrentView('jobs')}
                   className="flex items-center space-x-2"
-                  style={{ backgroundColor: currentView === 'tutoring' ? '#40b4e5' : 'transparent' }}
+                  style={{ backgroundColor: currentView === 'jobs' ? '#40b4e5' : 'transparent' }}
                 >
-                  <BookOpen className="h-4 w-4" />
-                  <span>Tutorías</span>
+                  <Briefcase className="h-4 w-4" />
+                  <span>Empleos</span>
                 </Button>
-                <Button
-                  variant={currentView === 'groups' ? 'default' : 'ghost'}
-                  onClick={() => setCurrentView('groups')}
-                  className="flex items-center space-x-2"
-                  style={{ backgroundColor: currentView === 'groups' ? '#40b4e5' : 'transparent' }}
-                >
-                  <Users className="h-4 w-4" />
-                  <span>Grupos</span>
-                </Button>
-                <Button
-                  variant={currentView === 'messaging' ? 'default' : 'ghost'}
-                  onClick={() => setCurrentView('messaging')}
-                  className="flex items-center space-x-2"
-                  style={{ backgroundColor: currentView === 'messaging' ? '#40b4e5' : 'transparent' }}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span>Mensajes</span>
-                </Button>
+                {!isOrg && (
+                  <Button
+                    variant={currentView === 'tutoring' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('tutoring')}
+                    className="flex items-center space-x-2"
+                    style={{ backgroundColor: currentView === 'tutoring' ? '#40b4e5' : 'transparent' }}
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span>Tutorías</span>
+                  </Button>
+                )}
+                {!isOrg && (
+                  <Button
+                    variant={currentView === 'groups' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('groups')}
+                    className="flex items-center space-x-2"
+                    style={{ backgroundColor: currentView === 'groups' ? '#40b4e5' : 'transparent' }}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>Grupos</span>
+                  </Button>
+                )}
+                {!isOrg && (
+                  <Button
+                    variant={currentView === 'messaging' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('messaging')}
+                    className="flex items-center space-x-2"
+                    style={{ backgroundColor: currentView === 'messaging' ? '#40b4e5' : 'transparent' }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Mensajes</span>
+                  </Button>
+                )}
 
                 {/* Dropdown de Reportes - Solo los 9 de Entrega 3 */}
-                {isModerator && (
+                {(isModerator || isAuditor) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -402,13 +428,15 @@ function App() {
                 )}
               </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentView('messaging')}
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Button>
+              {!isOrg && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setCurrentView('messaging')}
+                >
+                  <MessageSquare className="h-5 w-5" />
+                </Button>
+              )}
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -480,7 +508,10 @@ function App() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
-                      <AvatarFallback>U</AvatarFallback>
+                      <AvatarImage src={localStorage.getItem('userFoto') || undefined} />
+                      <AvatarFallback>
+                        {(localStorage.getItem('userName')?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)) || 'U'}
+                      </AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>

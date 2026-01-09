@@ -11,6 +11,15 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { getProfile, updateProfile, uploadProfilePhoto, getCurrentUser } from '../services/api';
 
+// URL base del backend para resolver paths relativos de imágenes
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+const getImageUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${API_BASE_URL}${url}`;
+};
+
 export default function EditProfile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
@@ -48,16 +57,17 @@ export default function EditProfile() {
       setLoading(true);
       const result = await getProfile();
       if (result.success && result.profile) {
+        const profile = result.profile;
         setFormData(prev => ({
           ...prev,
-          firstName: result.profile.nombre || '',
-          lastName: result.profile.apellido || '',
-          email: result.profile.email || '',
-          bio: result.profile.biografia || '',
-          city: result.profile.ubicacion?.split(',')[0] || '',
-          country: result.profile.ubicacion?.split(',')[1]?.trim() || 'Venezuela'
+          firstName: profile.nombre || '',
+          lastName: profile.apellido || '',
+          email: profile.email || '',
+          bio: profile.biografia || '',
+          city: profile.ciudad_residencia || '',
+          country: profile.pais_residencia || 'Venezuela'
         }));
-        setProfilePhoto(result.profile.foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(result.profile.nombre || 'U')}`);
+        setProfilePhoto(getImageUrl(profile.foto) || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.nombre || 'U')}`);
       }
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -149,7 +159,11 @@ export default function EditProfile() {
     try {
       const result = await uploadProfilePhoto(file);
       if (result.success && result.url) {
-        setProfilePhoto(result.url);
+        const fullUrl = getImageUrl(result.url) || result.url;
+        setProfilePhoto(fullUrl);
+        // Actualizar localStorage para que navbar muestre la nueva foto
+        localStorage.setItem('userFoto', fullUrl);
+        window.dispatchEvent(new Event('auth-change'));
         setSuccess('Foto actualizada correctamente');
       } else {
         setError(result.error || 'Error al subir la foto');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check } from 'lucide-react';
+import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check, Heart, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -9,7 +9,8 @@ import {
   acceptConnectionRequest,
   startConversation,
   getCurrentUser,
-  getUserProfile
+  getUserProfile,
+  getUserPosts
 } from '../services/api';
 
 interface ProfileData {
@@ -22,6 +23,7 @@ interface ProfileData {
   fecha_registro?: string;
   fotografia_url?: string;
   total_conexiones?: number;
+  total_grupos?: number;
   total_publicaciones?: number;
   tipo?: 'Persona' | 'Organizacion';
   rif?: string;
@@ -39,6 +41,8 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
   // Removed useNavigate since we are using state-based routing in App.tsx
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +84,7 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
           fecha_registro: profileData.fecha_registro,
           fotografia_url: profileData.foto || profileData.fotografia_url,
           total_conexiones: profileData.total_conexiones,
+          total_grupos: profileData.total_grupos,
           total_publicaciones: profileData.total_publicaciones,
           tipo: profileData.tipo,
           rif: profileData.rif,
@@ -87,6 +92,12 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
           estado_conexion: profileData.estado_conexion,
           solicitud_id: profileData.solicitud_id,
         });
+
+        // Cargar publicaciones del usuario
+        const emailToLoad = profileData.email || profileData.correo_principal;
+        if (emailToLoad) {
+          loadUserPosts(emailToLoad);
+        }
       } else {
         setError('No se pudo cargar el perfil');
       }
@@ -95,6 +106,20 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
       setError('Error de conexión');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserPosts = async (email: string) => {
+    try {
+      setPostsLoading(true);
+      const result = await getUserPosts(email);
+      if (result.success) {
+        setPosts(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading user posts:', err);
+    } finally {
+      setPostsLoading(false);
     }
   };
 
@@ -204,6 +229,12 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
                   <Users className="h-4 w-4 mr-1" />
                   {profile?.total_conexiones || 0} conexiones
                 </span>
+                {profile?.total_grupos !== undefined && (
+                  <span className="flex items-center text-purple-600">
+                    <Users className="h-4 w-4 mr-1" />
+                    {profile.total_grupos} grupos
+                  </span>
+                )}
                 <span className="flex items-center text-gray-500">
                   <Clock className="h-4 w-4 mr-1" />
                   Se unió en {formatDate(profile?.fecha_registro)}
@@ -305,6 +336,39 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
                   <span className="text-sm font-medium">{profile.entityType || 'N/A'}</span>
                 </div>
               </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* User Posts Section */}
+      <Card>
+        <CardHeader>
+          <h2 className="text-2xl font-semibold">Publicaciones</h2>
+        </CardHeader>
+        <CardContent>
+          {postsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            </div>
+          ) : posts.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No hay publicaciones aún.</p>
+          ) : (
+            <div className="space-y-4">
+              {posts.slice(0, 5).map((post: any) => (
+                <div key={post.clave_contenido} className="border-b pb-4 last:border-0">
+                  <p className="text-gray-700">{post.texto_contenido}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-gray-400">
+                      {post.fecha_hora_creacion ? new Date(post.fecha_hora_creacion).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
+                    </p>
+                    <div className="flex items-center space-x-3 text-sm text-gray-500">
+                      <span className="flex items-center"><Heart className="h-3 w-3 mr-1" /> {post.total_reacciones || 0}</span>
+                      <span className="flex items-center"><MessageCircle className="h-3 w-3 mr-1" /> {post.total_comentarios || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

@@ -34,6 +34,7 @@ async function getFeed(userEmail) {
         LEFT JOIN PUBLICACION p ON p.fk_contenido = c.clave_contenido
         LEFT JOIN PERSONA per ON c.correo_autor = per.correo_principal
         LEFT JOIN MIEMBRO m ON c.correo_autor = m.correo_principal
+        WHERE c.nombre_grupo IS NULL  -- Excluir posts de grupo del feed global
         ORDER BY c.fecha_hora_creacion DESC
         LIMIT 20
     `;

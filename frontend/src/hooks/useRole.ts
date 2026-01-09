@@ -5,6 +5,7 @@ interface UserRoles {
     isOrg: boolean;
     isModerator: boolean;
     isAdmin: boolean;
+    isAuditor: boolean;
     isVisitor: boolean;
     roles: string[];
 }
@@ -15,6 +16,7 @@ export function useRole(): UserRoles {
         isOrg: false,
         isModerator: false,
         isAdmin: false,
+        isAuditor: false,
         isVisitor: true,
         roles: []
     });
@@ -35,6 +37,7 @@ export function useRole(): UserRoles {
             const isPersona = parsedRoles.includes('Persona') || userType === 'persona'; // Fallback logic
             const isModerator = parsedRoles.includes('Moderador');
             const isAdmin = parsedRoles.includes('Administrador'); // Or 'Admin' depending on DB string
+            const isAuditor = parsedRoles.includes('Auditor') || parsedRoles.includes('auditor');
             const isVisitor = !localStorage.getItem('userEmail');
 
             setRoles({
@@ -42,6 +45,7 @@ export function useRole(): UserRoles {
                 isOrg,
                 isModerator,
                 isAdmin,
+                isAuditor,
                 isVisitor,
                 roles: parsedRoles
             });
@@ -50,7 +54,12 @@ export function useRole(): UserRoles {
         checkRoles();
         // Listen for storage changes just in case (login/logout in other tabs)
         window.addEventListener('storage', checkRoles);
-        return () => window.removeEventListener('storage', checkRoles);
+        window.addEventListener('auth-change', checkRoles); // Custom event for same-tab updates
+
+        return () => {
+            window.removeEventListener('storage', checkRoles);
+            window.removeEventListener('auth-change', checkRoles);
+        };
     }, []);
 
     return roles;

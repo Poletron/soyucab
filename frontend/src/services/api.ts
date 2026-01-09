@@ -184,9 +184,14 @@ export async function login(email: string, password?: string): Promise<LoginResp
     const data = await response.json();
 
     if (data.success && data.user) {
-        // Guardar email en localStorage
+        // Guardar datos en localStorage
         localStorage.setItem('userEmail', data.user.email);
         localStorage.setItem('userName', `${data.user.nombre} ${data.user.apellido}`);
+
+        // Guardar roles para useRole hook
+        if (data.user.roles && Array.isArray(data.user.roles)) {
+            localStorage.setItem('userRoles', JSON.stringify(data.user.roles));
+        }
     }
 
     return data;
@@ -281,6 +286,7 @@ export interface CreatePostData {
         pais?: string;
     };
     archivo_url?: string;
+    nombre_grupo?: string;  // Para posts de grupo
 }
 
 export async function createPost(data: CreatePostData) {
@@ -320,6 +326,13 @@ export async function createEvent(data: CreateEventData) {
 
 export async function getUpcomingEvents() {
     const res = await apiFetch('/api/events');
+    return res.json();
+}
+
+export async function closeEvent(eventId: number): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await apiFetch(`/api/events/${eventId}/close`, {
+        method: 'POST',
+    });
     return res.json();
 }
 
@@ -529,6 +542,14 @@ export async function getUserProfile(email: string) {
     return res.json();
 }
 
+/**
+ * Obtener publicaciones de un usuario
+ */
+export async function getUserPosts(email: string): Promise<{ success: boolean; data: any[]; count?: number }> {
+    const res = await apiFetch(`/api/users/${encodeURIComponent(email)}/posts`);
+    return res.json();
+}
+
 export async function getConnectionSuggestions(): Promise<{ success: boolean; data: UserSearchResult[] }> {
     const res = await apiFetch('/api/users/suggestions/connect');
     return res.json();
@@ -547,10 +568,12 @@ export interface JobOffer {
     descripcion_cargo: string;
     requisitos?: string;
     modalidad: 'Presencial' | 'Remoto' | 'Híbrido';
-    nombre_organizacion: string;
-    tipo_entidad: string;
+    nombre_organizacion?: string;
+    tipo_entidad?: string;
     foto_organizacion?: string;
-    total_postulaciones: number;
+    total_postulaciones?: number;
+    estado_postulacion?: string;
+    ya_postulado?: boolean;
 }
 
 export async function getOffers(): Promise<{ success: boolean; data: JobOffer[] }> {
@@ -648,6 +671,14 @@ export async function getMyGroups(): Promise<{ success: boolean; data: Group[] }
     return res.json();
 }
 
+/**
+ * Obtener publicaciones de un grupo específico
+ */
+export async function getGroupPosts(nombreGrupo: string): Promise<{ success: boolean; data: any[]; count?: number }> {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombreGrupo)}/posts`);
+    return res.json();
+}
+
 // ============================================
 // TUTORING
 // ============================================
@@ -709,3 +740,7 @@ export async function markAllNotificationsRead() {
     const res = await apiFetch(`/api/notifications/read-all`, { method: 'PUT' });
     return res.json();
 }
+
+
+
+
