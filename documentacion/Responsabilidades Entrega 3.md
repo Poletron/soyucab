@@ -1,113 +1,127 @@
-Responsabilidades Entrega 3
+# Responsabilidades Entrega 3
+
 Equipo: Oscar Jaramillo, Luis Torres, Pedro Urdaneta.
-1. Estrategia de Seguridad
+
+## 1. Estrategia de Seguridad
+
 Para la implementación física de la base de datos (PostgreSQL), el equipo ha definido
-una arquitectura de seguridad basada en Roles (RBAC) y el Principio de Menor
-Privilegio, garantizando que cada actor del sistema solo tenga acceso a lo
+una arquitectura de seguridad basada en **Roles (RBAC)** y el **Principio de Menor
+Privilegio** , garantizando que cada actor del sistema solo tenga acceso a lo
 estrictamente necesario.
-Roles Definidos para el Proyecto:
-1. ROL_ANONIMO: Acceso de solo lectura a información pública (Catálogos,
-Eventos públicos).
-2. ROL_MIEMBRO: Usuario autenticado estándar (Estudiantes, Egresados).
-Puede gestionar su perfil, interactuar y crear contenido.
-3. ROL_INSTITUCIONAL: Entidades (Escuelas, Empresas). Privilegios para
-gestión de ofertas y eventos oficiales.
-4. ROL_MODERADOR: Gestión de comunidad y censura de contenido.
-5. ROL_AUDITOR: Acceso exclusivo de lectura para herramientas de reportería.
-2. Distribución de Responsabilidades por Módulo
+**Roles Definidos para el Proyecto:**
+
+1. **ROL_ANONIMO:** Acceso de solo lectura a información pública (Catálogos,
+    Eventos públicos).
+2. **ROL_MIEMBRO:** Usuario autenticado estándar (Estudiantes, Egresados).
+    Puede gestionar su perfil, interactuar y crear contenido.
+3. **ROL_INSTITUCIONAL:** Entidades (Escuelas, Empresas). Privilegios para
+    gestión de ofertas y eventos oficiales.
+4. **ROL_MODERADOR:** Gestión de comunidad y censura de contenido.
+5. **ROL_AUDITOR:** Acceso exclusivo de lectura para herramientas de reportería.
+
+## 2. Distribución de Responsabilidades por Módulo
+
 A continuación, se detalla la asignación de tablas y la lógica programable (Stored
 Procedures, Functions, Triggers) que desarrollará cada integrante.
-2.1. Módulo: Gestión de Contenido e Interacciones
+
+## 2.1. Módulo: Gestión de Contenido e Interacciones
+
 Responsable: Oscar Jaramillo (Ing. Informática)
 Enfoque: Dinámica del "Feed", viralidad y ciclo de vida de publicaciones.
-● Tablas Asignadas:
+● **Tablas Asignadas:**
+
 1. CONTENIDO (Superclase), PUBLICACION, EVENTO.
 2. COMENTARIO, REACCIONA_CONTENIDO, TIPO_REACCION.
 
-● Objetos Programables:
-1. SP SP_CERRAR_EVENTO_Y_CREAR_RESEÑA:
-● Justificación: Automatiza el flujo de trabajo post-evento. Al finalizar
-un evento, el sistema cambia su estado y genera automáticamente
-un borrador de publicación para documentar resultados,
-asegurando continuidad en el contenido.
-2. Función FN_CALCULAR_NIVEL_IMPACTO:
-● Justificación: Estandariza el cálculo de popularidad para los
-reportes. Aplica una fórmula ponderada (Comentarios >
-Reacciones) para medir el "Engagement" real.
-3. Trigger TRG_EVITAR_AUTO_REACCION:
-● Justificación: Regla de integridad de negocio (Anti-Spam). Impide
-que un usuario infle artificialmente sus métricas reaccionando a su
-propio contenido.
 
-● Vistas / Reportes:
-1. V_REPORTE_TOP_VIRAL: Ranking de contenido con mayor impacto.
-2. V_REPORTE_LIDERES_OPINION: Usuarios más activos en generación
+```
+● Objetos Programables:
+```
+1. **SP SP_CERRAR_EVENTO_Y_CREAR_RESEÑA:**
+    ● Justificación: Automatiza el flujo de trabajo post-evento. Al finalizar
+       un evento, el sistema cambia su estado y genera automáticamente
+       un borrador de publicación para documentar resultados,
+       asegurando continuidad en el contenido.
+2. **Función FN_CALCULAR_NIVEL_IMPACTO:**
+    ● Justificación: Estandariza el cálculo de popularidad para los
+       reportes. Aplica una fórmula ponderada (Comentarios >
+       Reacciones) para medir el "Engagement" real.
+3. **Trigger TRG_EVITAR_AUTO_REACCION:**
+    ● Justificación: Regla de integridad de negocio (Anti-Spam). Impide
+       que un usuario infle artificialmente sus métricas reaccionando a su
+       propio contenido.
+● **Vistas / Reportes:**
+1. **V_REPORTE_TOP_VIRAL** : Ranking de contenido con mayor impacto.
+2. **V_REPORTE_LIDERES_OPINION** : Usuarios más activos en generación
 de contenido.
-3. V_REPORTE_INTERES_EVENTOS: Proyección de asistencia a eventos
+3. **V_REPORTE_INTERES_EVENTOS** : Proyección de asistencia a eventos
 futuros.
 
-2.2. Módulo: Usuarios, Grupos y Comunicación
+## 2.2. Módulo: Usuarios, Grupos y Comunicación
+
 Responsable: Luis Torres (Ing. Informática)
 Enfoque: Integridad estructural de la red social, privacidad y mensajería.
-● Tablas Asignadas:
+● **Tablas Asignadas:**
 ● MIEMBRO, PERSONA, CONFIGURACION.
 ● SOLICITA_CONEXION (Grafo social).
 ● GRUPO_INTERES, PERTENECE_A_GRUPO.
 ● CONVERSACION, MENSAJE, PARTICIPA_EN.
-● Objetos Programables:
-1. SP SP_CREAR_GRUPO_CON_FUNDADOR:
-● Justificación: Garantiza la consistencia atómica. Un grupo no
-puede existir sin miembros; este procedimiento crea el grupo y
-asigna al creador como Administrador en una sola transacción.
+● **Objetos Programables:**
 
-2. Función FN_VERIFICAR_ACCESO_PERFIL:
-● Justificación: Centraliza la compleja lógica de privacidad.
-Determina si un usuario A puede ver al usuario B basándose en
-configuración ('Público', 'Solo Amigos') y el estado de la conexión.
+1. **SP SP_CREAR_GRUPO_CON_FUNDADOR:**
+    ● Justificación: Garantiza la consistencia atómica. Un grupo no
+       puede existir sin miembros; este procedimiento crea el grupo y
+       asigna al creador como Administrador en una sola transacción.
 
-3. Trigger TRG_SEGURIDAD_MENSAJERIA:
-● Justificación: Seguridad crítica. Intercepta cada mensaje para
-verificar que el remitente sea un participante legítimo de la
-conversación antes de guardarlo.
 
-● Vistas / Reportes:
-1. V_REPORTE_CRECIMIENTO_DEMOGRAFICO: Análisis mensual de
+2. **Función FN_VERIFICAR_ACCESO_PERFIL:**
+    ● Justificación: Centraliza la compleja lógica de privacidad.
+       Determina si un usuario A puede ver al usuario B basándose en
+       configuración ('Público', 'Solo Amigos') y el estado de la conexión.
+3. **Trigger TRG_SEGURIDAD_MENSAJERIA:**
+    ● Justificación: Seguridad crítica. Intercepta cada mensaje para
+       verificar que el remitente sea un participante legítimo de la
+       conversación antes de guardarlo.
+● **Vistas / Reportes:**
+1. **V_REPORTE_CRECIMIENTO_DEMOGRAFICO** : Análisis mensual de
 nuevos registros.
-2. V_GRUPOS_MAS_ACTIVOS: Top comunidades por número de
+2. **V_GRUPOS_MAS_ACTIVOS** : Top comunidades por número de
 miembros.
-3. V_TOP_REFERENTES_COMUNIDAD: Usuarios con mayor autoridad en
+3. **V_TOP_REFERENTES_COMUNIDAD** : Usuarios con mayor autoridad en
 la red.
 
-2.3. Módulo: Oportunidades y Vinculación Institucional
+## 2.3. Módulo: Oportunidades y Vinculación Institucional
+
 Responsable: Pedro Urdaneta (Relaciones Industriales)
 Enfoque: Gestión de Recursos Humanos, alianzas estratégicas y empleabilidad.
-● Tablas Asignadas:
+● **Tablas Asignadas:**
 ● ENTIDAD_ORGANIZACIONAL (Empresas/Dependencias).
 ● TIENE_NEXO, TIPO_NEXO (Convenios).
 ● OFERTA_LABORAL, SE_POSTULA.
 ● TUTORIA, SOLICITA_TUTORIA.
-● Objetos Programables:
-1. SP SP_PUBLICAR_OFERTA_VALIDADA:
-● Justificación: Control de calidad y legalidad. Impide la publicación
-de ofertas si la organización no posee un convenio (nexo) vigente y
-activo con la Universidad.
+● **Objetos Programables:**
 
-2. Función FN_CALCULAR_TASAS_CIERRE_OFERTAS:
-● Justificación: Métrica avanzada para RRHH. Calcula no solo el
-volumen de postulantes por oferta, sino también la eficiencia del
-proceso de selección (tasa de cierre/aceptación) para medir el
-éxito de cada vacante.
+1. **SP SP_PUBLICAR_OFERTA_VALIDADA:**
+    ● Justificación: Control de calidad y legalidad. Impide la publicación
+       de ofertas si la organización no posee un convenio (nexo) vigente y
+       activo con la Universidad.
+2. **Función FN_CALCULAR_TASAS_CIERRE_OFERTAS:**
+    ● Justificación: Métrica avanzada para RRHH. Calcula no solo el
+       volumen de postulantes por oferta, sino también la eficiencia del
+       proceso de selección (tasa de cierre/aceptación) para medir el
+       éxito de cada vacante.
 
-3. Trigger TRG_CERRAR_POSTULACION_VENCIDA:
-● Justificación: Integridad del proceso de selección. Bloquea
-automáticamente intentos de postulación a ofertas cuyo estado sea
-'CERRADA' o cuya fecha límite haya expirado.
 
-● Vistas / Reportes:
-1. vista_top5_areas_conocimiento_demanda: Áreas más solicitadas para
+3. **Trigger TRG_CERRAR_POSTULACION_VENCIDA:**
+    ● Justificación: Integridad del proceso de selección. Bloquea
+       automáticamente intentos de postulación a ofertas cuyo estado sea
+       'CERRADA' o cuya fecha límite haya expirado.
+● **Vistas / Reportes:**
+1. **vista_top5_areas_conocimiento_demanda** : Áreas más solicitadas para
 tutorías.
-2. vista_nexos_vigentes_vs_por_vencer: Auditoría de convenios
+2. **vista_nexos_vigentes_vs_por_vencer** : Auditoría de convenios
 institucionales.
-3. vista_top10_ofertas_mas_postuladas: Vacantes con mayor atracción
+3. **vista_top10_ofertas_mas_postuladas** : Vacantes con mayor atracción
 de talento.
+
 
