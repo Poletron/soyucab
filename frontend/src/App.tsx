@@ -17,7 +17,8 @@ import {
   Award,
   Link,
   Briefcase,
-  Check
+  Check,
+  LayoutDashboard
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './components/ui/button';
@@ -38,6 +39,7 @@ import Tutoring from './components/Tutoring';
 import GeneralSettings from './components/GeneralSettings';
 import MessagingSystem from './components/MessagingSystem';
 import JobBoard from './components/JobBoard';
+import OrgDashboard from './components/OrgDashboard';
 // Importar los 9 reportes de Entrega 3 (conectados a la BD)
 import TopViralReport from './components/TopViralReport';
 import LideresReport from './components/LideresReport';
@@ -50,12 +52,13 @@ import NexosReport from './components/NexosReport';
 import OfertasReport from './components/OfertasReport';
 import DiasporaReport from './components/DiasporaReport';
 import EventsPage from './components/EventsPage';
+import ReportsDashboard from './components/ReportsDashboard';
 import soyucabLogo from './assets/33c35295992cfb6178c01246eefc5ecbf6bc76db.png';
 
 // Solo los views necesarios para Entrega 4
 type View = 'feed' | 'profile' | 'user-profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events' |
   'viral-report' | 'lideres-report' | 'eventos-report' | 'crecimiento-report' | 'grupos-report' |
-  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report' | 'jobs';
+  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report' | 'jobs' | 'org-dashboard' | 'reports-dashboard';
 type AuthView = 'login' | 'register';
 
 import { useRole } from './hooks/useRole';
@@ -182,6 +185,10 @@ function App() {
         return <EventsPage onNavigate={(view) => setCurrentView(view as View)} />;
       case 'jobs':
         return <JobBoard />;
+      case 'org-dashboard':
+        return <OrgDashboard onNavigate={(view) => setCurrentView(view as View)} />;
+      case 'reports-dashboard':
+        return <ReportsDashboard onNavigate={(view) => setCurrentView(view as View)} />;
       // 9 Reportes de Entrega 3 (conectados a la BD)
       case 'viral-report':
         return <TopViralReport />;
@@ -255,6 +262,17 @@ function App() {
                   <Home className="h-4 w-4" />
                   <span>Inicio</span>
                 </Button>
+                {isOrg && (
+                  <Button
+                    variant={currentView === 'org-dashboard' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('org-dashboard')}
+                    className="flex items-center space-x-2"
+                    style={{ backgroundColor: currentView === 'org-dashboard' ? '#40b4e5' : 'transparent' }}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Panel</span>
+                  </Button>
+                )}
                 <Button
                   variant={currentView === 'create' ? 'default' : 'ghost'}
                   onClick={() => setCurrentView('create')}
@@ -307,64 +325,17 @@ function App() {
                   </Button>
                 )}
 
-                {/* Dropdown de Reportes - Solo los 9 de Entrega 3 */}
+                {/* Reportes Button - directly to dashboard */}
                 {(isModerator || isAuditor) && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant={reportViews.includes(currentView) ? 'default' : 'ghost'}
-                        className="flex items-center space-x-2"
-                        style={{ backgroundColor: reportViews.includes(currentView) ? '#40b4e5' : 'transparent' }}
-                      >
-                        <BarChart3 className="h-4 w-4" />
-                        <span>Reportes</span>
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64">
-                      {/* ... Items ... */}
-                      <DropdownMenuItem onClick={() => setCurrentView('viral-report')}>
-                        <TrendingUp className="mr-2 h-4 w-4" />
-                        <span>Top Contenido Viral</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('lideres-report')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Líderes de Opinión</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('eventos-report')}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>Proyección Interés Eventos</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('crecimiento-report')}>
-                        <BarChart3 className="mr-2 h-4 w-4" />
-                        <span>Crecimiento Demográfico</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('grupos-report')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Grupos Más Activos</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('referentes-report')}>
-                        <Award className="mr-2 h-4 w-4" />
-                        <span>Top Referentes Comunidad</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('tutorias-report')}>
-                        <BookOpen className="mr-2 h-4 w-4" />
-                        <span>Áreas Conocimiento Demanda</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('nexos-report')}>
-                        <Link className="mr-2 h-4 w-4" />
-                        <span>Vigencia Nexos</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('ofertas-report')}>
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        <span>Ofertas Más Postuladas</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setCurrentView('diaspora-report')}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Mapa de la Diáspora</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant={currentView === 'reports-dashboard' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('reports-dashboard')}
+                    className="flex items-center space-x-2"
+                    style={{ backgroundColor: currentView === 'reports-dashboard' ? '#40b4e5' : 'transparent' }}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    <span>Reportes</span>
+                  </Button>
                 )}
               </nav>
             </div>

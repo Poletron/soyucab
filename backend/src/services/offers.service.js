@@ -96,7 +96,7 @@ async function isPerson(email) {
  */
 async function createOffer(userEmail, titulo, descripcion, requisitos, modalidad) {
     await db.queryAsUser(
-        `CALL sp_publicar_oferta_validada($1, NOW(), $2, $3, $4, $5)`,
+        `CALL sp_publicar_oferta_validada($1::VARCHAR, NOW()::TIMESTAMP, $2::VARCHAR, $3::TEXT, $4::TEXT, $5::VARCHAR)`,
         [userEmail, titulo, descripcion, requisitos || '', modalidad],
         userEmail
     );

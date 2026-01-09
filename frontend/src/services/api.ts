@@ -25,7 +25,18 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     });
 
     if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        let errorMessage = `API Error: ${response.status} ${response.statusText}`;
+        try {
+            const errorBody = await response.json();
+            if (errorBody.error) {
+                errorMessage = errorBody.error;
+            } else if (errorBody.message) {
+                errorMessage = errorBody.message;
+            }
+        } catch (e) {
+            // If response is not JSON, use default status text
+        }
+        throw new Error(errorMessage);
     }
 
     return response;
@@ -300,6 +311,14 @@ export async function createPost(data: CreatePostData) {
 export async function deletePost(id: number) {
     const res = await apiFetch(`/api/content/${id}`, {
         method: 'DELETE',
+    });
+    return res.json();
+}
+
+export async function updatePost(id: number, texto: string) {
+    const res = await apiFetch(`/api/content/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ texto }),
     });
     return res.json();
 }

@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send, X, Image as ImageIcon, UserPlus, Briefcase } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send, X, Image as ImageIcon, UserPlus, Briefcase, Edit, Save } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
 import { useRole } from '../hooks/useRole';
 
 // URL base del backend para resolver paths relativos de imágenes
@@ -74,6 +74,11 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
 
   // Image modal state
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // Edit post state
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editPostContent, setEditPostContent] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const currentUser = getCurrentUser();
 
@@ -313,6 +318,36 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
     }
   };
 
+  /* Edit Post Handlers */
+  const handleEditPost = (post: Post) => {
+    if (post.clave_contenido) {
+      setEditingPostId(post.clave_contenido);
+      setEditPostContent(post.texto_contenido);
+    }
+  };
+
+  const handleSavePostEdit = async () => {
+    if (!editingPostId) return;
+    setSavingEdit(true);
+    try {
+      const result = await updatePost(editingPostId, editPostContent);
+      if (result.success) {
+        setPosts(posts.map(p => p.clave_contenido === editingPostId ? { ...p, texto_contenido: editPostContent } : p));
+        setEditingPostId(null);
+      }
+    } catch (err) {
+      console.error('Error updating post:', err);
+      alert('Error al guardar cambios');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const cancelPostEdit = () => {
+    setEditingPostId(null);
+    setEditPostContent('');
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -523,7 +558,38 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                   {post.evento_titulo && (
                     <p className="font-semibold text-lg mb-2">{post.evento_titulo}</p>
                   )}
-                  <p className="whitespace-pre-line">{post.texto_contenido}</p>
+                  {editingPostId === post.clave_contenido ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={editPostContent}
+                        onChange={(e) => setEditPostContent(e.target.value)}
+                        className="min-h-[100px]"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="sm" onClick={cancelPostEdit} disabled={savingEdit}>
+                          <X className="h-4 w-4 mr-1" /> Cancelar
+                        </Button>
+                        <Button size="sm" onClick={handleSavePostEdit} disabled={savingEdit}>
+                          {savingEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                          Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="group flex items-start justify-between gap-2">
+                      <p className="whitespace-pre-line flex-1">{post.texto_contenido}</p>
+                      {post.correo_autor === currentUser?.email && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500 flex-shrink-0 h-8 w-8 p-0"
+                          onClick={() => handleEditPost(post)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {post.archivo_url && (
                     <div
                       className="mt-3 rounded-lg overflow-hidden border border-gray-100 cursor-pointer"
@@ -702,12 +768,18 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
 
           {/* Moderator Panel */}
           {isModerator && (
-            <Card className="border-blue-200 bg-blue-50">
+            <Card style={{ backgroundColor: '#fef3c7', borderColor: '#fbbf24' }} className="shadow-sm border">
               <CardHeader className="pb-3">
-                <h3 className="text-blue-800 font-semibold">Panel de Moderación</h3>
+                <h3 style={{ color: '#92400e' }} className="font-semibold flex items-center gap-2">
+                  🛡️ Panel de Moderación
+                </h3>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                <Button
+                  style={{ backgroundColor: '#f59e0b', color: '#ffffff' }}
+                  className="w-full hover:opacity-90"
+                  onClick={() => onNavigate && onNavigate('reports-dashboard')}
+                >
                   Ver Reportes
                 </Button>
               </CardContent>
@@ -746,40 +818,42 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </div >
 
       {/* Image Modal */}
-      {selectedImageUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setSelectedImageUrl(null)}
-        >
-          {/* Close button - always visible */}
-          <button
-            className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/40 rounded-full p-2 transition-colors"
+      {
+        selectedImageUrl && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
             onClick={() => setSelectedImageUrl(null)}
           >
-            <X className="h-6 w-6 text-white" />
-          </button>
+            {/* Close button - always visible */}
+            <button
+              className="absolute top-4 right-4 z-10 bg-white/20 hover:bg-white/40 rounded-full p-2 transition-colors"
+              onClick={() => setSelectedImageUrl(null)}
+            >
+              <X className="h-6 w-6 text-white" />
+            </button>
 
-          {/* Image container */}
-          <div
-            className="relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={selectedImageUrl}
-              alt="Imagen ampliada"
-              className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
-            />
+            {/* Image container */}
+            <div
+              className="relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={selectedImageUrl}
+                alt="Imagen ampliada"
+                className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              />
+            </div>
+
+            {/* Click anywhere hint */}
+            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
+              Click fuera de la imagen o presiona X para cerrar
+            </p>
           </div>
-
-          {/* Click anywhere hint */}
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm">
-            Click fuera de la imagen o presiona X para cerrar
-          </p>
-        </div>
-      )}
+        )
+      }
     </>
   );
 };

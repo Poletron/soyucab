@@ -93,7 +93,7 @@ router.post('/', requireAuth, async (req, res) => {
         res.status(201).json({ success: true, message: 'Oferta publicada exitosamente' });
     } catch (err) {
         console.error('[OFFERS] Error creando oferta:', err.message);
-        if (err.message.includes('no está autorizada')) {
+        if (err.message.includes('autorizada') || err.message.includes('no tienen nexos')) {
             return res.status(403).json({ success: false, error: 'La organización no tiene nexos activos para publicar ofertas' });
         }
         res.status(500).json({ success: false, error: err.message });

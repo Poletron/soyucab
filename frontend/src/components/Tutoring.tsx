@@ -105,14 +105,23 @@ export default function Tutoring() {
     }
   }, [activeTab, searchTerm, selectedSubject]);
 
+  // New state to track requests made in this session
+  const [sessionRequests, setSessionRequests] = useState<Set<number>>(new Set());
+
   const handleRequestMentorship = async (tutoriaId: number) => {
     try {
+      setSessionRequests(prev => new Set(prev).add(tutoriaId)); // Optimistic update
       const result = await requestMentorship(tutoriaId);
       if (result.success) {
         alert('Solicitud enviada correctamente');
-        loadTutors(); // Refresh to potentially show status change? 
+        loadTutors();
       }
     } catch (err: any) {
+      setSessionRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tutoriaId);
+        return newSet;
+      });
       alert(err.message || 'Error al solicitar mentoría');
     }
   };
@@ -295,11 +304,24 @@ export default function Tutoring() {
 
                             <Button
                               className="w-full"
-                              style={{ backgroundColor: '#40b4e5', borderColor: '#40b4e5' }}
+                              style={{
+                                backgroundColor: sessionRequests.has(tutor.clave_tutoria) ? '#fbbf24' : '#40b4e5',
+                                borderColor: sessionRequests.has(tutor.clave_tutoria) ? '#fbbf24' : '#40b4e5'
+                              }}
                               onClick={() => handleRequestMentorship(tutor.clave_tutoria)}
+                              disabled={sessionRequests.has(tutor.clave_tutoria)}
                             >
-                              <MessageSquare className="mr-2 h-4 w-4" />
-                              Solicitar Mentoría
+                              {sessionRequests.has(tutor.clave_tutoria) ? (
+                                <>
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  Solicitado
+                                </>
+                              ) : (
+                                <>
+                                  <MessageSquare className="mr-2 h-4 w-4" />
+                                  Solicitar Mentoría
+                                </>
+                              )}
                             </Button>
                           </div>
                         </DialogContent>

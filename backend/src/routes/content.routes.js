@@ -56,6 +56,27 @@ router.delete('/:id', requireAuth, async (req, res) => {
 });
 
 /**
+ * PUT /api/content/:id
+ * Editar contenido propio
+ */
+router.put('/:id', requireAuth, async (req, res) => {
+    const { texto } = req.body;
+    if (!texto || texto.trim().length === 0) {
+        return res.status(400).json({ success: false, error: 'El texto es requerido' });
+    }
+
+    try {
+        await contentService.updateContent(req.params.id, req.userEmail, texto);
+        res.json({ success: true, message: 'Contenido actualizado' });
+    } catch (err) {
+        if (err.message.includes('No tienes permiso')) {
+            return res.status(403).json({ success: false, error: err.message });
+        }
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
  * POST /api/content/:id/react
  * Reaccionar a un contenido
  */

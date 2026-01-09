@@ -169,6 +169,24 @@ async function getGroupPosts(nombreGrupo) {
     return result.rows;
 }
 
+/**
+ * Update content text
+ */
+async function updateContent(contentId, userEmail, newText) {
+    // Check ownership
+    const author = await getContentAuthor(contentId);
+    if (!author || author !== userEmail) {
+        throw new Error('No tienes permiso para editar este contenido');
+    }
+
+    await db.query(
+        'UPDATE CONTENIDO SET texto_contenido = $1 WHERE clave_contenido = $2',
+        [newText, contentId]
+    );
+
+    return { success: true };
+}
+
 module.exports = {
     createContent,
     getContentAuthor,
@@ -177,5 +195,6 @@ module.exports = {
     removeReaction,
     addComment,
     getComments,
-    getGroupPosts
+    getGroupPosts,
+    updateContent
 };

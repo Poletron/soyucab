@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check, Heart, MessageCircle } from 'lucide-react';
+import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check, Heart, MessageCircle, X, Save } from 'lucide-react';
+import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -10,7 +11,8 @@ import {
   startConversation,
   getCurrentUser,
   getUserProfile,
-  getUserPosts
+  getUserPosts,
+  updatePost
 } from '../services/api';
 
 interface ProfileData {
@@ -46,6 +48,11 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
   const [connecting, setConnecting] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit Post State
+  const [editingPost, setEditingPost] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [savingPost, setSavingPost] = useState(false);
 
   const currentUser = getCurrentUser();
 
@@ -164,6 +171,32 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
     } finally {
       setMessaging(false);
     }
+  };
+
+  const handleEditClick = (post: any) => {
+    setEditingPost(post.clave_contenido);
+    setEditContent(post.texto_contenido);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPost) return;
+    try {
+      setSavingPost(true);
+      const result = await updatePost(editingPost, editContent);
+      if (result.success) {
+        setPosts(posts.map(p => p.clave_contenido === editingPost ? { ...p, texto_contenido: editContent } : p));
+        setEditingPost(null);
+      }
+    } catch (err) {
+      console.error('Error updating post:', err);
+    } finally {
+      setSavingPost(false);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingPost(null);
+    setEditContent('');
   };
 
   const formatDate = (dateStr?: string) => {
@@ -357,7 +390,38 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
             <div className="space-y-4">
               {posts.slice(0, 5).map((post: any) => (
                 <div key={post.clave_contenido} className="border-b pb-4 last:border-0">
-                  <p className="text-gray-700">{post.texto_contenido}</p>
+                  {editingPost === post.clave_contenido ? (
+                    <div className="space-y-3">
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        className="min-h-[100px]"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={savingPost}>
+                          <X className="h-4 w-4 mr-1" /> Cancelar
+                        </Button>
+                        <Button size="sm" onClick={handleSaveEdit} disabled={savingPost}>
+                          {savingPost ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                          Guardar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="group flex items-start justify-between gap-2">
+                      <p className="text-gray-700 whitespace-pre-wrap flex-1">{post.texto_contenido}</p>
+                      {isOwnProfile && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-blue-500 flex-shrink-0 h-8 w-8 p-0"
+                          onClick={() => handleEditClick(post)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-xs text-gray-400">
                       {post.fecha_hora_creacion ? new Date(post.fecha_hora_creacion).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
