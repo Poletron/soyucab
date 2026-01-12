@@ -171,4 +171,137 @@ router.post('/:id/close', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/events/:id
+ * Editar un evento existente
+ * Solo el organizador del evento puede editarlo
+ */
+router.put('/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userEmail = req.userEmail;
+        const { titulo, descripcion, fecha_inicio, hora_inicio, fecha_fin, hora_fin, ubicacion } = req.body;
+
+        // Verificar que el usuario sea el organizador del evento
+        const eventCheck = await db.query(`
+            SELECT c.correo_autor, e.fk_contenido
+            FROM evento e
+            JOIN contenido c ON e.fk_contenido = c.clave_contenido
+            WHERE e.clave_evento = $1 OR e.fk_contenido = $1
+        `, [id]);
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Evento no encontrado' });
+        }
+
+        if (eventCheck.rows[0].correo_autor !== userEmail) {
+            return res.status(403).json({ success: false, error: 'Solo el organizador puede editar el evento' });
+        }
+
+        const fkContenido = eventCheck.rows[0].fk_contenido;
+
+        // Construir fechas con horas
+        let fechaInicio = null;
+        let fechaFin = null;
+
+        if (fecha_inicio) {
+            fechaInicio = fecha_inicio + (hora_inicio ? ` ${hora_inicio}:00` : ' 00:00:00');
+        }
+        if (fecha_fin) {
+            fechaFin = fecha_fin + (hora_fin ? ` ${hora_fin}:00` : ' 23:59:59');
+        }
+
+        // Actualizar tabla evento
+        const updateFields = [];
+        const updateValues = [];
+        let paramCount = 1;
+
+        if (titulo) {
+            updateFields.push(`titulo = $${paramCount++}`);
+            updateValues.push(titulo);
+        }
+        if (fechaInicio) {
+            updateFields.push(`fecha_inicio = $${paramCount++}`);
+            updateValues.push(fechaInicio);
+        }
+        if (fechaFin) {
+            updateFields.push(`fecha_fin = $${paramCount++}`);
+            updateValues.push(fechaFin);
+        }
+        if (ubicacion !== undefined) {
+            updateFields.push(`ciudad_ubicacion = $${paramCount++}`);
+            updateValues.push(ubicacion || null);
+        }
+
+        if (updateFields.length > 0) {
+            updateValues.push(id);
+            await db.queryAsUser(userEmail, `
+                UPDATE evento 
+                SET ${updateFields.join(', ')}
+                WHERE clave_evento = $${paramCount} OR fk_contenido = $${paramCount}
+            `, updateValues);
+        }
+
+        // Actualizar descripción en contenido si se proporcionó
+        if (descripcion !== undefined) {
+            await db.queryAsUser(userEmail, `
+                UPDATE contenido SET texto_contenido = $1 WHERE clave_contenido = $2
+            `, [descripcion, fkContenido]);
+        }
+
+        res.json({
+            success: true,
+            message: 'Evento actualizado exitosamente'
+        });
+    } catch (err) {
+        console.error('Error updating event:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/events/:id
+ * Eliminar un evento
+ * Solo el organizador del evento puede eliminarlo
+ */
+router.delete('/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userEmail = req.userEmail;
+
+        // Verificar que el usuario sea el organizador del evento
+        const eventCheck = await db.query(`
+            SELECT c.correo_autor, e.fk_contenido, e.titulo
+            FROM evento e
+            JOIN contenido c ON e.fk_contenido = c.clave_contenido
+            WHERE e.clave_evento = $1 OR e.fk_contenido = $1
+        `, [id]);
+
+        if (eventCheck.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Evento no encontrado' });
+        }
+
+        if (eventCheck.rows[0].correo_autor !== userEmail) {
+            return res.status(403).json({ success: false, error: 'Solo el organizador puede eliminar el evento' });
+        }
+
+        const fkContenido = eventCheck.rows[0].fk_contenido;
+        const titulo = eventCheck.rows[0].titulo;
+
+        // Eliminar el evento (la FK CASCADE debería eliminar dependencias)
+        await db.queryAsUser(userEmail, `DELETE FROM evento WHERE fk_contenido = $1`, [fkContenido]);
+
+        // Eliminar el contenido asociado
+        await db.queryAsUser(userEmail, `DELETE FROM contenido WHERE clave_contenido = $1`, [fkContenido]);
+
+        res.json({
+            success: true,
+            message: `Evento "${titulo}" eliminado exitosamente`
+        });
+    } catch (err) {
+        console.error('Error deleting event:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

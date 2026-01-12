@@ -355,6 +355,21 @@ export async function closeEvent(eventId: number): Promise<{ success: boolean; m
     return res.json();
 }
 
+export async function updateEvent(eventId: number, data: Partial<CreateEventData>): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await apiFetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
+
+export async function deleteEvent(eventId: number): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await apiFetch(`/api/events/${eventId}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
 export async function reactToPost(id: number, reaccion: string = 'Me Gusta') {
     const res = await apiFetch(`/api/content/${id}/react`, {
         method: 'POST',

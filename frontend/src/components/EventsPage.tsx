@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, Loader2, ArrowLeft, CheckCircle, X, Plus } from 'lucide-react';
+import { Calendar, MapPin, Clock, Loader2, ArrowLeft, CheckCircle, X, Plus, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getUpcomingEvents, closeEvent, getCurrentUser } from '../services/api';
+import { getUpcomingEvents, closeEvent, deleteEvent, getCurrentUser } from '../services/api';
 
 interface Event {
     clave_evento: number;
@@ -26,6 +26,7 @@ const EventsPage = ({ onNavigate }: EventsPageProps) => {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [closingEvent, setClosingEvent] = useState<number | null>(null);
+    const [deletingEvent, setDeletingEvent] = useState<number | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     const currentUser = getCurrentUser();
@@ -70,6 +71,30 @@ const EventsPage = ({ onNavigate }: EventsPageProps) => {
             setMessage({ type: 'error', text: 'Error de conexión al cerrar el evento' });
         } finally {
             setClosingEvent(null);
+        }
+    };
+
+    const handleDeleteEvent = async (event: Event) => {
+        if (!confirm(`¿Estás seguro de eliminar el evento "${event.titulo}"?\n\nEsta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        const eventId = event.fk_contenido || event.clave_evento;
+        setDeletingEvent(eventId);
+        setMessage(null);
+
+        try {
+            const result = await deleteEvent(eventId);
+            if (result.success) {
+                setMessage({ type: 'success', text: result.message || 'Evento eliminado exitosamente' });
+                setEvents(events.filter(e => e.clave_evento !== event.clave_evento));
+            } else {
+                setMessage({ type: 'error', text: result.error || 'Error al eliminar el evento' });
+            }
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Error de conexión al eliminar el evento' });
+        } finally {
+            setDeletingEvent(null);
         }
     };
 
@@ -191,22 +216,38 @@ const EventsPage = ({ onNavigate }: EventsPageProps) => {
                                                 </div>
                                             )}
 
-                                            {/* Botón de cerrar evento - solo visible para el organizador */}
+                                            {/* Botones de organizador - solo visibles para el creador del evento */}
                                             {isOrganizer(event) && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleCloseEvent(event)}
-                                                    disabled={closingEvent === (event.fk_contenido || event.clave_evento)}
-                                                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                                                >
-                                                    {closingEvent === (event.fk_contenido || event.clave_evento) ? (
-                                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                                    ) : (
-                                                        <CheckCircle className="h-4 w-4 mr-1" />
-                                                    )}
-                                                    Cerrar Evento
-                                                </Button>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleDeleteEvent(event)}
+                                                        disabled={deletingEvent === (event.fk_contenido || event.clave_evento)}
+                                                        className="text-red-600 border-red-300 hover:bg-red-50"
+                                                    >
+                                                        {deletingEvent === (event.fk_contenido || event.clave_evento) ? (
+                                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-4 w-4 mr-1" />
+                                                        )}
+                                                        Eliminar
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleCloseEvent(event)}
+                                                        disabled={closingEvent === (event.fk_contenido || event.clave_evento)}
+                                                        className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                                    >
+                                                        {closingEvent === (event.fk_contenido || event.clave_evento) ? (
+                                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                                        ) : (
+                                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                                        )}
+                                                        Cerrar Evento
+                                                    </Button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
