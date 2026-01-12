@@ -6,7 +6,7 @@ Documento generado a partir de la sesión de revisión. Las tareas están distri
 
 ### Oscar Jaramillo (Contenido, Feed, Eventos)
 - [x] **Eventos/NavBar:** Agregar pestaña de eventos en navbar. (RF 3.2) ✅
-- [ ] **Eventos/Feed:** Falta funcionalidad de "Crear evento" tanto desde el feed como desde la página de eventos. (RF 3.2)
+- [x] **Eventos/Feed:** Falta funcionalidad de "Crear evento" tanto desde el feed como desde la página de eventos. (RF 3.2) ✅
 - [ ] **Eventos:** Verificar funcionalidad de "Eliminar/Editar event". (Posible Omisión - RF 3.2)
 - [ ] **Comentarios:** Implementar comentarios anidados (actualmente no implementados). (RF 3.3)
 - [ ] **Comentarios:** Verificar funcionalidad de "Eliminar comentario". (Posible Omisión - RF 3.3)

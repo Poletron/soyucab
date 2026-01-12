@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, MapPin, Clock, Loader2, ArrowLeft, CheckCircle, X } from 'lucide-react';
+import { Calendar, MapPin, Clock, Loader2, ArrowLeft, CheckCircle, X, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -92,17 +92,27 @@ const EventsPage = ({ onNavigate }: EventsPageProps) => {
     return (
         <div className="max-w-4xl mx-auto">
             {/* Header */}
-            <div className="flex items-center mb-6">
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onNavigate && onNavigate('feed')}
+                        className="mr-3"
+                    >
+                        <ArrowLeft className="h-4 w-4 mr-1" />
+                        Volver
+                    </Button>
+                    <h1 className="text-2xl font-bold">Eventos</h1>
+                </div>
                 <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onNavigate && onNavigate('feed')}
-                    className="mr-3"
+                    onClick={() => onNavigate && onNavigate('create')}
+                    style={{ backgroundColor: '#40b4e5' }}
+                    className="flex items-center space-x-2"
                 >
-                    <ArrowLeft className="h-4 w-4 mr-1" />
-                    Volver
+                    <Plus className="h-4 w-4" />
+                    <span>Crear Evento</span>
                 </Button>
-                <h1 className="text-2xl font-bold">Eventos</h1>
             </div>
 
             {/* Messages */}
