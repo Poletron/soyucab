@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, deleteComment, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, deleteComment, reactToComment, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
 import { useRole } from '../hooks/useRole';
 
 // URL base del backend para resolver paths relativos de imágenes
@@ -699,6 +699,19 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                                           onClick={() => setReplyingToId(replyingToId === comment.clave_comentario ? null : comment.clave_comentario)}
                                         >
                                           {replyingToId === comment.clave_comentario ? 'Cancelar' : 'Responder'}
+                                        </button>
+                                        <button
+                                          className="text-xs text-pink-500 hover:text-pink-700 flex items-center"
+                                          onClick={async () => {
+                                            try {
+                                              await reactToComment(comment.clave_comentario, 'Me Gusta');
+                                            } catch (err) {
+                                              console.error('Error reacting to comment:', err);
+                                            }
+                                          }}
+                                        >
+                                          <Heart className="h-3 w-3 mr-1" />
+                                          Me gusta
                                         </button>
                                         {comment.correo_autor_comentario === currentUser?.email && (
                                           <button

@@ -229,6 +229,50 @@ async function deleteComment(commentId, userEmail) {
     return { success: true };
 }
 
+/**
+ * Get all available reaction types
+ */
+async function getReactionTypes() {
+    const result = await db.query('SELECT nombre_reaccion, descripcion, url_icono FROM TIPO_REACCION');
+    return result.rows;
+}
+
+/**
+ * Add reaction to comment
+ */
+async function addCommentReaction(userEmail, commentId, reaccion = 'Me Gusta') {
+    await db.query(
+        `INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT DO NOTHING`,
+        [userEmail, commentId, reaccion]
+    );
+}
+
+/**
+ * Remove reaction from comment
+ */
+async function removeCommentReaction(userEmail, commentId) {
+    await db.query(
+        'DELETE FROM REACCIONA_COMENTARIO WHERE correo_miembro = $1 AND fk_comentario = $2',
+        [userEmail, commentId]
+    );
+}
+
+/**
+ * Get reactions count for a comment
+ */
+async function getCommentReactions(commentId) {
+    const result = await db.query(
+        `SELECT nombre_reaccion, COUNT(*) as count 
+         FROM REACCIONA_COMENTARIO 
+         WHERE fk_comentario = $1 
+         GROUP BY nombre_reaccion`,
+        [commentId]
+    );
+    return result.rows;
+}
+
 module.exports = {
     createContent,
     getContentAuthor,
@@ -239,5 +283,9 @@ module.exports = {
     getComments,
     getGroupPosts,
     updateContent,
-    deleteComment
+    deleteComment,
+    getReactionTypes,
+    addCommentReaction,
+    removeCommentReaction,
+    getCommentReactions
 };

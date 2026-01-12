@@ -405,6 +405,33 @@ export async function deleteComment(commentId: number): Promise<{ success: boole
     return res.json();
 }
 
+// Reaction Types
+export interface ReactionType {
+    nombre_reaccion: string;
+    descripcion: string;
+    url_icono: string;
+}
+
+export async function getReactionTypes(): Promise<{ success: boolean; data?: ReactionType[] }> {
+    const res = await apiFetch('/api/content/reactions/types');
+    return res.json();
+}
+
+// Comment Reactions
+export async function reactToComment(commentId: number, reaccion: string = 'Me Gusta') {
+    const res = await apiFetch(`/api/content/comment/${commentId}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ reaccion }),
+    });
+    return res.json();
+}
+
+export async function removeCommentReaction(commentId: number) {
+    const res = await apiFetch(`/api/content/comment/${commentId}/react`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
 
 
 // ============================================

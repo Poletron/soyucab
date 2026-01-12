@@ -158,4 +158,45 @@ router.delete('/comment/:commentId', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/content/reactions/types
+ * Obtener tipos de reacciones disponibles
+ */
+router.get('/reactions/types', async (req, res) => {
+    try {
+        const types = await contentService.getReactionTypes();
+        res.json({ success: true, data: types });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * POST /api/content/comment/:commentId/react
+ * Reaccionar a un comentario
+ */
+router.post('/comment/:commentId/react', requireAuth, async (req, res) => {
+    const { reaccion = 'Me Gusta' } = req.body;
+    try {
+        await contentService.addCommentReaction(req.userEmail, req.params.commentId, reaccion);
+        res.json({ success: true, message: 'Reacción registrada' });
+    } catch (err) {
+        console.error('[COMMENT REACT] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/content/comment/:commentId/react
+ * Quitar reacción de un comentario
+ */
+router.delete('/comment/:commentId/react', requireAuth, async (req, res) => {
+    try {
+        await contentService.removeCommentReaction(req.userEmail, req.params.commentId);
+        res.json({ success: true, message: 'Reacción eliminada' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
