@@ -12,7 +12,7 @@ Documento generado a partir de la sesión de revisión. Las tareas están distri
 - [x] **Comentarios:** Verificar funcionalidad de "Eliminar comentario". (Posible Omisión - RF 3.3) ✅
 - [x] **Reacciones:** Agregar tipos de reacciones y permitir reacciones a comentarios. (RF 3.4) ✅
 - [x] **Reacciones:** Verificar funcionalidad de "Quitar reacción". (Posible Omisión - RF 3.4) ✅
-- [ ] **Publicación:** Verificar validación de "artículo" en publicación (confirmar necesidad/existencia). (RF 3.1)
+- [x] **Publicación:** Verificar validación de "artículo" en publicación (confirmar necesidad/existencia). (RF 3.1) ✅ — *Verificado: RF 3.1 solo requiere texto. Botón "Artículo" es placeholder decorativo.*
 
 ### Luis Torres (Usuarios, Grupos, Roles, Privacidad)
 - [ ] **Roles/Seguridad:** Implementar asignación de roles (Frontend/Backend). Verificar reacción de la App según rol (ej: Organización no envía mensajes). Verificar Multiroles. (RF 7.2)
