@@ -99,13 +99,17 @@ async function removeReaction(userEmail, contentId) {
 
 /**
  * Add comment to content
+ * @param {string} userEmail - Email of comment author
+ * @param {number} contentId - ID of content being commented on
+ * @param {string} texto - Comment text
+ * @param {number|null} parentId - Optional parent comment ID for nested replies
  */
-async function addComment(userEmail, contentId, texto) {
+async function addComment(userEmail, contentId, texto, parentId = null) {
     const result = await db.query(
-        `INSERT INTO COMENTARIO (fk_contenido, fecha_hora_comentario, correo_autor_comentario, texto_comentario)
-         VALUES ($1, NOW(), $2, $3)
-         RETURNING clave_comentario, fecha_hora_comentario`,
-        [contentId, userEmail, texto]
+        `INSERT INTO COMENTARIO (fk_contenido, fecha_hora_comentario, correo_autor_comentario, texto_comentario, fk_comentario_padre)
+         VALUES ($1, NOW(), $2, $3, $4)
+         RETURNING clave_comentario, fecha_hora_comentario, fk_comentario_padre`,
+        [contentId, userEmail, texto, parentId]
     );
 
     // Notify author of the content
@@ -127,11 +131,16 @@ async function addComment(userEmail, contentId, texto) {
 }
 
 /**
- * Get comments for a content
+ * Get comments for a content (including nested replies)
  */
 async function getComments(contentId) {
     const result = await db.query(
-        `SELECT c.*, 
+        `SELECT c.clave_comentario, 
+                c.fk_contenido,
+                c.fecha_hora_comentario,
+                c.correo_autor_comentario,
+                c.texto_comentario,
+                c.fk_comentario_padre,
                 COALESCE(p.nombres, eo.nombre_oficial) as nombres,
                 p.apellidos,
                 m.fotografia_url
@@ -140,7 +149,7 @@ async function getComments(contentId) {
          LEFT JOIN PERSONA p ON c.correo_autor_comentario = p.correo_principal
          LEFT JOIN ENTIDAD_ORGANIZACIONAL eo ON c.correo_autor_comentario = eo.correo_principal
          WHERE c.fk_contenido = $1
-         ORDER BY c.fecha_hora_comentario ASC`,
+         ORDER BY c.fk_comentario_padre NULLS FIRST, c.fecha_hora_comentario ASC`,
         [contentId]
     );
     return result.rows;

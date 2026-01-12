@@ -385,10 +385,10 @@ export async function removeReaction(id: number) {
     return res.json();
 }
 
-export async function commentOnPost(id: number, texto: string) {
+export async function commentOnPost(id: number, texto: string, parentId?: number) {
     const res = await apiFetch(`/api/content/${id}/comment`, {
         method: 'POST',
-        body: JSON.stringify({ texto }),
+        body: JSON.stringify({ texto, parent_id: parentId || null }),
     });
     return res.json();
 }

@@ -8,7 +8,7 @@ Documento generado a partir de la sesión de revisión. Las tareas están distri
 - [x] **Eventos/NavBar:** Agregar pestaña de eventos en navbar. (RF 3.2) ✅
 - [x] **Eventos/Feed:** Falta funcionalidad de "Crear evento" tanto desde el feed como desde la página de eventos. (RF 3.2) ✅
 - [x] **Eventos:** Verificar funcionalidad de "Eliminar/Editar event". (Posible Omisión - RF 3.2) ✅
-- [ ] **Comentarios:** Implementar comentarios anidados (actualmente no implementados). (RF 3.3)
+- [x] **Comentarios:** Implementar comentarios anidados (actualmente no implementados). (RF 3.3) ✅
 - [ ] **Comentarios:** Verificar funcionalidad de "Eliminar comentario". (Posible Omisión - RF 3.3)
 - [ ] **Reacciones:** Agregar tipos de reacciones y permitir reacciones a comentarios. (RF 3.4)
 - [ ] **Reacciones:** Verificar funcionalidad de "Quitar reacción". (Posible Omisión - RF 3.4)

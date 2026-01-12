@@ -25,6 +25,7 @@ interface Comment {
   texto_comentario: string;
   fecha_hora_comentario: string;
   correo_autor_comentario: string;
+  fk_comentario_padre?: number | null;
   nombres?: string;
   apellidos?: string;
   fotografia_url?: string;
@@ -71,6 +72,7 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
   const [currentComments, setCurrentComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [loadingComments, setLoadingComments] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<number | null>(null);
 
   // Image modal state
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
@@ -219,9 +221,10 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
     if (!commentText.trim()) return;
 
     try {
-      const result = await commentOnPost(postId, commentText);
+      const result = await commentOnPost(postId, commentText, replyingToId || undefined);
       if (result.success) {
         setCommentText('');
+        setReplyingToId(null);
         // Refresh comments
         const commentsResult = await getComments(postId);
         if (commentsResult.success) {
@@ -647,29 +650,71 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                       <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin text-gray-500" /></div>
                     ) : (
                       <div className="space-y-4">
-                        {/* Comments List */}
+                        {/* Comments List - Build nested structure */}
                         {currentComments.length > 0 ? (
                           <div className="space-y-3 mb-4">
-                            {currentComments.map((comment) => (
-                              <div key={comment.clave_comentario} className="flex space-x-2">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage src={getImageUrl(comment.fotografia_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent((comment.nombres || '') + ' ' + (comment.apellidos || ''))}`} />
-                                  <AvatarFallback>{(comment.nombres?.[0] || 'U')}</AvatarFallback>
-                                </Avatar>
-                                <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm flex-1">
-                                  <div className="flex justify-between items-start">
-                                    <p className="text-xs font-semibold text-gray-900">
-                                      {comment.nombres} {comment.apellidos}
-                                    </p>
-                                    <span className="text-xs text-gray-400">{formatDate(comment.fecha_hora_comentario)}</span>
+                            {/* Root comments (no parent) */}
+                            {currentComments
+                              .filter(c => !c.fk_comentario_padre)
+                              .map((comment) => (
+                                <div key={comment.clave_comentario}>
+                                  {/* Root comment */}
+                                  <div className="flex space-x-2">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={getImageUrl(comment.fotografia_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent((comment.nombres || '') + ' ' + (comment.apellidos || ''))}`} />
+                                      <AvatarFallback>{(comment.nombres?.[0] || 'U')}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="bg-white p-3 rounded-lg rounded-tl-none shadow-sm flex-1">
+                                      <div className="flex justify-between items-start">
+                                        <p className="text-xs font-semibold text-gray-900">
+                                          {comment.nombres} {comment.apellidos}
+                                        </p>
+                                        <span className="text-xs text-gray-400">{formatDate(comment.fecha_hora_comentario)}</span>
+                                      </div>
+                                      <p className="text-sm text-gray-700 mt-1">{comment.texto_comentario}</p>
+                                      <button
+                                        className="text-xs text-blue-500 hover:text-blue-700 mt-2"
+                                        onClick={() => setReplyingToId(replyingToId === comment.clave_comentario ? null : comment.clave_comentario)}
+                                      >
+                                        {replyingToId === comment.clave_comentario ? 'Cancelar' : 'Responder'}
+                                      </button>
+                                    </div>
                                   </div>
-                                  <p className="text-sm text-gray-700 mt-1">{comment.texto_comentario}</p>
+                                  {/* Nested replies */}
+                                  {currentComments
+                                    .filter(reply => reply.fk_comentario_padre === comment.clave_comentario)
+                                    .map((reply) => (
+                                      <div key={reply.clave_comentario} className="flex space-x-2 ml-10 mt-2">
+                                        <Avatar className="h-6 w-6">
+                                          <AvatarImage src={getImageUrl(reply.fotografia_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent((reply.nombres || '') + ' ' + (reply.apellidos || ''))}`} />
+                                          <AvatarFallback>{(reply.nombres?.[0] || 'U')}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="bg-gray-100 p-2 rounded-lg rounded-tl-none flex-1">
+                                          <div className="flex justify-between items-start">
+                                            <p className="text-xs font-semibold text-gray-800">
+                                              {reply.nombres} {reply.apellidos}
+                                            </p>
+                                            <span className="text-xs text-gray-400">{formatDate(reply.fecha_hora_comentario)}</span>
+                                          </div>
+                                          <p className="text-xs text-gray-600 mt-1">{reply.texto_comentario}</p>
+                                        </div>
+                                      </div>
+                                    ))}
                                 </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         ) : (
                           <p className="text-sm text-center text-gray-400 py-2">Sé el primero en comentar</p>
+                        )}
+
+                        {/* Reply indicator */}
+                        {replyingToId && (
+                          <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded">
+                            <span>Respondiendo a {currentComments.find(c => c.clave_comentario === replyingToId)?.nombres}</span>
+                            <button onClick={() => setReplyingToId(null)} className="text-gray-400 hover:text-gray-600">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
                         )}
 
                         {/* Comment Input */}
@@ -680,7 +725,7 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                           </Avatar>
                           <div className="flex-1 relative">
                             <Input
-                              placeholder="Escribe un comentario..."
+                              placeholder={replyingToId ? "Escribe tu respuesta..." : "Escribe un comentario..."}
                               value={commentText}
                               onChange={(e) => setCommentText(e.target.value)}
                               onKeyDown={(e) => {

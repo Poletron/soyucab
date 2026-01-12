@@ -110,17 +110,17 @@ router.delete('/:id/react', requireAuth, async (req, res) => {
 
 /**
  * POST /api/content/:id/comment
- * Comentar en un contenido
+ * Comentar en un contenido (soporta respuestas anidadas)
  */
 router.post('/:id/comment', requireAuth, async (req, res) => {
-    const { texto } = req.body;
+    const { texto, parent_id } = req.body;
 
     if (!texto || texto.trim().length === 0) {
         return res.status(400).json({ success: false, error: 'El comentario no puede estar vacío' });
     }
 
     try {
-        const result = await contentService.addComment(req.userEmail, req.params.id, texto);
+        const result = await contentService.addComment(req.userEmail, req.params.id, texto, parent_id || null);
         res.status(201).json({ success: true, message: 'Comentario creado', data: result });
     } catch (err) {
         console.error('[COMMENT] Error:', err.message);
