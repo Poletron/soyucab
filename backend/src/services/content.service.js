@@ -196,6 +196,39 @@ async function updateContent(contentId, userEmail, newText) {
     return { success: true };
 }
 
+/**
+ * Delete a comment (only author can delete)
+ * Child replies are also deleted via FK cascade
+ */
+async function deleteComment(commentId, userEmail) {
+    // Verify ownership
+    const result = await db.query(
+        'SELECT correo_autor_comentario FROM COMENTARIO WHERE clave_comentario = $1',
+        [commentId]
+    );
+
+    if (result.rows.length === 0) {
+        throw new Error('Comentario no encontrado');
+    }
+
+    if (result.rows[0].correo_autor_comentario !== userEmail) {
+        throw new Error('No tienes permiso para eliminar este comentario');
+    }
+
+    // Delete comment (child replies will be deleted by FK cascade if configured, 
+    // otherwise we delete children first)
+    await db.query(
+        'DELETE FROM COMENTARIO WHERE fk_comentario_padre = $1',
+        [commentId]
+    );
+    await db.query(
+        'DELETE FROM COMENTARIO WHERE clave_comentario = $1',
+        [commentId]
+    );
+
+    return { success: true };
+}
+
 module.exports = {
     createContent,
     getContentAuthor,
@@ -205,5 +238,6 @@ module.exports = {
     addComment,
     getComments,
     getGroupPosts,
-    updateContent
+    updateContent,
+    deleteComment
 };

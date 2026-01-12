@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send, X, Image as ImageIcon, UserPlus, Briefcase, Edit, Save } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Camera, FileText, Calendar, Users, TrendingUp, Loader2, RefreshCw, Send, X, Image as ImageIcon, UserPlus, Briefcase, Edit, Save, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, deleteComment, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
 import { useRole } from '../hooks/useRole';
 
 // URL base del backend para resolver paths relativos de imágenes
@@ -236,6 +236,27 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
     } catch (err) {
       console.error('Error posting comment:', err);
       alert('Error al publicar comentario');
+    }
+  };
+
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    if (!confirm('¿Estás seguro de eliminar este comentario?')) return;
+
+    try {
+      const result = await deleteComment(commentId);
+      if (result.success) {
+        // Refresh comments
+        const commentsResult = await getComments(postId);
+        if (commentsResult.success) {
+          setCurrentComments(commentsResult.data || []);
+        }
+        loadPosts();
+      } else {
+        alert(result.error || 'Error al eliminar comentario');
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+      alert('Error al eliminar comentario');
     }
   };
 
@@ -672,12 +693,23 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                                         <span className="text-xs text-gray-400">{formatDate(comment.fecha_hora_comentario)}</span>
                                       </div>
                                       <p className="text-sm text-gray-700 mt-1">{comment.texto_comentario}</p>
-                                      <button
-                                        className="text-xs text-blue-500 hover:text-blue-700 mt-2"
-                                        onClick={() => setReplyingToId(replyingToId === comment.clave_comentario ? null : comment.clave_comentario)}
-                                      >
-                                        {replyingToId === comment.clave_comentario ? 'Cancelar' : 'Responder'}
-                                      </button>
+                                      <div className="flex items-center gap-3 mt-2">
+                                        <button
+                                          className="text-xs text-blue-500 hover:text-blue-700"
+                                          onClick={() => setReplyingToId(replyingToId === comment.clave_comentario ? null : comment.clave_comentario)}
+                                        >
+                                          {replyingToId === comment.clave_comentario ? 'Cancelar' : 'Responder'}
+                                        </button>
+                                        {comment.correo_autor_comentario === currentUser?.email && (
+                                          <button
+                                            className="text-xs text-red-500 hover:text-red-700 flex items-center"
+                                            onClick={() => post.clave_contenido && handleDeleteComment(post.clave_contenido, comment.clave_comentario)}
+                                          >
+                                            <Trash2 className="h-3 w-3 mr-1" />
+                                            Eliminar
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   {/* Nested replies */}
@@ -694,7 +726,17 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                                             <p className="text-xs font-semibold text-gray-800">
                                               {reply.nombres} {reply.apellidos}
                                             </p>
-                                            <span className="text-xs text-gray-400">{formatDate(reply.fecha_hora_comentario)}</span>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-xs text-gray-400">{formatDate(reply.fecha_hora_comentario)}</span>
+                                              {reply.correo_autor_comentario === currentUser?.email && (
+                                                <button
+                                                  className="text-xs text-red-400 hover:text-red-600"
+                                                  onClick={() => post.clave_contenido && handleDeleteComment(post.clave_contenido, reply.clave_comentario)}
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </button>
+                                              )}
+                                            </div>
                                           </div>
                                           <p className="text-xs text-gray-600 mt-1">{reply.texto_comentario}</p>
                                         </div>

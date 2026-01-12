@@ -141,4 +141,21 @@ router.get('/:id/comments', async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/content/comment/:commentId
+ * Eliminar un comentario propio
+ */
+router.delete('/comment/:commentId', requireAuth, async (req, res) => {
+    try {
+        await contentService.deleteComment(req.params.commentId, req.userEmail);
+        res.json({ success: true, message: 'Comentario eliminado' });
+    } catch (err) {
+        if (err.message.includes('No tienes permiso') || err.message.includes('no encontrado')) {
+            return res.status(err.message.includes('no encontrado') ? 404 : 403).json({ success: false, error: err.message });
+        }
+        console.error('[DELETE COMMENT] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

@@ -398,6 +398,13 @@ export async function getComments(id: number) {
     return res.json();
 }
 
+export async function deleteComment(commentId: number): Promise<{ success: boolean; message?: string; error?: string }> {
+    const res = await apiFetch(`/api/content/comment/${commentId}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
 
 
 // ============================================
