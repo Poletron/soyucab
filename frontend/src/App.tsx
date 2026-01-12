@@ -291,6 +291,15 @@ function App() {
                   <Briefcase className="h-4 w-4" />
                   <span>Empleos</span>
                 </Button>
+                <Button
+                  variant={currentView === 'events' ? 'default' : 'ghost'}
+                  onClick={() => setCurrentView('events')}
+                  className="flex items-center space-x-2"
+                  style={{ backgroundColor: currentView === 'events' ? '#40b4e5' : 'transparent' }}
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span>Eventos</span>
+                </Button>
                 {!isOrg && (
                   <Button
                     variant={currentView === 'tutoring' ? 'default' : 'ghost'}
