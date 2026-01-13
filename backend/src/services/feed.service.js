@@ -28,7 +28,8 @@ async function getFeed(userEmail) {
             m.fotografia_url as autor_foto,
             (SELECT COUNT(*)::INTEGER FROM REACCIONA_CONTENIDO rc WHERE rc.fk_contenido = c.clave_contenido) as likes_count,
             (SELECT COUNT(*)::INTEGER FROM COMENTARIO com WHERE com.fk_contenido = c.clave_contenido) as comments_count,
-            EXISTS(SELECT 1 FROM REACCIONA_CONTENIDO rc WHERE rc.fk_contenido = c.clave_contenido AND rc.correo_miembro = $1) as user_has_reacted
+            EXISTS(SELECT 1 FROM REACCIONA_CONTENIDO rc WHERE rc.fk_contenido = c.clave_contenido AND rc.correo_miembro = $1) as user_has_reacted,
+            (SELECT nombre_reaccion FROM REACCIONA_CONTENIDO rc WHERE rc.fk_contenido = c.clave_contenido AND rc.correo_miembro = $1) as user_reaction_type
         FROM CONTENIDO c
         LEFT JOIN EVENTO e ON e.fk_contenido = c.clave_contenido
         LEFT JOIN PUBLICACION p ON p.fk_contenido = c.clave_contenido

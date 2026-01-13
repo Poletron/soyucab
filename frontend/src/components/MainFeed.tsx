@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Textarea } from './ui/textarea';
-import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, deleteComment, reactToComment, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
+import { getFeed, createPost, reactToPost, removeReaction, commentOnPost, getComments, deleteComment, reactToComment, removeCommentReaction, sendConnectionRequest, getCurrentUser, getUserStats, getConnectionSuggestions, getUpcomingEvents, uploadImage, updatePost } from '../services/api';
 import { useRole } from '../hooks/useRole';
 
 // URL base del backend para resolver paths relativos de imágenes
@@ -29,6 +29,7 @@ interface Comment {
   nombres?: string;
   apellidos?: string;
   fotografia_url?: string;
+  user_reaction_type?: string | null;
 }
 
 interface Post {
@@ -46,12 +47,26 @@ interface Post {
   likes_count?: number;
   comments_count?: number;
   user_has_reacted?: boolean;
+  user_reaction_type?: string | null;
 }
 
 interface MainFeedProps {
   onViewProfile?: (email: string) => void;
   onNavigate?: (view: string) => void;
 }
+
+// Helper to map reaction type to emoji
+const getReactionEmoji = (reactionType: string | null | undefined): string => {
+  switch (reactionType) {
+    case 'Me Gusta': return '👍';
+    case 'Me Encanta': return '❤️';
+    case 'Me Divierte': return '😂';
+    case 'Me Asombra': return '😮';
+    case 'Me Entristece': return '😢';
+    case 'Me Interesa': return '📅';
+    default: return '❤️';
+  }
+};
 
 const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
   const { isOrg, isVisitor, isModerator } = useRole();
@@ -79,6 +94,7 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
 
   // Reaction hover state
   const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
+  const [hoveredCommentId, setHoveredCommentId] = useState<number | null>(null);
 
   // Edit post state
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
@@ -173,7 +189,7 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
     }
   };
 
-  const handleLike = async (postId: number, postAuthor: string, hasReacted: boolean) => {
+  const handleReaction = async (postId: number, postAuthor: string, hasReacted: boolean) => {
     // Prevent self-reactions
     if (postAuthor === currentUser?.email) {
       alert('No puedes reaccionar a tu propia publicación');
@@ -185,7 +201,7 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
         // Remove reaction
         await removeReaction(postId);
       } else {
-        // Add reaction
+        // Add default reaction
         await reactToPost(postId, 'Me Gusta');
       }
       // Reload feed to get updated counts and reaction status
@@ -201,18 +217,48 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
   };
 
   // Handle selecting a specific reaction type from the picker
-  const handleReactionSelect = async (postId: number, postAuthor: string, reactionType: string) => {
+  const handleReactionSelect = async (postId: number, postAuthor: string, reactionType: string, currentReactionType?: string | null) => {
     if (postAuthor === currentUser?.email) {
       alert('No puedes reaccionar a tu propia publicación');
       return;
     }
 
     try {
-      await reactToPost(postId, reactionType);
+      if (currentReactionType === reactionType) {
+        // Toggle off
+        await removeReaction(postId);
+      } else {
+        // Add or update
+        await reactToPost(postId, reactionType);
+      }
       await loadPosts();
     } catch (err: any) {
       console.error('Error adding reaction:', err);
       alert('Error al reaccionar. Intenta de nuevo.');
+    }
+  };
+
+  // Handle comment reaction
+  const handleCommentReaction = async (commentId: number, reactionType: string, currentReactionType?: string | null) => {
+    try {
+      if (currentReactionType === reactionType) {
+        // Toggle off if clicking same reaction
+        await removeCommentReaction(commentId);
+      } else {
+        // Add or update reaction
+        await reactToComment(commentId, reactionType);
+      }
+
+      // Refresh comments to show update
+      if (activePostId) {
+        // Silently refresh comments
+        const response: any = await getComments(activePostId);
+        if (response.success && response.data) {
+          setCurrentComments(response.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error handling comment reaction:', err);
     }
   };
 
@@ -523,10 +569,6 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                               Foto
                             </Button>
                             <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
-                              <FileText className="h-4 w-4 mr-1" />
-                              Artículo
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-800">
                               <Calendar className="h-4 w-4 mr-1" />
                               Evento
                             </Button>
@@ -664,42 +706,47 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                         size="sm"
                         className={post.user_has_reacted ? "text-red-600" : "text-gray-600 hover:text-red-600"}
                         onClick={() => post.clave_contenido && handleReaction(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
+                        title={post.user_has_reacted ? `${post.user_reaction_type} - Click para quitar` : "Click para reaccionar"}
                       >
-                        <Heart className={`h-4 w-4 mr-1 ${post.user_has_reacted ? 'fill-red-600' : ''}`} />
+                        {post.user_has_reacted ? (
+                          <span className="text-base mr-1">{getReactionEmoji(post.user_reaction_type)}</span>
+                        ) : (
+                          <Heart className="h-4 w-4 mr-1" />
+                        )}
                         {Number(post.likes_count) || 0}
                       </Button>
                       {/* Reaction Picker Popup - shows on hover */}
                       {hoveredPostId === post.clave_contenido && (
-                        <div className="absolute bottom-full left-0 mb-2 z-50">
+                        <div className="absolute bottom-full left-0 mb-0 pb-2 z-50">
                           <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1.5 flex space-x-1">
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Gusta'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Gusta', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Gusta"
                             >👍</button>
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Encanta'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Encanta', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Encanta"
                             >❤️</button>
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Divierte'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Divierte', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Divierte"
                             >😂</button>
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Asombra'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Asombra', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Asombra"
                             >😮</button>
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Entristece'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Entristece', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Entristece"
                             >😢</button>
                             <button
                               className="text-xl hover:scale-125 transition-transform cursor-pointer"
-                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Interesa'); setHoveredPostId(null); }}
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Interesa', post.user_reaction_type); setHoveredPostId(null); }}
                               title="Me Interesa"
                             >📅</button>
                           </div>
@@ -763,19 +810,72 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                                         >
                                           {replyingToId === comment.clave_comentario ? 'Cancelar' : 'Responder'}
                                         </button>
-                                        <button
-                                          className="text-xs text-pink-500 hover:text-pink-700 flex items-center"
-                                          onClick={async () => {
-                                            try {
-                                              await reactToComment(comment.clave_comentario, 'Me Gusta');
-                                            } catch (err) {
-                                              console.error('Error reacting to comment:', err);
-                                            }
-                                          }}
+                                        {/* Comment Reaction with Picker */}
+                                        <div
+                                          className="relative"
+                                          onMouseEnter={() => setHoveredCommentId(comment.clave_comentario)}
+                                          onMouseLeave={() => setHoveredCommentId(null)}
                                         >
-                                          <Heart className="h-3 w-3 mr-1" />
-                                          Me gusta
-                                        </button>
+                                          <button
+                                            className="text-xs text-pink-500 hover:text-pink-700 flex items-center"
+                                            onClick={() => handleCommentReaction(comment.clave_comentario, 'Me Gusta', comment.user_reaction_type)}
+                                            title={comment.user_reaction_type ? `${comment.user_reaction_type} - Click para quitar` : "Click para reaccionar"}
+                                          >
+                                            {comment.user_reaction_type ? (
+                                              <span className="text-sm mr-1">{getReactionEmoji(comment.user_reaction_type)}</span>
+                                            ) : (
+                                              <Heart className="h-3 w-3 mr-1" />
+                                            )}
+                                            Me gusta
+                                          </button>
+                                          {/* Reaction Picker for Comments */}
+                                          {hoveredCommentId === comment.clave_comentario && (
+                                            <div className="absolute bottom-full left-0 mb-0 pb-2 z-50">
+                                              <div className="bg-white rounded-full shadow-lg border border-gray-200 px-1 py-0.5 flex space-x-0.5">
+                                                <button
+                                                  className="text-sm hover:scale-125 transition-transform cursor-pointer"
+                                                  onClick={() => {
+                                                    handleCommentReaction(comment.clave_comentario, 'Me Gusta', comment.user_reaction_type);
+                                                    setHoveredCommentId(null);
+                                                  }}
+                                                  title="Me Gusta"
+                                                >👍</button>
+                                                <button
+                                                  className="text-sm hover:scale-125 transition-transform cursor-pointer"
+                                                  onClick={() => {
+                                                    handleCommentReaction(comment.clave_comentario, 'Me Encanta', comment.user_reaction_type);
+                                                    setHoveredCommentId(null);
+                                                  }}
+                                                  title="Me Encanta"
+                                                >❤️</button>
+                                                <button
+                                                  className="text-sm hover:scale-125 transition-transform cursor-pointer"
+                                                  onClick={() => {
+                                                    handleCommentReaction(comment.clave_comentario, 'Me Divierte', comment.user_reaction_type);
+                                                    setHoveredCommentId(null);
+                                                  }}
+                                                  title="Me Divierte"
+                                                >😂</button>
+                                                <button
+                                                  className="text-sm hover:scale-125 transition-transform cursor-pointer"
+                                                  onClick={() => {
+                                                    handleCommentReaction(comment.clave_comentario, 'Me Asombra', comment.user_reaction_type);
+                                                    setHoveredCommentId(null);
+                                                  }}
+                                                  title="Me Asombra"
+                                                >😮</button>
+                                                <button
+                                                  className="text-sm hover:scale-125 transition-transform cursor-pointer"
+                                                  onClick={() => {
+                                                    handleCommentReaction(comment.clave_comentario, 'Me Entristece', comment.user_reaction_type);
+                                                    setHoveredCommentId(null);
+                                                  }}
+                                                  title="Me Entristece"
+                                                >😢</button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
                                         {comment.correo_autor_comentario === currentUser?.email && (
                                           <button
                                             className="text-xs text-red-500 hover:text-red-700 flex items-center"

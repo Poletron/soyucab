@@ -134,7 +134,7 @@ router.post('/:id/comment', requireAuth, async (req, res) => {
  */
 router.get('/:id/comments', async (req, res) => {
     try {
-        const comments = await contentService.getComments(req.params.id);
+        const comments = await contentService.getComments(req.params.id, req.userEmail);
         res.json({ success: true, data: comments });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });

@@ -67,7 +67,8 @@ async function addReaction(userEmail, contentId, reaccion = 'Me Gusta') {
     await db.query(
         `INSERT INTO REACCIONA_CONTENIDO (correo_miembro, fk_contenido, nombre_reaccion, fecha_hora_reaccion)
          VALUES ($1, $2, $3, NOW())
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT (correo_miembro, fk_contenido) 
+         DO UPDATE SET nombre_reaccion = EXCLUDED.nombre_reaccion, fecha_hora_reaccion = NOW()`,
         [userEmail, contentId, reaccion]
     );
 
@@ -133,7 +134,7 @@ async function addComment(userEmail, contentId, texto, parentId = null) {
 /**
  * Get comments for a content (including nested replies)
  */
-async function getComments(contentId) {
+async function getComments(contentId, userEmail) {
     const result = await db.query(
         `SELECT c.clave_comentario, 
                 c.fk_contenido,
@@ -141,16 +142,16 @@ async function getComments(contentId) {
                 c.correo_autor_comentario,
                 c.texto_comentario,
                 c.fk_comentario_padre,
-                COALESCE(p.nombres, eo.nombre_oficial) as nombres,
+                p.nombres,
                 p.apellidos,
-                m.fotografia_url
+                m.fotografia_url,
+                (SELECT nombre_reaccion FROM REACCIONA_COMENTARIO rc WHERE rc.fk_comentario = c.clave_comentario AND rc.correo_miembro = $2) as user_reaction_type
          FROM COMENTARIO c
          JOIN MIEMBRO m ON c.correo_autor_comentario = m.correo_principal
          LEFT JOIN PERSONA p ON c.correo_autor_comentario = p.correo_principal
-         LEFT JOIN ENTIDAD_ORGANIZACIONAL eo ON c.correo_autor_comentario = eo.correo_principal
          WHERE c.fk_contenido = $1
-         ORDER BY c.fk_comentario_padre NULLS FIRST, c.fecha_hora_comentario ASC`,
-        [contentId]
+         ORDER BY c.fecha_hora_comentario ASC`,
+        [contentId, userEmail]
     );
     return result.rows;
 }
@@ -251,6 +252,13 @@ async function addCommentReaction(userEmail, commentId, reaccion = 'Me Gusta') {
         await db.query(
             `INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
              VALUES ($1, $2, $3, NOW())`,
+            [userEmail, commentId, reaccion]
+        );
+    } else {
+        await db.query(
+            `UPDATE REACCIONA_COMENTARIO 
+             SET nombre_reaccion = $3, fecha_hora_reaccion = NOW()
+             WHERE correo_miembro = $1 AND fk_comentario = $2`,
             [userEmail, commentId, reaccion]
         );
     }
