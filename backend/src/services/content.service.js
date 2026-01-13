@@ -241,12 +241,19 @@ async function getReactionTypes() {
  * Add reaction to comment
  */
 async function addCommentReaction(userEmail, commentId, reaccion = 'Me Gusta') {
-    await db.query(
-        `INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
-         VALUES ($1, $2, $3, NOW())
-         ON CONFLICT DO NOTHING`,
-        [userEmail, commentId, reaccion]
+    // Check if already reacted (since table lacks UNIQUE constraint)
+    const existing = await db.query(
+        'SELECT 1 FROM REACCIONA_COMENTARIO WHERE correo_miembro = $1 AND fk_comentario = $2',
+        [userEmail, commentId]
     );
+
+    if (existing.rows.length === 0) {
+        await db.query(
+            `INSERT INTO REACCIONA_COMENTARIO (correo_miembro, fk_comentario, nombre_reaccion, fecha_hora_reaccion)
+             VALUES ($1, $2, $3, NOW())`,
+            [userEmail, commentId, reaccion]
+        );
+    }
 }
 
 /**
