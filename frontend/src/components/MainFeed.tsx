@@ -197,6 +197,22 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
     }
   };
 
+  // Handle selecting a specific reaction type from the picker
+  const handleReactionSelect = async (postId: number, postAuthor: string, reactionType: string) => {
+    if (postAuthor === currentUser?.email) {
+      alert('No puedes reaccionar a tu propia publicación');
+      return;
+    }
+
+    try {
+      await reactToPost(postId, reactionType);
+      await loadPosts();
+    } catch (err: any) {
+      console.error('Error adding reaction:', err);
+      alert('Error al reaccionar. Intenta de nuevo.');
+    }
+  };
+
   const handleCommentClick = async (postId: number) => {
     if (activePostId === postId) {
       setActivePostId(null);
@@ -634,15 +650,53 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                 {/* Post Actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="flex space-x-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={post.user_has_reacted ? "text-red-600" : "text-gray-600 hover:text-red-600"}
-                      onClick={() => post.clave_contenido && handleLike(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
-                    >
-                      <Heart className={`h-4 w-4 mr-1 ${post.user_has_reacted ? 'fill-red-600' : ''}`} />
-                      {Number(post.likes_count) || 0}
-                    </Button>
+                    {/* Reaction Button with Hover Picker */}
+                    <div className="relative group/reactions">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={post.user_has_reacted ? "text-red-600" : "text-gray-600 hover:text-red-600"}
+                        onClick={() => post.clave_contenido && handleLike(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
+                      >
+                        <Heart className={`h-4 w-4 mr-1 ${post.user_has_reacted ? 'fill-red-600' : ''}`} />
+                        {Number(post.likes_count) || 0}
+                      </Button>
+                      {/* Reaction Picker Popup */}
+                      <div className="absolute bottom-full left-0 mb-1 opacity-0 invisible group-hover/reactions:opacity-100 group-hover/reactions:visible transition-all duration-200 z-10">
+                        <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1 flex space-x-1">
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Gusta'); }}
+                            title="Me Gusta"
+                          >👍</button>
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Encanta'); }}
+                            title="Me Encanta"
+                          >❤️</button>
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Divierte'); }}
+                            title="Me Divierte"
+                          >😂</button>
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Asombra'); }}
+                            title="Me Asombra"
+                          >😮</button>
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Entristece'); }}
+                            title="Me Entristece"
+                          >😢</button>
+                          <button
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Interesa'); }}
+                            title="Me Interesa"
+                          >📅</button>
+                        </div>
+                      </div>
+                    </div>
                     <Button
                       variant="ghost"
                       size="sm"
