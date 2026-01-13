@@ -77,6 +77,9 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
   // Image modal state
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
+  // Reaction hover state
+  const [hoveredPostId, setHoveredPostId] = useState<number | null>(null);
+
   // Edit post state
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editPostContent, setEditPostContent] = useState('');
@@ -651,51 +654,57 @@ const MainFeed = ({ onViewProfile, onNavigate }: MainFeedProps) => {
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="flex space-x-4">
                     {/* Reaction Button with Hover Picker */}
-                    <div className="relative group/reactions">
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setHoveredPostId(post.clave_contenido || null)}
+                      onMouseLeave={() => setHoveredPostId(null)}
+                    >
                       <Button
                         variant="ghost"
                         size="sm"
                         className={post.user_has_reacted ? "text-red-600" : "text-gray-600 hover:text-red-600"}
-                        onClick={() => post.clave_contenido && handleLike(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
+                        onClick={() => post.clave_contenido && handleReaction(post.clave_contenido, post.correo_autor, post.user_has_reacted || false)}
                       >
                         <Heart className={`h-4 w-4 mr-1 ${post.user_has_reacted ? 'fill-red-600' : ''}`} />
                         {Number(post.likes_count) || 0}
                       </Button>
-                      {/* Reaction Picker Popup */}
-                      <div className="absolute bottom-full left-0 mb-1 opacity-0 invisible group-hover/reactions:opacity-100 group-hover/reactions:visible transition-all duration-200 z-10">
-                        <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1 flex space-x-1">
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Gusta'); }}
-                            title="Me Gusta"
-                          >👍</button>
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Encanta'); }}
-                            title="Me Encanta"
-                          >❤️</button>
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Divierte'); }}
-                            title="Me Divierte"
-                          >😂</button>
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Asombra'); }}
-                            title="Me Asombra"
-                          >😮</button>
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Entristece'); }}
-                            title="Me Entristece"
-                          >😢</button>
-                          <button
-                            className="text-xl hover:scale-125 transition-transform p-1"
-                            onClick={(e) => { e.stopPropagation(); post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Interesa'); }}
-                            title="Me Interesa"
-                          >📅</button>
+                      {/* Reaction Picker Popup - shows on hover */}
+                      {hoveredPostId === post.clave_contenido && (
+                        <div className="absolute bottom-full left-0 mb-2 z-50">
+                          <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-1.5 flex space-x-1">
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Gusta'); setHoveredPostId(null); }}
+                              title="Me Gusta"
+                            >👍</button>
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Encanta'); setHoveredPostId(null); }}
+                              title="Me Encanta"
+                            >❤️</button>
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Divierte'); setHoveredPostId(null); }}
+                              title="Me Divierte"
+                            >😂</button>
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Asombra'); setHoveredPostId(null); }}
+                              title="Me Asombra"
+                            >😮</button>
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Entristece'); setHoveredPostId(null); }}
+                              title="Me Entristece"
+                            >😢</button>
+                            <button
+                              className="text-xl hover:scale-125 transition-transform cursor-pointer"
+                              onClick={() => { post.clave_contenido && handleReactionSelect(post.clave_contenido, post.correo_autor, 'Me Interesa'); setHoveredPostId(null); }}
+                              title="Me Interesa"
+                            >📅</button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                     <Button
                       variant="ghost"

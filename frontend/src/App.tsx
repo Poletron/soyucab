@@ -256,81 +256,81 @@ function App() {
                 <Button
                   variant={currentView === 'feed' ? 'default' : 'ghost'}
                   onClick={() => setCurrentView('feed')}
-                  className="flex items-center space-x-2"
+                  className="p-2"
                   style={{ backgroundColor: currentView === 'feed' ? '#40b4e5' : 'transparent' }}
+                  title="Inicio"
                 >
-                  <Home className="h-4 w-4" />
-                  <span>Inicio</span>
+                  <Home className="h-5 w-5" />
                 </Button>
                 {isOrg && (
                   <Button
                     variant={currentView === 'org-dashboard' ? 'default' : 'ghost'}
                     onClick={() => setCurrentView('org-dashboard')}
-                    className="flex items-center space-x-2"
+                    className="p-2"
                     style={{ backgroundColor: currentView === 'org-dashboard' ? '#40b4e5' : 'transparent' }}
+                    title="Panel"
                   >
-                    <LayoutDashboard className="h-4 w-4" />
-                    <span>Panel</span>
+                    <LayoutDashboard className="h-5 w-5" />
                   </Button>
                 )}
                 <Button
                   variant={currentView === 'create' ? 'default' : 'ghost'}
                   onClick={() => setCurrentView('create')}
-                  className="flex items-center space-x-2"
+                  className="p-2"
                   style={{ backgroundColor: currentView === 'create' ? '#40b4e5' : 'transparent' }}
+                  title="Crear"
                 >
-                  <Plus className="h-4 w-4" />
-                  <span>Crear</span>
+                  <Plus className="h-5 w-5" />
                 </Button>
                 <Button
                   variant={currentView === 'jobs' ? 'default' : 'ghost'}
                   onClick={() => setCurrentView('jobs')}
-                  className="flex items-center space-x-2"
+                  className="p-2"
                   style={{ backgroundColor: currentView === 'jobs' ? '#40b4e5' : 'transparent' }}
+                  title="Empleos"
                 >
-                  <Briefcase className="h-4 w-4" />
-                  <span>Empleos</span>
+                  <Briefcase className="h-5 w-5" />
                 </Button>
                 <Button
                   variant={currentView === 'events' ? 'default' : 'ghost'}
                   onClick={() => setCurrentView('events')}
-                  className="flex items-center space-x-2"
+                  className="p-2"
                   style={{ backgroundColor: currentView === 'events' ? '#40b4e5' : 'transparent' }}
+                  title="Eventos"
                 >
-                  <Calendar className="h-4 w-4" />
-                  <span>Eventos</span>
+                  <Calendar className="h-5 w-5" />
                 </Button>
                 {!isOrg && (
                   <Button
                     variant={currentView === 'tutoring' ? 'default' : 'ghost'}
                     onClick={() => setCurrentView('tutoring')}
-                    className="flex items-center space-x-2"
+                    className="p-2"
                     style={{ backgroundColor: currentView === 'tutoring' ? '#40b4e5' : 'transparent' }}
+                    title="Tutorías"
                   >
-                    <BookOpen className="h-4 w-4" />
-                    <span>Tutorías</span>
+                    <BookOpen className="h-5 w-5" />
                   </Button>
                 )}
                 {!isOrg && (
                   <Button
                     variant={currentView === 'groups' ? 'default' : 'ghost'}
                     onClick={() => setCurrentView('groups')}
-                    className="flex items-center space-x-2"
+                    className="p-2"
                     style={{ backgroundColor: currentView === 'groups' ? '#40b4e5' : 'transparent' }}
+                    title="Grupos"
                   >
-                    <Users className="h-4 w-4" />
-                    <span>Grupos</span>
+                    <Users className="h-5 w-5" />
                   </Button>
                 )}
                 {!isOrg && (
                   <Button
                     variant={currentView === 'messaging' ? 'default' : 'ghost'}
                     onClick={() => setCurrentView('messaging')}
-                    className="flex items-center space-x-2"
+                    className="p-2"
                     style={{ backgroundColor: currentView === 'messaging' ? '#40b4e5' : 'transparent' }}
+                    title="Mensajes"
                   >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Mensajes</span>
+                    <MessageSquare className="h-5 w-5" />
                   </Button>
                 )}
 
@@ -339,11 +339,11 @@ function App() {
                   <Button
                     variant={currentView === 'reports-dashboard' ? 'default' : 'ghost'}
                     onClick={() => setCurrentView('reports-dashboard')}
-                    className="flex items-center space-x-2"
+                    className="p-2"
                     style={{ backgroundColor: currentView === 'reports-dashboard' ? '#40b4e5' : 'transparent' }}
+                    title="Reportes"
                   >
-                    <BarChart3 className="h-4 w-4" />
-                    <span>Reportes</span>
+                    <BarChart3 className="h-5 w-5" />
                   </Button>
                 )}
               </nav>
