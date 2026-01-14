@@ -110,4 +110,38 @@ router.get('/status/:correo', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/connections/cancel/:id
+ * Cancel a pending request sent by the user
+ */
+router.delete('/cancel/:id', requireAuth, async (req, res) => {
+    try {
+        const cancelled = await connectionsService.cancelRequest(req.params.id, req.userEmail);
+        if (!cancelled) {
+            return res.status(404).json({ success: false, error: 'Solicitud no encontrada o no puedes cancelarla' });
+        }
+        res.json({ success: true, message: 'Solicitud cancelada' });
+    } catch (err) {
+        console.error('[CONNECTIONS CANCEL] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * DELETE /api/connections/remove/:email
+ * Remove an accepted connection
+ */
+router.delete('/remove/:email', requireAuth, async (req, res) => {
+    try {
+        const removed = await connectionsService.removeConnection(req.params.email, req.userEmail);
+        if (!removed) {
+            return res.status(404).json({ success: false, error: 'Conexión no encontrada' });
+        }
+        res.json({ success: true, message: 'Conexión eliminada' });
+    } catch (err) {
+        console.error('[CONNECTIONS REMOVE] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

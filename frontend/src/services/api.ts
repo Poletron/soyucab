@@ -691,7 +691,7 @@ export async function getMyPublishedOffers() {
 export interface Group {
     nombre_grupo: string;
     descripcion_grupo?: string;
-    visibilidad: 'Publico' | 'Privado' | 'Secreto';
+    visibilidad: string;
     correo_creador: string;
     fecha_creacion: string;
     total_miembros?: number;
@@ -851,6 +851,147 @@ export async function markAllNotificationsRead() {
     return res.json();
 }
 
+// ============================================
+// Groups - Update/Delete (Creator only)
+// ============================================
 
+export async function updateGroup(nombre: string, data: { descripcion?: string; visibilidad?: string }) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+    return res.json();
+}
 
+export async function deleteGroup(nombre: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombre)}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
 
+// ============================================
+// Connections - Cancel/Remove
+// ============================================
+
+export async function cancelConnectionRequest(requestId: number) {
+    const res = await apiFetch(`/api/connections/cancel/${requestId}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
+export async function removeConnection(email: string) {
+    const res = await apiFetch(`/api/connections/remove/${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+    });
+    return res.json();
+}
+
+// ============================================
+// Privacy Settings
+// ============================================
+
+export interface PrivacySettings {
+    profileVisibility?: 'public' | 'friends' | 'private';
+    showEmail?: boolean;
+    showPhone?: boolean;
+    allowMessages?: 'everyone' | 'friends' | 'nobody';
+    showOnlineStatus?: boolean;
+}
+
+export async function updatePrivacy(settings: PrivacySettings) {
+    const res = await apiFetch('/api/users/privacy', {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+    });
+    return res.json();
+}
+
+// ============================================
+// Admin (Rol Admin required)
+// ============================================
+
+export interface AdminUser {
+    correo_principal: string;
+    nombre: string;
+    apellidos: string;
+    fecha_registro: string;
+    tipo: string;
+    roles: string[] | null;
+}
+
+export interface AdminRole {
+    nombre_rol: string;
+    descripcion: string;
+}
+
+export async function adminGetUsers(): Promise<{ success: boolean; data: AdminUser[] }> {
+    const res = await apiFetch('/api/admin/users');
+    return res.json();
+}
+
+export async function adminGetRoles(): Promise<{ success: boolean; data: AdminRole[] }> {
+    const res = await apiFetch('/api/admin/roles');
+    return res.json();
+}
+
+export async function adminAssignRole(userEmail: string, role: string) {
+    const res = await apiFetch('/api/admin/assign-role', {
+        method: 'POST',
+        body: JSON.stringify({ userEmail, role }),
+    });
+    return res.json();
+}
+
+export async function adminRemoveRole(userEmail: string, role: string) {
+    const res = await apiFetch('/api/admin/remove-role', {
+        method: 'DELETE',
+        body: JSON.stringify({ userEmail, role }),
+    });
+    return res.json();
+}
+
+// ============================================
+// Group Join Requests (Private Groups)
+// ============================================
+
+export interface GroupJoinRequest {
+    clave_solicitud: number;
+    correo_solicitante: string;
+    fecha_solicitud: string;
+    nombres: string;
+    apellidos: string;
+    fotografia_url: string | null;
+}
+
+export async function requestJoinGroup(nombreGrupo: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombreGrupo)}/request`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function getGroupJoinRequests(nombreGrupo: string): Promise<{ success: boolean; data: GroupJoinRequest[] }> {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombreGrupo)}/requests`);
+    return res.json();
+}
+
+export async function acceptGroupJoinRequest(requestId: number) {
+    const res = await apiFetch(`/api/groups/requests/${requestId}/accept`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function rejectGroupJoinRequest(requestId: number) {
+    const res = await apiFetch(`/api/groups/requests/${requestId}/reject`, {
+        method: 'POST',
+    });
+    return res.json();
+}
+
+export async function getMyGroupJoinRequestStatus(nombreGrupo: string) {
+    const res = await apiFetch(`/api/groups/${encodeURIComponent(nombreGrupo)}/my-request`);
+    return res.json();
+}

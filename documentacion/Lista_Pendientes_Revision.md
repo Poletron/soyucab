@@ -15,13 +15,13 @@ Documento generado a partir de la sesión de revisión. Las tareas están distri
 - [x] **Publicación:** Verificar validación de "artículo" en publicación (confirmar necesidad/existencia). (RF 3.1) ✅ — *Verificado: RF 3.1 solo requiere texto. Botón "Artículo" es placeholder decorativo.*
 
 ### Luis Torres (Usuarios, Grupos, Roles, Privacidad)
-- [ ] **Roles/Seguridad:** Implementar asignación de roles (Frontend/Backend). Verificar reacción de la App según rol (ej: Organización no envía mensajes). Verificar Multiroles. (RF 7.2)
-- [ ] **Admin:** Falta interfaz de administrador para asignación de roles. (RF 7.2)
+- [x] **Roles/Seguridad:** Implementar asignación de roles (Frontend/Backend). Verificar reacción de la App según rol (ej: Organización no envía mensajes). Verificar Multiroles. (RF 7.2)
+- [x] **Admin:** Falta interfaz de administrador para asignación de roles. (RF 7.2)
 - [ ] **Privacidad:** Verificar que la configuración de privacidad está realmente conectada al backend (la página existe, falta verificar integración). (RF 7.1)
 - [ ] **Grupos:** Bug/Falta en "Crear Grupos nuevos". (RF 6.1)
 - [ ] **Grupos:** Verificar funcionalidad de "Editar/Eliminar grupo" y "Salir del grupo". (Posible Omisión - RF 6.1/6.2)
 - [ ] **Grupos:** Agregar funcionalidad de administración de grupo para el creador. (RF 6.1 / RF 6.2)
-- [ ] **Grupos:** Mostrar número de miembros de los grupos en el Frontend. (RF 6.2)
+- [x] **Grupos:** Mostrar número de miembros de los grupos en el Frontend. (RF 6.2)
 - [ ] **Conexiones:** Implementar funcionalidad de "Rechazar amigo/conexión". (RF 2.2)
 - [ ] **Conexiones:** Verificar funcionalidad de "Cancelar solicitud enviada" y "Eliminar amigo". (Posible Omisión - RF 2.2)
 - [ ] **Mapa:** Implementar "Mapa de la diáspora" (RF 8.1).

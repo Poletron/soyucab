@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check, Heart, MessageCircle, X, Save } from 'lucide-react';
+import { MapPin, Calendar, Edit, MessageSquare, Loader2, UserPlus, Clock, Users, Check, Heart, MessageCircle, X, Save, UserMinus } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -8,11 +8,18 @@ import {
   getProfile,
   sendConnectionRequest,
   acceptConnectionRequest,
+  rejectConnectionRequest,
+  cancelConnectionRequest,
+  removeConnection,
   startConversation,
   getCurrentUser,
   getUserProfile,
   getUserPosts,
-  updatePost
+  updatePost,
+  reactToPost,
+  removeReaction,
+  commentOnPost,
+  getComments
 } from '../services/api';
 
 interface ProfileData {
@@ -173,6 +180,51 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
     }
   };
 
+  const handleRejectConnection = async () => {
+    if (!profile?.solicitud_id) return;
+    try {
+      setConnecting(true);
+      const result = await rejectConnectionRequest(profile.solicitud_id);
+      if (result.success) {
+        setProfile(prev => prev ? { ...prev, estado_conexion: 'no_conectado', solicitud_id: undefined } : null);
+      }
+    } catch (err) {
+      console.error('Error rejecting connection:', err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!profile?.solicitud_id) return;
+    try {
+      setConnecting(true);
+      const result = await cancelConnectionRequest(profile.solicitud_id);
+      if (result.success) {
+        setProfile(prev => prev ? { ...prev, estado_conexion: 'no_conectado', solicitud_id: undefined } : null);
+      }
+    } catch (err) {
+      console.error('Error canceling request:', err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const handleRemoveConnection = async () => {
+    if (!profile?.correo_principal || !confirm('¿Eliminar esta conexión?')) return;
+    try {
+      setConnecting(true);
+      const result = await removeConnection(profile.correo_principal);
+      if (result.success) {
+        setProfile(prev => prev ? { ...prev, estado_conexion: 'no_conectado' } : null);
+      }
+    } catch (err) {
+      console.error('Error removing connection:', err);
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const handleEditClick = (post: any) => {
     setEditingPost(post.clave_contenido);
     setEditContent(post.texto_contenido);
@@ -288,24 +340,75 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
                 </Button>
               ) : (
                 <>
-                  <Button
-                    style={{
-                      backgroundColor: profile?.estado_conexion === 'conectado' ? '#10b981' :
-                        profile?.estado_conexion?.startsWith('pendiente') ? '#94a3b8' : '#40b4e5'
-                    }}
-                    className="text-white hover:opacity-90 px-6 disabled:opacity-70"
-                    onClick={handleConnect}
-                    disabled={connecting || (profile?.estado_conexion !== 'no_conectado' && profile?.estado_conexion !== 'pendiente_recibida')}
-                  >
-                    {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> :
-                      profile?.estado_conexion === 'conectado' ? <Check className="h-4 w-4 mr-2" /> :
-                        profile?.estado_conexion === 'pendiente_enviada' ? <Clock className="h-4 w-4 mr-2" /> :
-                          <UserPlus className="h-4 w-4 mr-2" />}
+                  {/* Connection Actions */}
+                  {profile?.estado_conexion === 'conectado' && (
+                    <>
+                      <Button
+                        style={{ backgroundColor: '#10b981' }}
+                        className="text-white px-6"
+                        disabled
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Conectado
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-red-500 hover:text-red-600"
+                        onClick={handleRemoveConnection}
+                        disabled={connecting}
+                      >
+                        {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+                      </Button>
+                    </>
+                  )}
 
-                    {profile?.estado_conexion === 'conectado' ? 'Conectado' :
-                      profile?.estado_conexion === 'pendiente_enviada' ? 'Pendiente' :
-                        profile?.estado_conexion === 'pendiente_recibida' ? 'Aceptar Solicitud' : 'Conectar'}
-                  </Button>
+                  {profile?.estado_conexion === 'pendiente_enviada' && (
+                    <Button
+                      variant="outline"
+                      className="px-6"
+                      onClick={handleCancelRequest}
+                      disabled={connecting}
+                    >
+                      {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+                      Cancelar Solicitud
+                    </Button>
+                  )}
+
+                  {profile?.estado_conexion === 'pendiente_recibida' && (
+                    <>
+                      <Button
+                        style={{ backgroundColor: '#40b4e5' }}
+                        className="text-white px-6"
+                        onClick={handleConnect}
+                        disabled={connecting}
+                      >
+                        {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                        Aceptar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-red-500 px-6"
+                        onClick={handleRejectConnection}
+                        disabled={connecting}
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Rechazar
+                      </Button>
+                    </>
+                  )}
+
+                  {profile?.estado_conexion === 'no_conectado' && (
+                    <Button
+                      style={{ backgroundColor: '#40b4e5' }}
+                      className="text-white hover:opacity-90 px-6"
+                      onClick={handleConnect}
+                      disabled={connecting}
+                    >
+                      {connecting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                      Conectar
+                    </Button>
+                  )}
+
                   <Button
                     variant="outline"
                     className="flex items-center space-x-2 px-6"
@@ -426,9 +529,43 @@ const UserProfile = ({ onNavigate, targetEmail }: UserProfileProps) => {
                     <p className="text-xs text-gray-400">
                       {post.fecha_hora_creacion ? new Date(post.fecha_hora_creacion).toLocaleDateString('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}
                     </p>
-                    <div className="flex items-center space-x-3 text-sm text-gray-500">
-                      <span className="flex items-center"><Heart className="h-3 w-3 mr-1" /> {post.total_reacciones || 0}</span>
-                      <span className="flex items-center"><MessageCircle className="h-3 w-3 mr-1" /> {post.total_comentarios || 0}</span>
+                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <button
+                        className={`flex items-center hover:text-red-500 transition-colors ${post.user_reacted ? 'text-red-500' : ''}`}
+                        onClick={async () => {
+                          try {
+                            if (post.user_reacted) {
+                              await removeReaction(post.clave_contenido);
+                            } else {
+                              await reactToPost(post.clave_contenido, 'Me Gusta');
+                            }
+                            // Reload posts
+                            loadUserPosts(profile?.correo_principal || '');
+                          } catch (err) {
+                            console.error('Reaction error:', err);
+                          }
+                        }}
+                      >
+                        <Heart className={`h-4 w-4 mr-1 ${post.user_reacted ? 'fill-current' : ''}`} />
+                        {post.total_reacciones || 0}
+                      </button>
+                      <button
+                        className="flex items-center hover:text-blue-500 transition-colors"
+                        onClick={async () => {
+                          const comment = prompt('Escribe un comentario:');
+                          if (comment && comment.trim()) {
+                            try {
+                              await commentOnPost(post.clave_contenido, comment.trim());
+                              loadUserPosts(profile?.correo_principal || '');
+                            } catch (err) {
+                              console.error('Comment error:', err);
+                            }
+                          }
+                        }}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        {post.total_comentarios || 0}
+                      </button>
                     </div>
                   </div>
                 </div>

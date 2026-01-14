@@ -114,12 +114,26 @@ export default function GeneralSettings() {
     setIsLoading(true);
     setSuccess('');
 
-    // Save to localStorage
     try {
+      // Save to localStorage
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+
+      // If saving privacy section, also sync to backend
+      if (section === 'privacy') {
+        const { updatePrivacy } = await import('../services/api');
+        await updatePrivacy({
+          profileVisibility: settings.profileVisibility as 'public' | 'friends' | 'private',
+          showEmail: settings.showEmail,
+          showPhone: settings.showPhone,
+          allowMessages: settings.allowMessages as 'everyone' | 'friends' | 'nobody',
+          showOnlineStatus: settings.showOnlineStatus,
+        });
+      }
+
       setSuccess('Configuración guardada correctamente');
     } catch (e) {
       console.error('Error saving settings:', e);
+      setSuccess('Error al guardar configuración');
     } finally {
       setIsLoading(false);
     }

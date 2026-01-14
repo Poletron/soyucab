@@ -115,4 +115,18 @@ router.get('/:email/posts', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/users/privacy
+ * Update privacy settings
+ */
+router.put('/privacy', requireAuth, async (req, res) => {
+    try {
+        const result = await usersService.updatePrivacy(req.userEmail, req.body);
+        res.json(result);
+    } catch (err) {
+        console.error('[USERS] Error updating privacy:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;

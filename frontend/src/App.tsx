@@ -18,7 +18,8 @@ import {
   Link,
   Briefcase,
   Check,
-  LayoutDashboard
+  LayoutDashboard,
+  Shield
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Button } from './components/ui/button';
@@ -53,18 +54,19 @@ import OfertasReport from './components/OfertasReport';
 import DiasporaReport from './components/DiasporaReport';
 import EventsPage from './components/EventsPage';
 import ReportsDashboard from './components/ReportsDashboard';
+import AdminPanel from './components/AdminPanel';
 import soyucabLogo from './assets/33c35295992cfb6178c01246eefc5ecbf6bc76db.png';
 
 // Solo los views necesarios para Entrega 4
 type View = 'feed' | 'profile' | 'user-profile' | 'edit-profile' | 'create' | 'tutoring' | 'groups' | 'messaging' | 'settings' | 'events' |
   'viral-report' | 'lideres-report' | 'eventos-report' | 'crecimiento-report' | 'grupos-report' |
-  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report' | 'jobs' | 'org-dashboard' | 'reports-dashboard';
+  'referentes-report' | 'tutorias-report' | 'nexos-report' | 'ofertas-report' | 'diaspora-report' | 'jobs' | 'org-dashboard' | 'reports-dashboard' | 'admin';
 type AuthView = 'login' | 'register';
 
 import { useRole } from './hooks/useRole';
 
 function App() {
-  const { isModerator, isAuditor, isOrg } = useRole();
+  const { isModerator, isAuditor, isOrg, isAdmin } = useRole();
   // Inicializar estado de autenticación desde localStorage
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return !!localStorage.getItem('userEmail');
@@ -189,6 +191,8 @@ function App() {
         return <OrgDashboard onNavigate={(view) => setCurrentView(view as View)} />;
       case 'reports-dashboard':
         return <ReportsDashboard onNavigate={(view) => setCurrentView(view as View)} />;
+      case 'admin':
+        return <AdminPanel />;
       // 9 Reportes de Entrega 3 (conectados a la BD)
       case 'viral-report':
         return <TopViralReport />;
@@ -344,6 +348,17 @@ function App() {
                     title="Reportes"
                   >
                     <BarChart3 className="h-5 w-5" />
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant={currentView === 'admin' ? 'default' : 'ghost'}
+                    onClick={() => setCurrentView('admin')}
+                    className="p-2"
+                    style={{ backgroundColor: currentView === 'admin' ? '#40b4e5' : 'transparent' }}
+                    title="Admin"
+                  >
+                    <Shield className="h-5 w-5" />
                   </Button>
                 )}
               </nav>

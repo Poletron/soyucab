@@ -29,6 +29,7 @@ const usersRoutes = require('./routes/users.routes');
 const offersRoutes = require('./routes/offers.routes');
 const eventsRoutes = require('./routes/events.routes');
 const notificationsRoutes = require('./routes/notifications.routes');
+const adminRoutes = require('./routes/admin.routes');
 const path = require('path');
 
 // Configuración
@@ -102,6 +103,9 @@ app.use('/api/offers', offersRoutes);
 
 // Notificaciones
 app.use('/api/notifications', notificationsRoutes);
+
+// Admin (Role management)
+app.use('/api/admin', adminRoutes);
 
 // Servir archivos estáticos (imágenes subidas)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

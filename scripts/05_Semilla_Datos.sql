@@ -142,6 +142,7 @@ INSERT INTO CONFIGURACION (correo_miembro, visibilidad_perfil) VALUES
 INSERT INTO MIEMBRO_POSEE_ROL (correo_miembro, nombre_rol, fecha_asignacion) VALUES
 ('oscar@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 year'),
 ('oscar@ucab.edu.ve', 'Moderador', NOW() - INTERVAL '3 months'),
+('oscar@ucab.edu.ve', 'Admin', NOW() - INTERVAL '1 month'),
 ('luis@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 year'),
 ('pedro@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 year'),
 ('maria@ucab.edu.ve', 'Estudiante', NOW() - INTERVAL '1 year'),

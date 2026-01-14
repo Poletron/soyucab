@@ -151,6 +151,34 @@ async function getConnectionStatus(userEmail, otherEmail) {
     };
 }
 
+/**
+ * Cancel a pending connection request (sent by user)
+ */
+async function cancelRequest(requestId, userEmail) {
+    const result = await db.query(
+        `DELETE FROM SOLICITA_CONEXION 
+         WHERE clave_solicitud = $1 AND correo_solicitante = $2 AND estado_solicitud = 'Pendiente'
+         RETURNING *`,
+        [requestId, userEmail]
+    );
+    return result.rowCount > 0;
+}
+
+/**
+ * Remove an accepted connection
+ */
+async function removeConnection(targetEmail, userEmail) {
+    const result = await db.query(
+        `DELETE FROM SOLICITA_CONEXION 
+         WHERE estado_solicitud = 'Aceptada'
+         AND ((correo_solicitante = $1 AND correo_solicitado = $2) 
+              OR (correo_solicitante = $2 AND correo_solicitado = $1))
+         RETURNING *`,
+        [userEmail, targetEmail]
+    );
+    return result.rowCount > 0;
+}
+
 module.exports = {
     getAcceptedConnections,
     getPendingRequests,
@@ -158,5 +186,7 @@ module.exports = {
     sendConnectionRequest,
     acceptRequest,
     rejectRequest,
-    getConnectionStatus
+    getConnectionStatus,
+    cancelRequest,
+    removeConnection
 };

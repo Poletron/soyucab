@@ -8,6 +8,7 @@ const db = require('../config/db');
 
 /**
  * Search users by name, surname, or email
+ * Includes both PERSONA and ENTIDAD_ORGANIZACIONAL
  * @param {string} query - Search query (min 2 chars)
  * @param {string} userEmail - Current user's email (for connection status)
  * @returns {Promise<Array>} - Array of matching users
@@ -16,6 +17,7 @@ async function searchUsers(query, userEmail) {
     const searchTerm = `%${query.trim().toLowerCase()}%`;
 
     const sql = `
+        -- Search PERSONA
         SELECT 
             p.correo_principal,
             p.nombres,
@@ -24,6 +26,7 @@ async function searchUsers(query, userEmail) {
             p.ciudad_residencia,
             p.pais_residencia,
             m.fotografia_url,
+            'Persona' as tipo,
             CASE 
                 WHEN sc.estado_solicitud = 'Aceptada' THEN 'conectado'
                 WHEN sc.estado_solicitud = 'Pendiente' AND sc.correo_solicitante = $2 THEN 'pendiente_enviada'
@@ -49,9 +52,32 @@ async function searchUsers(query, userEmail) {
             LOWER(p.correo_principal) LIKE $1 OR
             LOWER(CONCAT(p.nombres, ' ', p.apellidos)) LIKE $1
         )
-        ORDER BY 
-            CASE WHEN LOWER(p.nombres) LIKE $1 THEN 0 ELSE 1 END,
-            p.nombres
+
+        UNION ALL
+
+        -- Search ENTIDAD_ORGANIZACIONAL
+        SELECT 
+            eo.correo_principal,
+            eo.nombre_oficial as nombres,
+            '' as apellidos,
+            eo.descripcion as biografia,
+            eo.ciudad_ubicacion as ciudad_residencia,
+            eo.pais_ubicacion as pais_residencia,
+            m.fotografia_url,
+            'Organizacion' as tipo,
+            'no_conectado' as estado_conexion,
+            0 as total_conexiones
+        FROM ENTIDAD_ORGANIZACIONAL eo
+        INNER JOIN MIEMBRO m ON eo.correo_principal = m.correo_principal
+        WHERE eo.correo_principal != $2
+        AND (
+            LOWER(eo.nombre_oficial) LIKE $1 OR
+            LOWER(eo.rif) LIKE $1 OR
+            LOWER(eo.correo_principal) LIKE $1 OR
+            LOWER(eo.descripcion) LIKE $1
+        )
+
+        ORDER BY nombres
         LIMIT 20
     `;
 
@@ -61,12 +87,14 @@ async function searchUsers(query, userEmail) {
 
 /**
  * Get public profile of a user
+ * Handles both PERSONA and ENTIDAD_ORGANIZACIONAL
  * @param {string} targetEmail - Email of the profile to view
  * @param {string} requesterEmail - Email of the user requesting
  * @returns {Promise<Object|null>} - User profile or null if not found
  */
 async function getUserProfile(targetEmail, requesterEmail) {
     const sql = `
+        -- Try PERSONA first
         SELECT 
             p.correo_principal,
             p.nombres,
@@ -78,6 +106,9 @@ async function getUserProfile(targetEmail, requesterEmail) {
             m.fecha_registro,
             m.fotografia_url,
             c.visibilidad_perfil,
+            'Persona' as tipo,
+            NULL as rif,
+            NULL as tipo_entidad,
             (
                 SELECT COUNT(*) 
                 FROM SOLICITA_CONEXION sc 
@@ -90,15 +121,45 @@ async function getUserProfile(targetEmail, requesterEmail) {
                 WHERE con.correo_autor = p.correo_principal
             ) as total_publicaciones,
             (
-                SELECT ARRAY_AGG(nombre_grupo)
+                SELECT COUNT(*)
                 FROM PERTENECE_A_GRUPO pg
                 WHERE pg.correo_persona = p.correo_principal
-                LIMIT 5
-            ) as grupos
+            ) as total_grupos
         FROM PERSONA p
         INNER JOIN MIEMBRO m ON p.correo_principal = m.correo_principal
         LEFT JOIN CONFIGURACION c ON p.correo_principal = c.correo_miembro
         WHERE p.correo_principal = $1
+
+        UNION ALL
+
+        -- Try ENTIDAD_ORGANIZACIONAL
+        SELECT 
+            eo.correo_principal,
+            eo.nombre_oficial as nombres,
+            '' as apellidos,
+            eo.descripcion as biografia,
+            eo.ciudad_ubicacion as ciudad_residencia,
+            eo.pais_ubicacion as pais_residencia,
+            NULL as fecha_nacimiento,
+            m.fecha_registro,
+            m.fotografia_url,
+            c.visibilidad_perfil,
+            'Organizacion' as tipo,
+            eo.rif,
+            eo.tipo_entidad,
+            0 as total_conexiones,
+            (
+                SELECT COUNT(*) 
+                FROM CONTENIDO con 
+                WHERE con.correo_autor = eo.correo_principal
+            ) as total_publicaciones,
+            0 as total_grupos
+        FROM ENTIDAD_ORGANIZACIONAL eo
+        INNER JOIN MIEMBRO m ON eo.correo_principal = m.correo_principal
+        LEFT JOIN CONFIGURACION c ON eo.correo_principal = c.correo_miembro
+        WHERE eo.correo_principal = $1
+
+        LIMIT 1
     `;
 
     const result = await db.queryAsUser(sql, [targetEmail], requesterEmail);
@@ -223,10 +284,51 @@ async function getUserPosts(targetEmail, requesterEmail) {
     return result.rows;
 }
 
+/**
+ * Update user privacy settings
+ * @param {string} userEmail - Current user
+ * @param {Object} settings - Privacy settings to update
+ */
+async function updatePrivacy(userEmail, settings) {
+    const { profileVisibility, showEmail, showPhone, allowMessages, showOnlineStatus } = settings;
+
+    // Map frontend values to DB values
+    const visibilityMap = {
+        'public': 'Público',
+        'friends': 'Solo Conexiones',
+        'private': 'Privado'
+    };
+    const dbVisibility = visibilityMap[profileVisibility] || profileVisibility;
+
+    // Check if config exists, insert or update
+    const existing = await db.query(
+        'SELECT 1 FROM CONFIGURACION WHERE correo_miembro = $1',
+        [userEmail]
+    );
+
+    if (existing.rows.length === 0) {
+        await db.query(
+            `INSERT INTO CONFIGURACION (correo_miembro, visibilidad_perfil)
+             VALUES ($1, $2)`,
+            [userEmail, dbVisibility || 'Público']
+        );
+    } else {
+        await db.query(
+            `UPDATE CONFIGURACION 
+             SET visibilidad_perfil = COALESCE($2, visibilidad_perfil)
+             WHERE correo_miembro = $1`,
+            [userEmail, dbVisibility]
+        );
+    }
+
+    return { success: true, message: 'Configuración de privacidad actualizada' };
+}
+
 module.exports = {
     searchUsers,
     getUserProfile,
     getConnectionStatus,
     getConnectionSuggestions,
-    getUserPosts
+    getUserPosts,
+    updatePrivacy
 };

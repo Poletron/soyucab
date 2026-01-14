@@ -30,7 +30,7 @@ const DiasporaReport = () => {
             // Por consistencia, asumiremos que getReportPreview maneja tipos.
 
             const token = localStorage.getItem('token'); // Asumimos token en localStorage
-            const response = await fetch('http://localhost:4000/api/reports/diaspora', {
+            const response = await fetch('http://localhost:4000/api/report/diaspora', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

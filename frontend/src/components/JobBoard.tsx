@@ -283,7 +283,7 @@ export default function JobBoard() {
                 <TabsContent value="browse" className="space-y-6">
                     {/* Filters */}
                     <div className="bg-white p-4 rounded-lg border shadow-sm flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 relative">
+                        <div className="w-full md:w-3/4 relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input
                                 placeholder="Buscar por cargo o empresa..."
@@ -292,7 +292,7 @@ export default function JobBoard() {
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
-                        <div className="w-full md:w-48">
+                        <div className="w-full md:w-1/4">
                             <Select value={modalidadFilter} onValueChange={setModalidadFilter}>
                                 <SelectTrigger>
                                     <div className="flex items-center">

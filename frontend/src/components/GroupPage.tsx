@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Calendar, Settings, UserPlus, Image, Lock, Globe, Loader2, LogOut, UserCheck, Heart, MessageCircle } from 'lucide-react';
+import { Users, Calendar, Settings, UserPlus, Image, Lock, Globe, Loader2, LogOut, UserCheck, Heart, MessageCircle, Plus, Trash2, Edit } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -14,8 +14,20 @@ import {
   createPost,
   getCurrentUser,
   getGroupPosts,
-  Group
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  requestJoinGroup,
+  getGroupJoinRequests,
+  acceptGroupJoinRequest,
+  rejectGroupJoinRequest,
+  getMyGroupJoinRequestStatus,
+  Group,
+  GroupJoinRequest
 } from '../services/api';
+import { Input } from './ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface GroupMember {
   correo_persona: string;
@@ -47,6 +59,21 @@ const GroupPage = () => {
   const [newPost, setNewPost] = useState('');
   const [joining, setJoining] = useState(false);
   const [posting, setPosting] = useState(false);
+
+  // Create/Edit Group Modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [newGroupVisibility, setNewGroupVisibility] = useState('Público');
+  const [creatingGroup, setCreatingGroup] = useState(false);
+
+  // Join Request state
+  const [pendingRequests, setPendingRequests] = useState<GroupJoinRequest[]>([]);
+  const [myRequestStatus, setMyRequestStatus] = useState<string | null>(null);
+  const [requestingJoin, setRequestingJoin] = useState(false);
+  const [showRequestsModal, setShowRequestsModal] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
   const currentUser = getCurrentUser();
 
@@ -163,6 +190,162 @@ const GroupPage = () => {
     return myGroups.some(g => g.nombre_grupo === groupName);
   };
 
+  const isGroupCreator = (group: Group) => {
+    return group.correo_creador === currentUser?.email;
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    try {
+      setCreatingGroup(true);
+      const result = await createGroup({
+        nombre: newGroupName.trim(),
+        descripcion: newGroupDesc.trim(),
+        visibilidad: newGroupVisibility
+      });
+      if (result.success) {
+        setShowCreateModal(false);
+        setNewGroupName('');
+        setNewGroupDesc('');
+        setNewGroupVisibility('Público');
+        loadGroups();
+      }
+    } catch (err) {
+      console.error('Error creating group:', err);
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const handleEditGroup = async () => {
+    if (!selectedGroup) return;
+    try {
+      setCreatingGroup(true);
+      const result = await updateGroup(selectedGroup.nombre_grupo, {
+        descripcion: newGroupDesc.trim(),
+        visibilidad: newGroupVisibility
+      });
+      if (result.success) {
+        setShowEditModal(false);
+        // Update selectedGroup immediately for real-time UI update
+        setSelectedGroup(prev => prev ? {
+          ...prev,
+          descripcion_grupo: newGroupDesc.trim(),
+          visibilidad: newGroupVisibility
+        } : null);
+        loadGroups();
+      }
+    } catch (err) {
+      console.error('Error updating group:', err);
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!selectedGroup || !confirm('¿Estás seguro de eliminar este grupo? Esta acción no se puede deshacer.')) return;
+    try {
+      const result = await deleteGroup(selectedGroup.nombre_grupo);
+      if (result.success) {
+        setSelectedGroup(null);
+        loadGroups();
+      }
+    } catch (err) {
+      console.error('Error deleting group:', err);
+    }
+  };
+
+  // ===== Join Request Handlers =====
+
+  const handleRequestJoin = async (groupName: string) => {
+    if (requestingJoin) return; // Prevent double click
+    try {
+      setRequestingJoin(true);
+      const result = await requestJoinGroup(groupName);
+      if (result.success) {
+        setMyRequestStatus('Pendiente');
+      }
+    } catch (err) {
+      console.error('Error requesting join:', err);
+    } finally {
+      setRequestingJoin(false);
+    }
+  };
+
+  const loadPendingRequests = async (groupName: string) => {
+    try {
+      const result = await getGroupJoinRequests(groupName);
+      if (result.success) {
+        setPendingRequests(result.data || []);
+      }
+    } catch (err) {
+      console.error('Error loading pending requests:', err);
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: number) => {
+    if (processingRequestId) return;
+    try {
+      setProcessingRequestId(requestId);
+      await acceptGroupJoinRequest(requestId);
+      if (selectedGroup) {
+        await loadPendingRequests(selectedGroup.nombre_grupo);
+        await loadGroups(); // Reload to update member count/list
+      }
+    } catch (err) {
+      console.error('Error accepting request:', err);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: number) => {
+    if (processingRequestId) return;
+    try {
+      setProcessingRequestId(requestId);
+      await rejectGroupJoinRequest(requestId);
+      if (selectedGroup) {
+        await loadPendingRequests(selectedGroup.nombre_grupo);
+      }
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  // Helper for safe date formatting
+  const formatDate = (dateString: string) => {
+    try {
+      if (!dateString) return 'Fecha desconocida';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Fecha inválida';
+      return date.toLocaleDateString('es-VE');
+    } catch (e) {
+      return 'Fecha inválida';
+    }
+  };
+
+  // Load request status when selecting a group (for non-members)
+  useEffect(() => {
+    if (selectedGroup && !isMyGroup(selectedGroup.nombre_grupo)) {
+      getMyGroupJoinRequestStatus(selectedGroup.nombre_grupo).then(res => {
+        setMyRequestStatus(res.data?.estado_solicitud || null);
+      });
+    } else {
+      setMyRequestStatus(null);
+    }
+  }, [selectedGroup]);
+
+  // Load pending requests for creators/admins
+  useEffect(() => {
+    if (selectedGroup && isGroupCreator(selectedGroup)) {
+      loadPendingRequests(selectedGroup.nombre_grupo);
+    } else {
+      setPendingRequests([]);
+    }
+  }, [selectedGroup]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -178,8 +361,50 @@ const GroupPage = () => {
         {/* Groups Sidebar */}
         <div className="lg:col-span-1 space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <h3 className="font-semibold">Mis Grupos</h3>
+              <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+                <DialogTrigger asChild>
+                  <Button size="sm" style={{ backgroundColor: '#40b4e5' }} className="text-white">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Crear Nuevo Grupo</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <Input
+                      placeholder="Nombre del grupo"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                    />
+                    <Textarea
+                      placeholder="Descripción (opcional)"
+                      value={newGroupDesc}
+                      onChange={(e) => setNewGroupDesc(e.target.value)}
+                    />
+                    <Select value={newGroupVisibility} onValueChange={setNewGroupVisibility}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Visibilidad" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Público">Público</SelectItem>
+                        <SelectItem value="Privado">Privado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="w-full"
+                      style={{ backgroundColor: '#40b4e5' }}
+                      onClick={handleCreateGroup}
+                      disabled={creatingGroup || !newGroupName.trim()}
+                    >
+                      {creatingGroup ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      Crear Grupo
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent className="space-y-2">
               {myGroups.length === 0 ? (
@@ -221,21 +446,33 @@ const GroupPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100">
-                        <Users className="h-4 w-4 text-gray-600" />
+                        {group.visibilidad === 'Privado' ? <Lock className="h-4 w-4 text-gray-600" /> : <Users className="h-4 w-4 text-gray-600" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{group.nombre_grupo}</p>
-                        <p className="text-xs text-gray-500">{group.total_miembros || 0} miembros</p>
+                        <p className="text-xs text-gray-500">{group.total_miembros || 0} miembros · {group.visibilidad}</p>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); handleJoinGroup(group.nombre_grupo); }}
-                      disabled={joining}
-                    >
-                      {joining ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
-                    </Button>
+                    {group.visibilidad === 'Privado' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleRequestJoin(group.nombre_grupo); }}
+                        disabled={requestingJoin}
+                        title="Solicitar acceso"
+                      >
+                        {requestingJoin ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleJoinGroup(group.nombre_grupo); }}
+                        disabled={joining}
+                      >
+                        {joining ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserPlus className="h-3 w-3" />}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -277,25 +514,99 @@ const GroupPage = () => {
 
                     <div className="flex space-x-3">
                       {isMyGroup(selectedGroup.nombre_grupo) ? (
-                        <Button
-                          variant="outline"
-                          className="flex items-center space-x-2"
-                          onClick={() => handleLeaveGroup(selectedGroup.nombre_grupo)}
-                          disabled={joining}
-                        >
-                          {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                          <span>Salir del Grupo</span>
-                        </Button>
+                        <>
+                          {isGroupCreator(selectedGroup) && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setNewGroupDesc(selectedGroup.descripcion_grupo || '');
+                                  setNewGroupVisibility(selectedGroup.visibilidad);
+                                  setShowEditModal(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-500 hover:text-red-600"
+                                onClick={handleDeleteGroup}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="outline"
+                            className="flex items-center space-x-2"
+                            onClick={() => handleLeaveGroup(selectedGroup.nombre_grupo)}
+                            disabled={joining}
+                          >
+                            {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                            <span>Salir del Grupo</span>
+                          </Button>
+                          {/* Pending requests badge for creators of private groups */}
+                          {isGroupCreator(selectedGroup) && selectedGroup.visibilidad === 'Privado' && pendingRequests.length > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowRequestsModal(true)}
+                              className="relative"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              <span className="ml-1">Solicitudes</span>
+                              <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5">
+                                {pendingRequests.length}
+                              </Badge>
+                            </Button>
+                          )}
+                        </>
                       ) : (
-                        <Button
-                          style={{ backgroundColor: '#40b4e5' }}
-                          className="text-white hover:opacity-90 flex items-center space-x-2"
-                          onClick={() => handleJoinGroup(selectedGroup.nombre_grupo)}
-                          disabled={joining}
-                        >
-                          {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                          <span>Unirse al Grupo</span>
-                        </Button>
+                        // Non-member view - show join, request, or pending status
+                        <>
+                          {selectedGroup.visibilidad === 'Privado' ? (
+                            // Private group - show request button or pending status
+                            myRequestStatus === 'Pendiente' ? (
+                              <Button variant="outline" disabled className="flex items-center space-x-2">
+                                <Lock className="h-4 w-4" />
+                                <span>Solicitud Pendiente</span>
+                              </Button>
+                            ) : myRequestStatus === 'Rechazada' ? (
+                              <Button
+                                variant="outline"
+                                className="flex items-center space-x-2"
+                                onClick={() => handleRequestJoin(selectedGroup.nombre_grupo)}
+                                disabled={requestingJoin}
+                              >
+                                {requestingJoin ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                                <span>Reintentar Solicitud</span>
+                              </Button>
+                            ) : (
+                              <Button
+                                style={{ backgroundColor: '#40b4e5' }}
+                                className="text-white hover:opacity-90 flex items-center space-x-2"
+                                onClick={() => handleRequestJoin(selectedGroup.nombre_grupo)}
+                                disabled={requestingJoin}
+                              >
+                                {requestingJoin ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
+                                <span>Solicitar Ingreso</span>
+                              </Button>
+                            )
+                          ) : (
+                            // Public group - direct join
+                            <Button
+                              style={{ backgroundColor: '#40b4e5' }}
+                              className="text-white hover:opacity-90 flex items-center space-x-2"
+                              onClick={() => handleJoinGroup(selectedGroup.nombre_grupo)}
+                              disabled={joining}
+                            >
+                              {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                              <span>Unirse al Grupo</span>
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -389,7 +700,7 @@ const GroupPage = () => {
                     <h3 className="font-semibold mb-3">Información del Grupo</h3>
                     <div className="space-y-2 text-sm">
                       <p><span className="text-gray-500">Creador:</span> {selectedGroup.correo_creador}</p>
-                      <p><span className="text-gray-500">Creado:</span> {new Date(selectedGroup.fecha_creacion).toLocaleDateString('es-VE')}</p>
+                      <p><span className="text-gray-500">Creado:</span> {formatDate(selectedGroup.fecha_creacion)}</p>
                       <p><span className="text-gray-500">Visibilidad:</span> {selectedGroup.visibilidad}</p>
                     </div>
                   </CardContent>
@@ -406,6 +717,100 @@ const GroupPage = () => {
           )}
         </div>
       </div>
+
+      {/* Edit Group Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Grupo: {selectedGroup?.nombre_grupo}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <Textarea
+              placeholder="Descripción"
+              value={newGroupDesc}
+              onChange={(e) => setNewGroupDesc(e.target.value)}
+            />
+            <Select value={newGroupVisibility} onValueChange={setNewGroupVisibility}>
+              <SelectTrigger>
+                <SelectValue placeholder="Visibilidad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Público">Público</SelectItem>
+                <SelectItem value="Privado">Privado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              className="w-full"
+              style={{ backgroundColor: '#40b4e5' }}
+              onClick={handleEditGroup}
+              disabled={creatingGroup}
+            >
+              {creatingGroup ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Guardar Cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pending Join Requests Modal */}
+      <Dialog open={showRequestsModal} onOpenChange={setShowRequestsModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitudes de Ingreso Pendientes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4 max-h-[400px] overflow-y-auto">
+            {pendingRequests.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No hay solicitudes pendientes</p>
+            ) : (
+              pendingRequests.map((req) => (
+                <div key={req.clave_solicitud} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={req.fotografia_url || `https://ui-avatars.com/api/?name=${req.nombres}`} />
+                      <AvatarFallback>{req.nombres?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{req.nombres} {req.apellidos}</p>
+                      <p className="text-xs text-gray-500">{req.correo_solicitante}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatDate(req.fecha_solicitud)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      style={{ backgroundColor: '#10b981' }}
+                      className="text-white relative"
+                      onClick={() => handleAcceptRequest(req.clave_solicitud)}
+                      disabled={processingRequestId === req.clave_solicitud}
+                    >
+                      {processingRequestId === req.clave_solicitud ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Aceptar'
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-500 relative"
+                      onClick={() => handleRejectRequest(req.clave_solicitud)}
+                      disabled={processingRequestId === req.clave_solicitud}
+                    >
+                      {processingRequestId === req.clave_solicitud ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Rechazar'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

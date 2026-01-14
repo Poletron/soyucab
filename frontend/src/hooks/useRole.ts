@@ -36,7 +36,7 @@ export function useRole(): UserRoles {
             const isOrg = parsedRoles.includes('Entidad') || userType === 'organizacion';
             const isPersona = parsedRoles.includes('Persona') || userType === 'persona'; // Fallback logic
             const isModerator = parsedRoles.includes('Moderador');
-            const isAdmin = parsedRoles.includes('Administrador'); // Or 'Admin' depending on DB string
+            const isAdmin = parsedRoles.includes('Admin') || parsedRoles.includes('Administrador');
             const isAuditor = parsedRoles.includes('Auditor') || parsedRoles.includes('auditor');
             const isVisitor = !localStorage.getItem('userEmail');
 

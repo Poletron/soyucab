@@ -101,8 +101,29 @@ CREATE TABLE PERTENECE_A_GRUPO (
     fecha_union TIMESTAMP NOT NULL,
     rol_en_grupo VARCHAR(30) NOT NULL CHECK (rol_en_grupo IN ('Miembro', 'Moderador', 'Administrador')),
     CONSTRAINT fk_pert_persona FOREIGN KEY (correo_persona) REFERENCES PERSONA(correo_principal),
-    CONSTRAINT fk_pert_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo)
+    CONSTRAINT fk_pert_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo),
+    CONSTRAINT uq_miembro_grupo UNIQUE (correo_persona, nombre_grupo)
 );
+
+-- =============================================================================
+-- 3.1 SOLICITUDES DE INGRESO A GRUPOS PRIVADOS
+-- Patrón igual a SOLICITA_CONEXION para consistencia
+-- =============================================================================
+
+CREATE TABLE SOLICITA_INGRESO_GRUPO (
+    clave_solicitud SERIAL PRIMARY KEY,
+    correo_solicitante VARCHAR(255) NOT NULL,
+    nombre_grupo VARCHAR(150) NOT NULL,
+    fecha_solicitud TIMESTAMP NOT NULL DEFAULT NOW(),
+    estado_solicitud VARCHAR(20) NOT NULL DEFAULT 'Pendiente',
+    fecha_respuesta TIMESTAMP,
+    
+    CONSTRAINT fk_sol_grupo_persona FOREIGN KEY (correo_solicitante) REFERENCES PERSONA(correo_principal),
+    CONSTRAINT fk_sol_grupo_grupo FOREIGN KEY (nombre_grupo) REFERENCES GRUPO_INTERES(nombre_grupo),
+    CONSTRAINT ck_estado_sol_grupo CHECK (estado_solicitud IN ('Pendiente', 'Aceptada', 'Rechazada')),
+    CONSTRAINT uq_solicitud_grupo_unica UNIQUE (correo_solicitante, nombre_grupo)
+);
+
 
 -- =============================================================================
 -- 4. CONTENIDO E INTERACCIONES
