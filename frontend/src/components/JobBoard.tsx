@@ -63,8 +63,8 @@ export default function JobBoard() {
         loadData();
     }, [isOrg]);
 
-    const loadData = async () => {
-        setLoading(true);
+    const loadData = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const allOffersRes = await getOffers();
             let loadedOffers = allOffersRes.success ? allOffersRes.data : [];
@@ -92,7 +92,7 @@ export default function JobBoard() {
         } catch (error) {
             console.error('Error loading offers:', error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -105,7 +105,7 @@ export default function JobBoard() {
             if (result.success) {
                 setIsCreateOpen(false);
                 setNewOffer({ titulo: '', descripcion: '', requisitos: '', modalidad: 'Presencial' });
-                loadData(); // Reload all data
+                loadData(false); // Reload all data silently
             }
         } catch (error) {
             console.error('Error creating offer:', error);
@@ -120,7 +120,7 @@ export default function JobBoard() {
             const result = await applyToOffer(offerId);
             if (result.success) {
                 setSelectedOffer(null);
-                loadData();
+                loadData(false);
             }
         } catch (error) {
             console.error('Error applying:', error);
@@ -165,7 +165,7 @@ export default function JobBoard() {
                     }
                 }
                 // Refresh my offers to update counts
-                loadData();
+                loadData(false);
             }
         } catch (error) {
             console.error('Error updating application:', error);

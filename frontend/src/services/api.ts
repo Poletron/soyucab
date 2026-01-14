@@ -696,6 +696,7 @@ export interface Group {
     fecha_creacion: string;
     total_miembros?: number;
     es_miembro?: boolean;
+    estado_solicitud?: string;
 }
 
 export async function getGroups(): Promise<{ success: boolean; data: Group[] }> {
@@ -993,5 +994,10 @@ export async function rejectGroupJoinRequest(requestId: number) {
 
 export async function getMyGroupJoinRequestStatus(nombreGrupo: string) {
     const res = await apiFetch(`/api/groups/${encodeURIComponent(nombreGrupo)}/my-request`);
+    return res.json();
+}
+
+export async function getMySentRequests(): Promise<{ success: boolean; data: { nombre_grupo: string; estado_solicitud: string }[] }> {
+    const res = await apiFetch('/api/groups/my-requests');
     return res.json();
 }

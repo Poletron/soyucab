@@ -219,7 +219,7 @@ INSERT INTO SOLICITA_CONEXION (correo_solicitante, correo_solicitado, fecha_soli
 -- =============================================================================
 
 INSERT INTO GRUPO_INTERES (nombre_grupo, descripcion_grupo, visibilidad, correo_creador, fecha_creacion) VALUES
-('Desarrolladores UCAB', 'Comunidad de programadores', 'Público', 'oscar@ucab.edu.ve', NOW() - INTERVAL '8 months'),
+('Desarrolladores UCAB', 'Comunidad de programadores', 'Privado', 'oscar@ucab.edu.ve', NOW() - INTERVAL '8 months'),
 ('MBA Network', 'Red de MBA', 'Público', 'andres.castro@ucab.edu.ve', NOW() - INTERVAL '1 year'),
 ('Data Science Club', 'Data science y ML', 'Público', 'sebastian.lopez@ucab.edu.ve', NOW() - INTERVAL '6 months'),
 ('Emprendedores UCAB', 'Startups', 'Público', 'andres.castro@ucab.edu.ve', NOW() - INTERVAL '2 years'),

@@ -35,6 +35,19 @@ router.get('/my', requireAuth, async (req, res) => {
 });
 
 /**
+ * GET /api/groups/my-requests
+ * Get all sent requests by current user
+ */
+router.get('/my-requests', requireAuth, async (req, res) => {
+    try {
+        const requests = await groupsService.getUserSentRequests(req.userEmail);
+        res.json({ success: true, data: requests });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
  * POST /api/groups
  * Crear grupo usando SP_CREAR_GRUPO_CON_FUNDADOR
  */

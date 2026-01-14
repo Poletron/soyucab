@@ -209,12 +209,12 @@ async function requestJoinGroup(userEmail, nombreGrupo) {
 
     // Notify group creator
     const creatorEmail = groupCheck.rows[0].correo_creador;
-    await notificationsService.createNotification({
-        correoUsuario: creatorEmail,
-        tipo: 'Grupo',
-        mensaje: `${userEmail} ha solicitado unirse al grupo "${nombreGrupo}"`,
-        urlAccion: `/groups/${encodeURIComponent(nombreGrupo)}`
-    });
+    await notificationsService.createNotification(
+        creatorEmail,
+        'Grupo',
+        `${userEmail} ha solicitado unirse al grupo "${nombreGrupo}"`,
+        `/groups/${encodeURIComponent(nombreGrupo)}`
+    );
 
     return result.rows[0];
 }
@@ -306,12 +306,12 @@ async function acceptJoinRequest(requestId, userEmail) {
     `, [correo_solicitante, nombre_grupo]);
 
     // Notify the requester
-    await notificationsService.createNotification({
-        correoUsuario: correo_solicitante,
-        tipo: 'Grupo',
-        mensaje: `Tu solicitud para unirte al grupo "${nombre_grupo}" ha sido aceptada`,
-        urlAccion: `/groups/${encodeURIComponent(nombre_grupo)}`
-    });
+    await notificationsService.createNotification(
+        correo_solicitante,
+        'Grupo',
+        `Tu solicitud para unirte al grupo "${nombre_grupo}" ha sido aceptada`,
+        `/groups/${encodeURIComponent(nombre_grupo)}`
+    );
 
     return { success: true };
 }
@@ -357,12 +357,12 @@ async function rejectJoinRequest(requestId, userEmail) {
     );
 
     // Notify the requester
-    await notificationsService.createNotification({
-        correoUsuario: correo_solicitante,
-        tipo: 'Grupo',
-        mensaje: `Tu solicitud para unirte al grupo "${nombre_grupo}" ha sido rechazada`,
-        urlAccion: null
-    });
+    await notificationsService.createNotification(
+        correo_solicitante,
+        'Grupo',
+        `Tu solicitud para unirte al grupo "${nombre_grupo}" ha sido rechazada`,
+        null
+    );
 
     return { success: true };
 }
@@ -380,6 +380,19 @@ async function getMyJoinRequestStatus(userEmail, nombreGrupo) {
     return result.rows[0] || null;
 }
 
+/**
+ * Get all sent requests by a user
+ */
+async function getUserSentRequests(userEmail) {
+    const result = await db.query(
+        `SELECT nombre_grupo, estado_solicitud
+         FROM SOLICITA_INGRESO_GRUPO
+         WHERE correo_solicitante = $1`,
+        [userEmail]
+    );
+    return result.rows;
+}
+
 module.exports = {
     getPublicGroups,
     getUserGroups,
@@ -393,5 +406,6 @@ module.exports = {
     getPendingJoinRequests,
     acceptJoinRequest,
     rejectJoinRequest,
-    getMyJoinRequestStatus
+    getMyJoinRequestStatus,
+    getUserSentRequests
 };

@@ -79,6 +79,9 @@ function App() {
   const [viewProfileEmail, setViewProfileEmail] = useState<string | null>(() => {
     return localStorage.getItem('viewProfileEmail');
   });
+  const [viewGroupName, setViewGroupName] = useState<string | null>(() => {
+    return localStorage.getItem('viewGroupName');
+  });
 
   // Persist view state to localStorage
   useEffect(() => {
@@ -88,7 +91,12 @@ function App() {
     } else {
       localStorage.removeItem('viewProfileEmail');
     }
-  }, [currentView, viewProfileEmail]);
+    if (viewGroupName) {
+      localStorage.setItem('viewGroupName', viewGroupName);
+    } else {
+      localStorage.removeItem('viewGroupName');
+    }
+  }, [currentView, viewProfileEmail, viewGroupName]);
 
   // Global Search State
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
@@ -178,7 +186,7 @@ function App() {
       case 'tutoring':
         return <Tutoring />;
       case 'groups':
-        return <GroupPage />;
+        return <GroupPage initialGroupName={viewGroupName || undefined} />;
       case 'messaging':
         return <MessagingSystem />;
       case 'settings':
@@ -469,8 +477,12 @@ function App() {
                                   setCurrentView('user-profile');
                                 } else if (notif.url_accion.startsWith('/messages/')) {
                                   setCurrentView('messaging');
-                                } else if (notif.url_accion.startsWith('/post/') || notif.url_accion.startsWith('/groups/')) {
-                                  // For posts/groups, navigate to feed for now
+                                } else if (notif.url_accion.startsWith('/groups/')) {
+                                  const groupName = decodeURIComponent(notif.url_accion.replace('/groups/', ''));
+                                  setViewGroupName(groupName);
+                                  setCurrentView('groups');
+                                } else if (notif.url_accion.startsWith('/post/')) {
+                                  // For posts, navigate to feed for now
                                   setCurrentView('feed');
                                 }
                               }

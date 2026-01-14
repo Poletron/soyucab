@@ -22,6 +22,7 @@ import {
   acceptGroupJoinRequest,
   rejectGroupJoinRequest,
   getMyGroupJoinRequestStatus,
+  getMySentRequests,
   Group,
   GroupJoinRequest
 } from '../services/api';
@@ -49,7 +50,11 @@ interface GroupPost {
   total_comentarios?: number;
 }
 
-const GroupPage = () => {
+interface GroupPageProps {
+  initialGroupName?: string;
+}
+
+const GroupPage = ({ initialGroupName }: GroupPageProps) => {
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<Group[]>([]);
   const [myGroups, setMyGroups] = useState<Group[]>([]);
@@ -70,40 +75,68 @@ const GroupPage = () => {
 
   // Join Request state
   const [pendingRequests, setPendingRequests] = useState<GroupJoinRequest[]>([]);
-  const [myRequestStatus, setMyRequestStatus] = useState<string | null>(null);
   const [requestingJoin, setRequestingJoin] = useState(false);
   const [showRequestsModal, setShowRequestsModal] = useState(false);
   const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
   const currentUser = getCurrentUser();
 
+  // Derived status for selected group
+
+
   useEffect(() => {
     loadGroups();
   }, []);
 
-  const loadGroups = async () => {
+  // Handle URL linking
+  useEffect(() => {
+    if (initialGroupName && groups.length > 0) {
+      const target = groups.find(g => g.nombre_grupo === initialGroupName);
+      if (target) {
+        setSelectedGroup(target);
+      }
+    }
+  }, [initialGroupName, groups]);
+
+  const loadGroups = async (showLoading = true) => {
     try {
-      setLoading(true);
-      const [allGroupsResult, myGroupsResult] = await Promise.all([
+      if (showLoading) setLoading(true);
+      const [allGroupsResult, myGroupsResult, myRequestsResult] = await Promise.all([
         getGroups(),
-        getMyGroups()
+        getMyGroups(),
+        getMySentRequests()
       ]);
 
       if (allGroupsResult.success) {
-        setGroups(allGroupsResult.data || []);
+        let groupsData = allGroupsResult.data || [];
+
+        // Merge request status if available
+        if (myRequestsResult.success) {
+          const requestsMap = new Map();
+          myRequestsResult.data.forEach(r => requestsMap.set(r.nombre_grupo, r.estado_solicitud));
+
+          groupsData = groupsData.map(g => ({
+            ...g,
+            estado_solicitud: requestsMap.get(g.nombre_grupo)
+          }));
+        }
+
+        setGroups(groupsData);
       }
 
       if (myGroupsResult.success) {
         setMyGroups(myGroupsResult.data || []);
-        // Solo seleccionar automáticamente si el usuario tiene grupos
-        if (myGroupsResult.data?.length > 0 && !selectedGroup) {
+        // Solo seleccionar automáticamente si el usuario tiene grupos y no hay selección explícita ni inicial
+        if (myGroupsResult.data?.length > 0 && !selectedGroup && showLoading && !initialGroupName) {
           setSelectedGroup(myGroupsResult.data[0]);
         }
       }
+
+
     } catch (err) {
       console.error('Error loading groups:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -133,12 +166,23 @@ const GroupPage = () => {
   const handleJoinGroup = async (groupName: string) => {
     try {
       setJoining(true);
+      // Optimistic update
+      const group = groups.find(g => g.nombre_grupo === groupName);
+      if (group) {
+        setMyGroups(prev => [...prev, { ...group }]);
+      }
+
       const result = await joinGroup(groupName);
       if (result.success) {
-        loadGroups();
+        await loadGroups(false); // Silent refresh
+      } else {
+        // Revert on failure
+        setMyGroups(prev => prev.filter(g => g.nombre_grupo !== groupName));
       }
     } catch (err) {
       console.error('Error joining group:', err);
+      // Revert on error
+      setMyGroups(prev => prev.filter(g => g.nombre_grupo !== groupName));
     } finally {
       setJoining(false);
     }
@@ -147,12 +191,22 @@ const GroupPage = () => {
   const handleLeaveGroup = async (groupName: string) => {
     try {
       setJoining(true);
+      // Optimistic update
+      setMyGroups(prev => prev.filter(g => g.nombre_grupo !== groupName));
+
       const result = await leaveGroup(groupName);
       if (result.success) {
-        loadGroups();
+        await loadGroups(false); // Silent refresh
+        if (selectedGroup?.nombre_grupo === groupName) {
+          setSelectedGroup(null); // Deselect if leaving current group
+        }
+      } else {
+        // Revert on failure (complex to revert perfectly without fetching, but we can re-fetch)
+        await loadGroups(false);
       }
     } catch (err) {
       console.error('Error leaving group:', err);
+      await loadGroups(false);
     } finally {
       setJoining(false);
     }
@@ -208,7 +262,7 @@ const GroupPage = () => {
         setNewGroupName('');
         setNewGroupDesc('');
         setNewGroupVisibility('Público');
-        loadGroups();
+        loadGroups(false);
       }
     } catch (err) {
       console.error('Error creating group:', err);
@@ -233,7 +287,7 @@ const GroupPage = () => {
           descripcion_grupo: newGroupDesc.trim(),
           visibilidad: newGroupVisibility
         } : null);
-        loadGroups();
+        loadGroups(false);
       }
     } catch (err) {
       console.error('Error updating group:', err);
@@ -248,7 +302,7 @@ const GroupPage = () => {
       const result = await deleteGroup(selectedGroup.nombre_grupo);
       if (result.success) {
         setSelectedGroup(null);
-        loadGroups();
+        loadGroups(false);
       }
     } catch (err) {
       console.error('Error deleting group:', err);
@@ -263,7 +317,12 @@ const GroupPage = () => {
       setRequestingJoin(true);
       const result = await requestJoinGroup(groupName);
       if (result.success) {
-        setMyRequestStatus('Pendiente');
+        // Optimistic update using merged state
+        setGroups(prev => prev.map(g => g.nombre_grupo === groupName ? { ...g, estado_solicitud: 'Pendiente' } : g));
+
+        if (selectedGroup?.nombre_grupo === groupName) {
+          setSelectedGroup(prev => prev ? { ...prev, estado_solicitud: 'Pendiente' } : null);
+        }
       }
     } catch (err) {
       console.error('Error requesting join:', err);
@@ -290,7 +349,7 @@ const GroupPage = () => {
       await acceptGroupJoinRequest(requestId);
       if (selectedGroup) {
         await loadPendingRequests(selectedGroup.nombre_grupo);
-        await loadGroups(); // Reload to update member count/list
+        await loadGroups(false); // Reload to update member count/list silently
       }
     } catch (err) {
       console.error('Error accepting request:', err);
@@ -326,16 +385,7 @@ const GroupPage = () => {
     }
   };
 
-  // Load request status when selecting a group (for non-members)
-  useEffect(() => {
-    if (selectedGroup && !isMyGroup(selectedGroup.nombre_grupo)) {
-      getMyGroupJoinRequestStatus(selectedGroup.nombre_grupo).then(res => {
-        setMyRequestStatus(res.data?.estado_solicitud || null);
-      });
-    } else {
-      setMyRequestStatus(null);
-    }
-  }, [selectedGroup]);
+  // Removed individual request status fetching effect in favor of global map
 
   // Load pending requests for creators/admins
   useEffect(() => {
@@ -436,8 +486,8 @@ const GroupPage = () => {
             <CardHeader>
               <h3 className="font-semibold">Descubrir Grupos</h3>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {groups.filter(g => !isMyGroup(g.nombre_grupo)).slice(0, 5).map((group) => (
+            <CardContent className="space-y-2 max-h-[500px] overflow-y-auto">
+              {groups.filter(g => !isMyGroup(g.nombre_grupo)).map((group) => (
                 <div
                   key={group.nombre_grupo}
                   className="p-3 rounded-lg border hover:bg-gray-50 transition-colors cursor-pointer"
@@ -454,15 +504,27 @@ const GroupPage = () => {
                       </div>
                     </div>
                     {group.visibilidad === 'Privado' ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleRequestJoin(group.nombre_grupo); }}
-                        disabled={requestingJoin}
-                        title="Solicitar acceso"
-                      >
-                        {requestingJoin ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
-                      </Button>
+                      group.estado_solicitud === 'Pendiente' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className="text-orange-500 border-orange-200 bg-orange-50"
+                        >
+                          <Lock className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Pendiente</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleRequestJoin(group.nombre_grupo); }}
+                          disabled={requestingJoin}
+                          title="Solicitar acceso"
+                        >
+                          {requestingJoin ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
+                        </Button>
+                      )
                     ) : (
                       <Button
                         size="sm"
@@ -568,12 +630,12 @@ const GroupPage = () => {
                         <>
                           {selectedGroup.visibilidad === 'Privado' ? (
                             // Private group - show request button or pending status
-                            myRequestStatus === 'Pendiente' ? (
+                            selectedGroup.estado_solicitud === 'Pendiente' ? (
                               <Button variant="outline" disabled className="flex items-center space-x-2">
                                 <Lock className="h-4 w-4" />
                                 <span>Solicitud Pendiente</span>
                               </Button>
-                            ) : myRequestStatus === 'Rechazada' ? (
+                            ) : selectedGroup.estado_solicitud === 'Rechazada' ? (
                               <Button
                                 variant="outline"
                                 className="flex items-center space-x-2"
