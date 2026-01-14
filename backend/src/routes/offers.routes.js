@@ -127,4 +127,53 @@ router.post('/:id/apply', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/offers/:id/applicants
+ * Get applicants for a job offer (organization only)
+ */
+router.get('/:id/applicants', requireAuth, async (req, res) => {
+    try {
+        const isOrg = await offersService.isOrganization(req.userEmail);
+        if (!isOrg) {
+            return res.status(403).json({ success: false, error: 'Solo organizaciones pueden ver postulantes' });
+        }
+
+        const applicants = await offersService.getOfferApplicants(req.params.id, req.userEmail);
+        res.json({ success: true, data: applicants });
+    } catch (err) {
+        console.error('[OFFERS] Error getting applicants:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * PUT /api/offers/application/:id/status
+ * Update application status (organization only)
+ */
+router.put('/application/:id/status', requireAuth, async (req, res) => {
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ success: false, error: 'Estado requerido' });
+    }
+
+    try {
+        const isOrg = await offersService.isOrganization(req.userEmail);
+        if (!isOrg) {
+            return res.status(403).json({ success: false, error: 'Solo organizaciones pueden actualizar postulaciones' });
+        }
+
+        const result = await offersService.updateApplicationStatus(req.params.id, status, req.userEmail);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Postulación no encontrada o no autorizada' });
+        }
+
+        res.json({ success: true, message: `Postulación actualizada a ${status}` });
+    } catch (err) {
+        console.error('[OFFERS] Error updating application:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
+

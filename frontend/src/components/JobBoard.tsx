@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
     Briefcase, Search, MapPin, Building, Clock,
     Plus, Filter, CheckCircle, Loader2, FileText,
-    ChevronRight, ArrowRight
+    ChevronRight, ArrowRight, Users, Check, X
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -17,7 +17,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { useRole } from '../hooks/useRole';
 import {
     getOffers, createOffer, applyToOffer, getMyPublishedOffers,
-    getMyApplications, JobOffer
+    getMyApplications, JobOffer, getOfferApplicants, updateApplicationStatus, Applicant
 } from '../services/api';
 
 // URL base del backend para resolver paths relativos de imágenes
@@ -51,6 +51,13 @@ export default function JobBoard() {
     // Apply State
     const [selectedOffer, setSelectedOffer] = useState<JobOffer | null>(null);
     const [applying, setApplying] = useState(false);
+
+    // Applicants Dialog State
+    const [applicantsDialogOpen, setApplicantsDialogOpen] = useState(false);
+    const [selectedOfferForApplicants, setSelectedOfferForApplicants] = useState<JobOffer | null>(null);
+    const [applicants, setApplicants] = useState<Applicant[]>([]);
+    const [loadingApplicants, setLoadingApplicants] = useState(false);
+    const [updatingApplicationId, setUpdatingApplicationId] = useState<number | null>(null);
 
     useEffect(() => {
         loadData();
@@ -129,6 +136,59 @@ export default function JobBoard() {
         return matchesSearch && matchesModalidad;
     });
 
+    const handleViewApplicants = async (offer: JobOffer) => {
+        setSelectedOfferForApplicants(offer);
+        setApplicantsDialogOpen(true);
+        setLoadingApplicants(true);
+        try {
+            const result = await getOfferApplicants(offer.clave_oferta);
+            if (result.success) {
+                setApplicants(result.data);
+            }
+        } catch (error) {
+            console.error('Error loading applicants:', error);
+        } finally {
+            setLoadingApplicants(false);
+        }
+    };
+
+    const handleUpdateApplicationStatus = async (applicationId: number, status: string) => {
+        setUpdatingApplicationId(applicationId);
+        try {
+            const result = await updateApplicationStatus(applicationId, status);
+            if (result.success) {
+                // Refresh applicants list
+                if (selectedOfferForApplicants) {
+                    const refreshed = await getOfferApplicants(selectedOfferForApplicants.clave_oferta);
+                    if (refreshed.success) {
+                        setApplicants(refreshed.data);
+                    }
+                }
+                // Refresh my offers to update counts
+                loadData();
+            }
+        } catch (error) {
+            console.error('Error updating application:', error);
+        } finally {
+            setUpdatingApplicationId(null);
+        }
+    };
+
+    const getApplicationStatusBadge = (status: string) => {
+        switch (status) {
+            case 'Enviada':
+                return <Badge className="bg-blue-100 text-blue-800">Pendiente</Badge>;
+            case 'En Revisión':
+                return <Badge className="bg-yellow-100 text-yellow-800">En Revisión</Badge>;
+            case 'Aceptada':
+                return <Badge className="bg-green-100 text-green-800">Aceptada</Badge>;
+            case 'Rechazada':
+                return <Badge className="bg-red-100 text-red-800">Rechazada</Badge>;
+            default:
+                return <Badge variant="secondary">{status}</Badge>;
+        }
+    };
+
     return (
         <div className="max-w-6xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -166,7 +226,7 @@ export default function JobBoard() {
                                         <label className="text-sm font-medium">Modalidad</label>
                                         <Select
                                             value={newOffer.modalidad}
-                                            onValueChange={v => setNewOffer({ ...newOffer, modalidad: v })}
+                                            onValueChange={(v: string) => setNewOffer({ ...newOffer, modalidad: v })}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Selecciona..." />
@@ -404,13 +464,92 @@ export default function JobBoard() {
                                                     <Badge variant="secondary">{offer.total_postulaciones} postulaciones</Badge>
                                                 </div>
                                             </div>
-                                            <Button variant="outline" size="sm">Ver Postulantes</Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleViewApplicants(offer)}
+                                            >
+                                                <Users className="h-4 w-4 mr-2" />
+                                                Ver Postulantes
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </CardContent>
                     </Card>
+
+                    {/* Applicants Dialog */}
+                    <Dialog open={applicantsDialogOpen} onOpenChange={setApplicantsDialogOpen}>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Postulantes - {selectedOfferForApplicants?.titulo_oferta}</DialogTitle>
+                                <DialogDescription>
+                                    Gestiona las postulaciones recibidas para esta oferta
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            {loadingApplicants ? (
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                </div>
+                            ) : applicants.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500">
+                                    No hay postulantes para esta oferta aún.
+                                </div>
+                            ) : (
+                                <div className="space-y-4 max-h-96 overflow-y-auto">
+                                    {applicants.map(applicant => (
+                                        <div key={applicant.clave_postulacion} className="flex items-center justify-between p-4 border rounded-lg">
+                                            <div className="flex items-center space-x-4">
+                                                <Avatar className="h-10 w-10">
+                                                    <AvatarImage src={getImageUrl(applicant.fotografia_url)} />
+                                                    <AvatarFallback>{applicant.nombres?.[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <h4 className="font-semibold">{applicant.nombres} {applicant.apellidos}</h4>
+                                                    <p className="text-sm text-gray-500">{applicant.correo_principal}</p>
+                                                    <p className="text-xs text-gray-400">Postulado el {new Date(applicant.fecha_postulacion).toLocaleDateString()}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                {applicant.estado_postulacion === 'Enviada' ? (
+                                                    <>
+                                                        <Button
+                                                            size="sm"
+                                                            style={{ backgroundColor: '#10b981' }}
+                                                            onClick={() => handleUpdateApplicationStatus(applicant.clave_postulacion, 'Aceptada')}
+                                                            disabled={updatingApplicationId === applicant.clave_postulacion}
+                                                        >
+                                                            {updatingApplicationId === applicant.clave_postulacion ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <><Check className="h-4 w-4 mr-1" /> Aceptar</>
+                                                            )}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => handleUpdateApplicationStatus(applicant.clave_postulacion, 'Rechazada')}
+                                                            disabled={updatingApplicationId === applicant.clave_postulacion}
+                                                        >
+                                                            {updatingApplicationId === applicant.clave_postulacion ? (
+                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                            ) : (
+                                                                <><X className="h-4 w-4 mr-1" /> Rechazar</>
+                                                            )}
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    getApplicationStatusBadge(applicant.estado_postulacion)
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
                 </TabsContent>
 
                 <TabsContent value="applications">

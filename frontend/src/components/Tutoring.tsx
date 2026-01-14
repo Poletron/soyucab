@@ -9,7 +9,10 @@ import {
   MessageSquare,
   Award,
   ThumbsUp,
-  Loader2
+  Loader2,
+  Clock,
+  Check,
+  X
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -22,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Textarea } from './ui/textarea';
 import { Separator } from './ui/separator';
-import { searchTutors, getMyMentorships, requestMentorship, registerAsTutor, getCurrentUser } from '../services/api';
+import { searchTutors, getMyMentorships, requestMentorship, registerAsTutor, getCurrentUser, acceptMentorship, rejectMentorship } from '../services/api';
 
 /* Interfaces updated to match API */
 interface Tutor {
@@ -34,6 +37,7 @@ interface Tutor {
   area_conocimiento: string;
   descripcion_enfoque: string;
   active_students: number;
+  my_request_status: 'Enviada' | 'Aceptada' | 'Rechazada' | 'Completada' | null;
 }
 
 interface MentorConnection {
@@ -152,6 +156,30 @@ export default function Tutoring() {
     }
   };
 
+  const handleAcceptMentorship = async (requestId: number) => {
+    try {
+      const result = await acceptMentorship(requestId);
+      if (result.success) {
+        alert('Solicitud aceptada');
+        loadConnections();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al aceptar');
+    }
+  };
+
+  const handleRejectMentorship = async (requestId: number) => {
+    try {
+      const result = await rejectMentorship(requestId);
+      if (result.success) {
+        alert('Solicitud rechazada');
+        loadConnections();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al rechazar');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Aceptada':
@@ -160,9 +188,29 @@ export default function Tutoring() {
         return <Badge className="bg-yellow-100 text-yellow-800">⏳ Pendiente</Badge>;
       case 'Completada':
         return <Badge className="bg-green-100 text-green-800">✓ Finalizada</Badge>;
+      case 'Rechazada':
+        return <Badge className="bg-red-100 text-red-800">✗ Rechazada</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  // Helper to check if user already requested this tutor
+  const isRequested = (tutor: Tutor) => {
+    return tutor.my_request_status !== null || sessionRequests.has(tutor.clave_tutoria);
+  };
+
+  const getRequestButtonState = (tutor: Tutor) => {
+    if (tutor.my_request_status === 'Aceptada') {
+      return { disabled: true, label: 'Conectado', color: '#10b981', icon: <Check className="mr-2 h-4 w-4" /> };
+    }
+    if (tutor.my_request_status === 'Enviada' || sessionRequests.has(tutor.clave_tutoria)) {
+      return { disabled: true, label: 'Solicitado', color: '#fbbf24', icon: <Clock className="mr-2 h-4 w-4" /> };
+    }
+    if (tutor.my_request_status === 'Rechazada') {
+      return { disabled: true, label: 'Rechazado', color: '#ef4444', icon: <X className="mr-2 h-4 w-4" /> };
+    }
+    return { disabled: false, label: 'Solicitar Mentoría', color: '#40b4e5', icon: <MessageSquare className="mr-2 h-4 w-4" /> };
   };
 
   return (
@@ -302,27 +350,20 @@ export default function Tutoring() {
                               <p className="text-gray-700">{tutor.descripcion_enfoque}</p>
                             </div>
 
-                            <Button
-                              className="w-full"
-                              style={{
-                                backgroundColor: sessionRequests.has(tutor.clave_tutoria) ? '#fbbf24' : '#40b4e5',
-                                borderColor: sessionRequests.has(tutor.clave_tutoria) ? '#fbbf24' : '#40b4e5'
-                              }}
-                              onClick={() => handleRequestMentorship(tutor.clave_tutoria)}
-                              disabled={sessionRequests.has(tutor.clave_tutoria)}
-                            >
-                              {sessionRequests.has(tutor.clave_tutoria) ? (
-                                <>
-                                  <Clock className="mr-2 h-4 w-4" />
-                                  Solicitado
-                                </>
-                              ) : (
-                                <>
-                                  <MessageSquare className="mr-2 h-4 w-4" />
-                                  Solicitar Mentoría
-                                </>
-                              )}
-                            </Button>
+                            {(() => {
+                              const btnState = getRequestButtonState(tutor);
+                              return (
+                                <Button
+                                  className="w-full"
+                                  style={{ backgroundColor: btnState.color, borderColor: btnState.color }}
+                                  onClick={() => handleRequestMentorship(tutor.clave_tutoria)}
+                                  disabled={btnState.disabled}
+                                >
+                                  {btnState.icon}
+                                  {btnState.label}
+                                </Button>
+                              );
+                            })()}
                           </div>
                         </DialogContent>
                       </Dialog>
@@ -352,7 +393,7 @@ export default function Tutoring() {
             <CardContent>
               <div className="space-y-4">
                 {myConnections.map((connection) => (
-                  <Card key={connection.clave_solicitud} className="border-l-4" style={{ borderLeftColor: connection.estado === 'Aceptada' ? '#40b4e5' : connection.estado === 'Enviada' ? '#ffc526' : '#047732' }}>
+                  <Card key={connection.clave_solicitud} className="border-l-4" style={{ borderLeftColor: connection.estado === 'Aceptada' ? '#40b4e5' : connection.estado === 'Enviada' ? '#ffc526' : connection.estado === 'Rechazada' ? '#ef4444' : '#047732' }}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -366,7 +407,27 @@ export default function Tutoring() {
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
-                          {getStatusBadge(connection.estado)}
+                          {/* Show Accept/Reject buttons for Mentors with pending requests */}
+                          {connection.my_role === 'Mentor' && connection.estado === 'Enviada' ? (
+                            <>
+                              <Button
+                                size="sm"
+                                style={{ backgroundColor: '#10b981' }}
+                                onClick={() => handleAcceptMentorship(connection.clave_solicitud)}
+                              >
+                                <Check className="h-4 w-4 mr-1" /> Aceptar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRejectMentorship(connection.clave_solicitud)}
+                              >
+                                <X className="h-4 w-4 mr-1" /> Rechazar
+                              </Button>
+                            </>
+                          ) : (
+                            getStatusBadge(connection.estado)
+                          )}
                         </div>
                       </div>
                     </CardContent>

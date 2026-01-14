@@ -25,7 +25,12 @@ const tutoringService = {
                     SELECT COUNT(*) 
                     FROM SOLICITA_TUTORIA st 
                     WHERE st.fk_tutoria = t.clave_tutoria AND st.estado = 'Aceptada'
-                )::INTEGER as active_students
+                )::INTEGER as active_students,
+                (
+                    SELECT st2.estado 
+                    FROM SOLICITA_TUTORIA st2 
+                    WHERE st2.fk_tutoria = t.clave_tutoria AND st2.correo_solicitante = $1
+                ) as my_request_status
             FROM TUTORIA t
             INNER JOIN PERSONA p ON t.correo_tutor = p.correo_principal
             INNER JOIN MIEMBRO m ON t.correo_tutor = m.correo_principal
@@ -151,7 +156,45 @@ const tutoringService = {
 
         const result = await db.query(sql, [studentEmail, tutoriaId]);
         return result.rows[0];
+    },
+
+    /**
+     * Accept a mentorship request (as mentor)
+     */
+    async acceptMentorship(requestId, mentorEmail) {
+        // Verify the mentor owns this tutoria
+        const sql = `
+            UPDATE SOLICITA_TUTORIA st
+            SET estado = 'Aceptada'
+            FROM TUTORIA t
+            WHERE st.clave_solicitud = $1
+              AND st.fk_tutoria = t.clave_tutoria
+              AND t.correo_tutor = $2
+              AND st.estado = 'Enviada'
+            RETURNING st.clave_solicitud, st.correo_solicitante
+        `;
+        const result = await db.query(sql, [requestId, mentorEmail]);
+        return result.rows[0] || null;
+    },
+
+    /**
+     * Reject a mentorship request (as mentor)
+     */
+    async rejectMentorship(requestId, mentorEmail) {
+        const sql = `
+            UPDATE SOLICITA_TUTORIA st
+            SET estado = 'Rechazada'
+            FROM TUTORIA t
+            WHERE st.clave_solicitud = $1
+              AND st.fk_tutoria = t.clave_tutoria
+              AND t.correo_tutor = $2
+              AND st.estado = 'Enviada'
+            RETURNING st.clave_solicitud
+        `;
+        const result = await db.query(sql, [requestId, mentorEmail]);
+        return result.rows[0] || null;
     }
 };
 
 module.exports = tutoringService;
+

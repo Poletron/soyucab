@@ -781,6 +781,48 @@ export async function registerAsTutor(data: { subjects: string, experience: stri
     return res.json();
 }
 
+export async function acceptMentorship(requestId: number) {
+    const res = await apiFetch(`/api/tutoring/request/${requestId}/accept`, {
+        method: 'PUT',
+    });
+    return res.json();
+}
+
+export async function rejectMentorship(requestId: number) {
+    const res = await apiFetch(`/api/tutoring/request/${requestId}/reject`, {
+        method: 'PUT',
+    });
+    return res.json();
+}
+
+// ============================================
+// OFFERS - Applicants Management
+// ============================================
+
+export interface Applicant {
+    clave_postulacion: number;
+    fecha_postulacion: string;
+    estado_postulacion: string;
+    correo_principal: string;
+    nombres: string;
+    apellidos: string;
+    biografia?: string;
+    fotografia_url?: string;
+}
+
+export async function getOfferApplicants(offerId: number): Promise<{ success: boolean; data: Applicant[] }> {
+    const res = await apiFetch(`/api/offers/${offerId}/applicants`);
+    return res.json();
+}
+
+export async function updateApplicationStatus(applicationId: number, status: string) {
+    const res = await apiFetch(`/api/offers/application/${applicationId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+    });
+    return res.json();
+}
+
 // ============================================
 // Notificaciones
 // ============================================

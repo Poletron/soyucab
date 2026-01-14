@@ -167,6 +167,59 @@ async function getPublishedOffers(userEmail) {
     return result.rows;
 }
 
+/**
+ * Get applicants for a specific job offer (organization only)
+ */
+async function getOfferApplicants(offerId, orgEmail) {
+    // First verify the organization owns this offer
+    const checkSql = `SELECT 1 FROM OFERTA_LABORAL WHERE clave_oferta = $1 AND correo_organizacion = $2`;
+    const check = await db.query(checkSql, [offerId, orgEmail]);
+    if (check.rows.length === 0) {
+        throw new Error('Oferta no encontrada o no autorizada');
+    }
+
+    const sql = `
+        SELECT 
+            sp.clave_postulacion,
+            sp.fecha_postulacion,
+            sp.estado_postulacion,
+            p.correo_principal,
+            p.nombres,
+            p.apellidos,
+            p.biografia,
+            m.fotografia_url
+        FROM SE_POSTULA sp
+        INNER JOIN PERSONA p ON sp.correo_persona = p.correo_principal
+        INNER JOIN MIEMBRO m ON p.correo_principal = m.correo_principal
+        WHERE sp.fk_oferta = $1
+        ORDER BY sp.fecha_postulacion DESC
+    `;
+    const result = await db.query(sql, [offerId]);
+    return result.rows;
+}
+
+/**
+ * Update application status (organization only)
+ */
+async function updateApplicationStatus(applicationId, status, orgEmail) {
+    const validStatuses = ['Enviada', 'En Revisión', 'Rechazada', 'Aceptada'];
+    if (!validStatuses.includes(status)) {
+        throw new Error('Estado de postulación no válido');
+    }
+
+    const sql = `
+        UPDATE SE_POSTULA sp
+        SET estado_postulacion = $1
+        FROM OFERTA_LABORAL ol
+        WHERE sp.clave_postulacion = $2
+          AND sp.fk_oferta = ol.clave_oferta
+          AND ol.correo_organizacion = $3
+        RETURNING sp.clave_postulacion, sp.correo_persona
+    `;
+    const result = await db.query(sql, [status, applicationId, orgEmail]);
+    return result.rows[0] || null;
+}
+
 module.exports = {
     getActiveOffers,
     getOfferDetails,
@@ -176,5 +229,8 @@ module.exports = {
     isOfferActive,
     applyToOffer,
     getUserApplications,
-    getPublishedOffers
+    getPublishedOffers,
+    getOfferApplicants,
+    updateApplicationStatus
 };
+

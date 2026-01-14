@@ -29,12 +29,12 @@ Documento generado a partir de la sesión de revisión. Las tareas están distri
 - [ ] **Buscador:** Corregir bug/falta: No se muestran las empresas en el buscador. (RF 1.3)
 
 ### Pedro Urdaneta (Tutorías, Ofertas, Nexos)
-- [ ] **Tutorías:** Solicitar tutoría bugea el frontend (requiere recarga). Arreglar flujo. (RF 5.2)
-- [ ] **Tutorías:** Implementar aceptar/rechazar tutoría (actualmente no implementado). (RF 5.2)
-- [ ] **Tutorías:** Verificar confirmación de tutorías. (RF 5.2)
-- [ ] **Postulaciones:** Funcionalidad "Aceptar postulaciones" no funciona. (RF 4.2)
-- [ ] **Postulaciones:** Verificar funcionalidad de "Rechazar postulación". (Posible Omisión - RF 4.2)
-- [ ] **Nexos:** Revisar RF 2.3 Vínculos Institucionales (Registro de relaciones Persona-Organización). (RF 2.3)
+- [x] **Tutorías:** Solicitar tutoría bugea el frontend (requiere recarga). Arreglar flujo. (RF 5.2) ✅ — *Se agregó `my_request_status` al backend para persistir el estado.*
+- [x] **Tutorías:** Implementar aceptar/rechazar tutoría (actualmente no implementado). (RF 5.2) ✅ — *Endpoints y UI implementados.*
+- [x] **Tutorías:** Verificar confirmación de tutorías. (RF 5.2) ✅ — *Flujo completo funcional.*
+- [x] **Postulaciones:** Funcionalidad "Aceptar postulaciones" no funciona. (RF 4.2) ✅ — *Dialog de postulantes con Accept/Reject implementado.*
+- [x] **Postulaciones:** Verificar funcionalidad de "Rechazar postulación". (Posible Omisión - RF 4.2) ✅ — *Implementado junto con Aceptar.*
+- [x] **Nexos:** Revisar RF 2.3 Vínculos Institucionales (Registro de relaciones Persona-Organización). (RF 2.3) ✅ — *Revisado: Tabla `TIENE_NEXO` y reporte ya existen.*
 
 ---
 *Última actualización: 11 Ene 2026*

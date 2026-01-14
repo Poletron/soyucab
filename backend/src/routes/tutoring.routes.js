@@ -73,4 +73,39 @@ router.post('/request', requireAuth, async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/tutoring/request/:id/accept
+ * Accept a mentorship request (mentor only)
+ */
+router.put('/request/:id/accept', requireAuth, async (req, res) => {
+    try {
+        const result = await tutoringService.acceptMentorship(req.params.id, req.userEmail);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Solicitud no encontrada o ya procesada' });
+        }
+        res.json({ success: true, message: 'Solicitud aceptada' });
+    } catch (err) {
+        console.error('[TUTORING] Error accepting mentorship:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+/**
+ * PUT /api/tutoring/request/:id/reject
+ * Reject a mentorship request (mentor only)
+ */
+router.put('/request/:id/reject', requireAuth, async (req, res) => {
+    try {
+        const result = await tutoringService.rejectMentorship(req.params.id, req.userEmail);
+        if (!result) {
+            return res.status(404).json({ success: false, error: 'Solicitud no encontrada o ya procesada' });
+        }
+        res.json({ success: true, message: 'Solicitud rechazada' });
+    } catch (err) {
+        console.error('[TUTORING] Error rejecting mentorship:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 module.exports = router;
+
