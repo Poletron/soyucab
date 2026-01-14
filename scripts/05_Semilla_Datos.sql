@@ -92,7 +92,20 @@ DECLARE
         ['alumni.empresaria@gmail.com', 'V-20000002', 'Patricia', 'Empresaria Alumni', '1988-11-05', 'Femenino', 'CEO Consultora', 'Venezuela', 'Caracas'],
         ['nuevo.ingreso@ucab.edu.ve', 'V-31000001', 'Leonardo', 'Nuevo Ingreso', '2005-01-15', 'Masculino', 'Primer Semestre', 'Venezuela', 'Caracas'],
         ['moderador@ucab.edu.ve', 'V-10000001', 'Staff', 'Moderador', '1995-01-01', 'Prefiero no decirlo', 'Staff de Moderación y Contenido.', 'Venezuela', 'Caracas'],
-        ['auditor@ucab.edu.ve', 'V-10000002', 'Staff', 'Auditor', '1990-01-01', 'Prefiero no decirlo', 'Staff de Auditoría y BI.', 'Venezuela', 'Caracas']
+        ['auditor@ucab.edu.ve', 'V-10000002', 'Staff', 'Auditor', '1990-01-01', 'Prefiero no decirlo', 'Staff de Auditoría y BI.', 'Venezuela', 'Caracas'],
+        -- Usuarios Diáspora (Internacionales)
+        ['diaspora.es1@ucab.edu.ve', 'V-19000001', 'Alejandro', 'Ruiz', '1995-05-10', 'Masculino', 'Viviendo en Madrid', 'Spain', 'Madrid'],
+        ['diaspora.es2@ucab.edu.ve', 'V-19000002', 'Elena', 'Vargas', '1996-03-12', 'Femenino', 'Master en Barcelona', 'Spain', 'Barcelona'],
+        ['diaspora.us1@ucab.edu.ve', 'V-19000003', 'Michael', 'Smith', '1990-11-20', 'Masculino', 'Tech en Miami', 'United States', 'Miami'],
+        ['diaspora.us2@ucab.edu.ve', 'V-19000004', 'Patricia', 'Daz', '1992-08-15', 'Femenino', 'Finance in NY', 'United States', 'New York'],
+        ['diaspora.us3@ucab.edu.ve', 'V-19000005', 'Robert', 'Johnson', '1988-02-01', 'Masculino', 'Real Estate', 'United States', 'Miami'],
+        ['diaspora.cl1@ucab.edu.ve', 'V-19000006', 'Camila', 'Soto', '1994-07-30', 'Femenino', 'Desarrollo en Chile', 'Chile', 'Santiago'],
+        ['diaspora.ar1@ucab.edu.ve', 'V-19000007', 'Facundo', 'Gomez', '1993-09-25', 'Masculino', 'Marketing Digital', 'Argentina', 'Buenos Aires'],
+        ['diaspora.co1@ucab.edu.ve', 'V-19000008', 'Juan', 'Perez', '1995-12-10', 'Masculino', 'Consultor', 'Colombia', 'Bogota'],
+        ['diaspora.pa1@ucab.edu.ve', 'V-19000009', 'Maria', 'Rodriguez', '1997-04-05', 'Femenino', 'Logística', 'Panama', 'Panama City'],
+        ['diaspora.pa2@ucab.edu.ve', 'V-19000010', 'Carlos', 'Blanco', '1991-06-20', 'Masculino', 'Banca', 'Panama', 'Panama City'],
+        ['diaspora.ec1@ucab.edu.ve', 'V-19000011', 'Luis', 'Ecuador', '1993-01-01', 'Masculino', 'Turismo', 'Ecuador', 'Quito'],
+        ['diaspora.pe1@ucab.edu.ve', 'V-19000012', 'Ana', 'Peru', '1994-02-02', 'Femenino', 'Gastronomía', 'Peru', 'Lima']
     ];
     u TEXT[];
     vis TEXT[] := ARRAY['Público', 'Público', 'Solo Conexiones'];

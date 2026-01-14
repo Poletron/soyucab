@@ -5,13 +5,20 @@ import { Download, Globe, Loader2, RefreshCcw } from 'lucide-react';
 import { getReportPreview } from '../services/api'; // Usamos el helper existente que ya maneja token
 import WorldMapSVG from './WorldMapSVG';
 
-interface DiasporaData {
-    pais_residencia: string;
+interface CityData {
+    ciudad: string;
     total: number;
 }
 
+interface DiasporaData {
+    pais_residencia: string;
+    total: number;
+    ciudades: CityData[];
+}
+
 const DiasporaReport = () => {
-    const [data, setData] = useState<Record<string, number>>({});
+    const [highlightData, setHighlightData] = useState<Record<string, number>>({});
+    const [tooltipContent, setTooltipContent] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -24,15 +31,14 @@ const DiasporaReport = () => {
             setLoading(true);
             setError(null);
 
-            // Usamos el endpoint fetch general pero apuntando a 'diaspora'
-            // NOTA: Como agregamos una ruta especifica /diaspora en backend,
-            // quizas necesitemos llamar fetch directo o ajustar getReportPreview.
-            // Por consistencia, asumiremos que getReportPreview maneja tipos.
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+            // Hardcoded email for dev/demo as per api.ts pattern if auth context is missing
+            const userEmail = localStorage.getItem('userEmail') || 'oscar@ucab.edu.ve';
 
-            const token = localStorage.getItem('token'); // Asumimos token en localStorage
-            const response = await fetch('http://localhost:4000/api/report/diaspora', {
+            const response = await fetch(`${baseUrl}/api/report/diaspora`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Content-Type': 'application/json',
+                    'x-user-email': userEmail
                 }
             });
 
@@ -43,12 +49,25 @@ const DiasporaReport = () => {
             const json = await response.json();
 
             if (json.success) {
-                // Transformar array [{pais, total}] a objeto {Pais: total}
                 const mapData: Record<string, number> = {};
+                const tooltips: Record<string, string> = {};
+
                 json.data.forEach((item: DiasporaData) => {
-                    mapData[item.pais_residencia] = item.total;
+                    const countryName = item.pais_residencia;
+                    mapData[countryName] = item.total;
+
+                    // Construir tooltip con detalle de ciudades
+                    let tooltip = `${countryName}: ${item.total} usuarios`;
+                    if (item.ciudades && item.ciudades.length > 0) {
+                        // Ordenar ciudades por cantidad
+                        const sortedCities = [...item.ciudades].sort((a, b) => b.total - a.total);
+                        tooltip += '\n' + sortedCities.map(c => `- ${c.ciudad}: ${c.total}`).join('\n');
+                    }
+                    tooltips[countryName] = tooltip;
                 });
-                setData(mapData);
+
+                setHighlightData(mapData);
+                setTooltipContent(tooltips);
             } else {
                 setError(json.error || 'Error desconocido');
             }
@@ -87,7 +106,7 @@ const DiasporaReport = () => {
                 <CardContent className="p-0 h-full">
                     {/* Pasamos los datos al componente presentacional */}
                     <div className="w-full h-full p-4">
-                        <WorldMapSVG highlightData={data} />
+                        <WorldMapSVG highlightData={highlightData} tooltipContent={tooltipContent} />
                     </div>
                 </CardContent>
             </Card>
@@ -101,16 +120,20 @@ const DiasporaReport = () => {
                     <CardContent>
                         <div className="space-y-2">
                             <div className="flex items-center">
-                                <div className="w-4 h-4 bg-[#047732] rounded mr-2"></div>
-                                <span className="text-sm">Alta (10+ usuarios)</span>
+                                <div className="w-4 h-4 bg-[#047732] rounded mr-2 border border-gray-200"></div>
+                                <span className="text-sm text-gray-700">Alta (10+ usuarios)</span>
                             </div>
                             <div className="flex items-center">
-                                <div className="w-4 h-4 bg-[#40b4e5] rounded mr-2"></div>
-                                <span className="text-sm">Media (5-10 usuarios)</span>
+                                <div className="w-4 h-4 bg-[#40b4e5] rounded mr-2 border border-gray-200"></div>
+                                <span className="text-sm text-gray-700">Media (5-10 usuarios)</span>
                             </div>
                             <div className="flex items-center">
-                                <div className="w-4 h-4 bg-[#ffc526] rounded mr-2"></div>
-                                <span className="text-sm">Baja (1-4 usuarios)</span>
+                                <div className="w-4 h-4 bg-[#ffc526] rounded mr-2 border border-gray-200"></div>
+                                <span className="text-sm text-gray-700">Baja (1-4 usuarios)</span>
+                            </div>
+                            <div className="flex items-center">
+                                <div className="w-4 h-4 bg-[#F5F5F5] rounded mr-2 border border-gray-300"></div>
+                                <span className="text-sm text-gray-500 italic">Sin información</span>
                             </div>
                         </div>
                     </CardContent>

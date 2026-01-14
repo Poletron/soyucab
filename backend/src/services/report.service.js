@@ -97,18 +97,45 @@ async function getOfertasReportData(userEmail) {
 }
 
 async function getDiasporaReportData(userEmail) {
-    // Agrupa usuarios por país de residencia
+    // 1. Obtener conteo por país y ciudad
     const sql = `
         SELECT 
             pais_residencia, 
+            ciudad_residencia,
             COUNT(*)::int as total 
         FROM PERSONA 
         WHERE pais_residencia IS NOT NULL
-        GROUP BY pais_residencia
-        ORDER BY total DESC
+        GROUP BY pais_residencia, ciudad_residencia
+        ORDER BY pais_residencia, total DESC
     `;
     const result = await db.queryAsUser(sql, [], userEmail);
-    return result.rows;
+
+    // 2. Procesar datos para agrupar por país
+    const countryMap = {};
+
+    result.rows.forEach(row => {
+        const pais = row.pais_residencia;
+
+        if (!countryMap[pais]) {
+            countryMap[pais] = {
+                pais_residencia: pais,
+                total: 0,
+                ciudades: []
+            };
+        }
+
+        countryMap[pais].total += row.total;
+
+        if (row.ciudad_residencia) {
+            countryMap[pais].ciudades.push({
+                ciudad: row.ciudad_residencia,
+                total: row.total
+            });
+        }
+    });
+
+    // 3. Convertir mapa a array y ordenar por total descendente
+    return Object.values(countryMap).sort((a, b) => b.total - a.total);
 }
 
 // ============================================
